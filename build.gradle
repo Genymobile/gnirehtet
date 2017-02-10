@@ -21,3 +21,15 @@ allprojects {
 task clean(type: Delete) {
     delete rootProject.buildDir
 }
+
+task forwardPort(type: Exec) {
+    // linux
+    commandLine 'adb', 'reverse', 'tcp:1080', 'tcp:1080'
+}
+
+task clientStart(type: Exec, dependsOn: [':forwardPort', ':app:run']) {
+    // linux
+    commandLine 'adb', 'shell', 'am', 'start', '-a', 'com.genymobile.gnirehtet.VPN'
+}
+
+task serverStart(dependsOn: ':relay:run') {}

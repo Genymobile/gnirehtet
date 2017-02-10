@@ -26,3 +26,8 @@ dependencies {
     })
     testCompile 'junit:junit:4.12'
 }
+
+task run(type: Exec, dependsOn: 'installDebug') {
+    // linux
+    commandLine 'adb', 'shell', 'am', 'start', '-a', 'com.genymobile.gnirehtet.VPN'
+}

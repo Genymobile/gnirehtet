@@ -1,3 +1,15 @@
+## Automatically
+
+Build and run the server (keep it open):
+
+    gradle serverStart
+
+From another terminal, build the Android app, forward the port, and start:
+
+    gradle clientStart
+
+## Manually
+
 To build the project:
 
     gradle debug
@@ -12,6 +24,6 @@ To start the reverse tethering:
     adb install app/build/outputs/apk/app-debug.apk
     adb shell am start -a com.genymobile.gnirehtet.VPN
 
-Why `gnirehtet`?
+## Why `gnirehtet`?
 
     rev <<< tethering
