@@ -1,6 +1,12 @@
 package com.genymobile.gnirehtet;
 
+import android.content.Context;
+import android.net.ConnectivityManager;
+import android.net.LinkAddress;
+import android.net.LinkProperties;
+import android.net.Network;
 import android.net.VpnService;
+import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
@@ -8,6 +14,9 @@ import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.List;
 
 public class GnirehtetService extends VpnService {
 
@@ -15,8 +24,8 @@ public class GnirehtetService extends VpnService {
 
     private static final String TAG = VpnService.class.getName();
 
-    private static final String VPN_ADDRESS = "10.0.0.2";
-    private static final String VPN_ROUTE = "0.0.0.0"; // intercept everything
+    private static final InetAddress VPN_ADDRESS = getInetAddress(new byte[]{10, 0, 0, 2});
+    private static final InetAddress VPN_ROUTE = getInetAddress(new byte[]{0, 0, 0, 0}); // intercept everything
 
     private static final int MAX_PACKET_SIZE = 4096;
 
@@ -37,6 +46,14 @@ public class GnirehtetService extends VpnService {
         cleanUp();
     }
 
+    private static InetAddress getInetAddress(byte[] raw) {
+        try {
+            return InetAddress.getByAddress(raw);
+        } catch (UnknownHostException e) {
+            throw new AssertionError("Invalid address");
+        }
+    }
+
     private void setupVpn() {
         Builder builder = new Builder();
         builder.addAddress(VPN_ADDRESS, 32);
@@ -51,6 +68,32 @@ public class GnirehtetService extends VpnService {
         builder.setBlocking(true);
 
         vpnInterface = builder.establish();
+
+        if (Build.VERSION.SDK_INT >= 22) {
+            Network vpnNetwork = findVpnNetwork();
+            if (vpnNetwork != null) {
+                // so that applications knows that network is available
+                setUnderlyingNetworks(new Network[]{vpnNetwork});
+            }
+        } else {
+            Log.w(TAG, "Cannot set underlying network, API version " + Build.VERSION.SDK_INT + " < 22");
+        }
+    }
+
+    private Network findVpnNetwork() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        Network[] networks = cm.getAllNetworks();
+        for (Network network : networks) {
+            LinkProperties linkProperties = cm.getLinkProperties(network);
+            Log.d(TAG, "" + linkProperties);
+            List<LinkAddress> addresses = linkProperties.getLinkAddresses();
+            for (LinkAddress addr : addresses) {
+                if (addr.getAddress().equals(VPN_ADDRESS)) {
+                    return network;
+                }
+            }
+        }
+        return null;
     }
 
     private void startForwarding() {
