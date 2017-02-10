@@ -32,7 +32,7 @@ public class GnirehtetActivity extends Activity {
         }
     }
 
-    public void startVpnService() {
+    private void startVpnService() {
         startService(new Intent(this, GnirehtetService.class));
         finish();
     }

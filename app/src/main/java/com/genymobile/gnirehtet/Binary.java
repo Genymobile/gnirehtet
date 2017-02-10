@@ -18,4 +18,14 @@ public class Binary {
         return value & 0xffffffffl;
     }
 
+    public static String toString(byte[] data, int len) {
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < len; ++i) {
+            if (i % 8 == 0)
+                builder.append('\n');
+            builder.append(String.format("%02X ", data[i] & 0xff));
+        }
+        return builder.toString();
+    }
+
 }

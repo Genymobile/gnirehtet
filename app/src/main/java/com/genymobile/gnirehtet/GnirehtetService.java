@@ -146,7 +146,7 @@ public class GnirehtetService extends VpnService {
                     }
                     if (w > 0) {
                         if (GnirehtetService.VERBOSE) {
-                            Log.d(TAG, "WRITING " + w + "..." + RelayTunnel.toString(buffer, w));
+                            Log.d(TAG, "WRITING " + w + "..." + Binary.toString(buffer, w));
                         }
                         packetOutputStream.write(buffer, 0, w);
                     }

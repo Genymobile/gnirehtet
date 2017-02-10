@@ -28,7 +28,7 @@ public class RelayTunnel implements Tunnel {
     @Override
     public void send(byte[] packet, int len) throws IOException {
         if (GnirehtetService.VERBOSE) {
-            Log.d(TAG, "Sending..." + toString(packet, len));
+            Log.d(TAG, "Sending..." + Binary.toString(packet, len));
         }
         ByteBuffer buffer = ByteBuffer.wrap(packet, 0, len);
         while (buffer.hasRemaining()) {
@@ -40,18 +40,8 @@ public class RelayTunnel implements Tunnel {
     public int receive(byte[] packet) throws IOException {
         int r = client.getChannel().read(ByteBuffer.wrap(packet));
         if (GnirehtetService.VERBOSE) {
-            Log.d(TAG, "Receiving..." + toString(packet, r));
+            Log.d(TAG, "Receiving..." + Binary.toString(packet, r));
         }
         return r;
-    }
-
-    public static String toString(byte[] data, int len) {
-        StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < len; ++i) {
-            if (i % 8 == 0)
-                builder.append('\n');
-            builder.append(String.format("%02X ", data[i] & 0xff));
-        }
-        return builder.toString();
     }
 }
