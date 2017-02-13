@@ -82,6 +82,10 @@ public class IPv4Packet {
         return raw.duplicate();
     }
 
+    public int getRawLength() {
+        return raw.limit();
+    }
+
     public ByteBuffer getPayload() {
         int headersLength = ipv4Header.getHeaderLength() + transportHeader.getHeaderLength();
         raw.position(headersLength);

@@ -24,8 +24,7 @@ public class TCPConnection extends AbstractConnection {
         LAST_ACK
     }
 
-    private static final int QUEUE_CAPACITY = 32;
-    private final NetBuffer clientToNetwork = new NetBuffer(QUEUE_CAPACITY);
+    private final StreamBuffer clientToNetwork = new StreamBuffer(4 * IPv4Packet.MAX_PACKET_LENGTH);
     private final NetBuffer networkToClient = new NetBuffer(1);
 
     private final SocketChannel channel;
@@ -94,7 +93,7 @@ public class TCPConnection extends AbstractConnection {
 
     private void processSend() {
         try {
-            if (!clientToNetwork.write(channel)) {
+            if (clientToNetwork.writeTo(channel) == -1) {
                 destroy();
                 return;
             }
@@ -260,7 +259,12 @@ public class TCPConnection extends AbstractConnection {
             return;
         }
 
-        clientToNetwork.offer(packet.getPayload());
+        if (clientToNetwork.remaining() < payloadLength) {
+            Log.d(TAG, "Not enough space, drop packet");
+            return;
+        }
+
+        clientToNetwork.readFrom(packet.getPayload());
 
         // send ACK to client
         Log.d(TAG, route.getKey() + " Received a payload from the client (" + payloadLength + "), sending ACK");

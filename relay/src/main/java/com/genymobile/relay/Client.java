@@ -15,7 +15,7 @@ public class Client {
     private final RemoveHandler<Client> removeHandler;
 
     private final IPv4PacketInflater clientToNetwork = new IPv4PacketInflater();
-    private final NetBuffer networkToClient = new NetBuffer(16);
+    private final StreamBuffer networkToClient = new StreamBuffer(16 * IPv4Packet.MAX_PACKET_LENGTH);
     private final Router router;
 
     public Client(Selector selector, SocketChannel clientChannel, RemoveHandler<Client> removeHandler) throws ClosedChannelException {
@@ -65,7 +65,7 @@ public class Client {
 
     private boolean write() {
         try {
-            return networkToClient.write(clientChannel);
+            return networkToClient.writeTo(clientChannel) != -1;
         } catch (IOException e) {
             Log.e(TAG, "Cannot write", e);
             return false;
@@ -99,9 +99,14 @@ public class Client {
     }
 
     public boolean sendToClient(IPv4Packet packet) {
-        boolean result = networkToClient.offer(packet.getRaw());
+        if (networkToClient.remaining() < packet.getRawLength()) {
+            // FIXME some parts of the app assume that a packet to the client is never lost
+            Log.d(TAG, "************ COMMUNICATION BROKEN **********");
+            return false;
+        }
+        networkToClient.readFrom(packet.getRaw());
         updateInterests();
-        return result;
+        return true;
     }
 
     public void cleanExpiredConnections() {
