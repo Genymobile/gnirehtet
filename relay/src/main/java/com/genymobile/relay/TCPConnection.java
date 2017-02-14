@@ -25,7 +25,7 @@ public class TCPConnection extends AbstractConnection {
     }
 
     private final StreamBuffer clientToNetwork = new StreamBuffer(4 * IPv4Packet.MAX_PACKET_LENGTH);
-    private final NetBuffer networkToClient = new NetBuffer(1);
+    private final ByteBuffer networkToClient = ByteBuffer.allocate(IPv4Packet.MAX_PACKET_LENGTH);
 
     private final SocketChannel channel;
     private final SelectionKey selectionKey;
@@ -79,10 +79,12 @@ public class TCPConnection extends AbstractConnection {
 
     private void processReceive() {
         try {
-            if (!networkToClient.read(channel)) {
+            networkToClient.clear();
+            if (channel.read(networkToClient) == -1) {
                 eof();
                 return;
             }
+            networkToClient.flip();
             pushToClient();
         } catch (IOException e) {
             Log.e(TAG, "Cannot read", e);
@@ -114,14 +116,22 @@ public class TCPConnection extends AbstractConnection {
     }
 
     private void pushToClient() {
-        ByteBuffer buffer;
-        while ((buffer = networkToClient.poll()) != null) {
+        ByteBuffer buffer = ByteBuffer.allocate(1300);
+        int remaining = networkToClient.remaining();
+        while (remaining > 0) {
+            buffer.rewind();
+            buffer.limit(Math.min(1300, remaining));
+            networkToClient.get(buffer.array(), 0, buffer.limit());
+
+            // TODO avoid copies
             IPv4Packet packet = IPv4Packet.merge(responseIPv4Header, responseTCPHeader, buffer);
             updateHeaders(packet);
             packet.recompute();
             Log.d(TAG, route.getKey() + " PACKET SEND TO CLIENT " + packet.getPayloadLength() + Binary.toString(packet.getRaw()));
             sendToClient(packet);
             sequenceNumber += packet.getPayloadLength();
+
+            remaining = networkToClient.remaining();
         }
     }
 
@@ -238,7 +248,6 @@ public class TCPConnection extends AbstractConnection {
     }
 
     private void handleAck(IPv4Packet packet) {
-        TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
         Log.d(TAG, route.getKey() + " handleAck");
         if (state == State.SYN_RECEIVED) {
             Log.d(TAG, route.getKey() + " ESTABLISHED");
