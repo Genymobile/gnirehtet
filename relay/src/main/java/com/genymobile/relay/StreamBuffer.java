@@ -41,14 +41,14 @@ public class StreamBuffer {
 
     public int writeTo(WritableByteChannel channel) throws IOException {
         if (head > tail) {
-            wrapper.position(tail).limit(head);
+            wrapper.limit(head).position(tail);
             int w = channel.write(wrapper);
             tail = wrapper.position();
             return w;
         }
 
         if (head < tail) {
-            wrapper.position(tail).limit(data.length);
+            wrapper.limit(data.length).position(tail);
             int w = channel.write(wrapper);
             tail = wrapper.position() % data.length;
             return w;

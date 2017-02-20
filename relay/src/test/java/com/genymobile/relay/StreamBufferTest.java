@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
-import java.util.Arrays;
 
 public class StreamBufferTest {
 
@@ -29,8 +28,7 @@ public class StreamBufferTest {
         streamBuffer.writeTo(channel);
 
         byte[] result = bos.toByteArray();
-        System.err.println(Arrays.toString(result));
-        Assert.assertArrayEquals(result, buffer.array());
+        Assert.assertArrayEquals(buffer.array(), result);
     }
 
     @Test
@@ -50,11 +48,12 @@ public class StreamBufferTest {
         streamBuffer.writeTo(channel);
 
         // StreamBuffer is expected to break writes at circular buffer boundaries (capacity + 1)
-        // This is not a requirement, but it tests that the implementation works as expected
+        // This is not a requirement, but this verifies that the implementation works as expected
         byte[] result = bos.toByteArray();
         byte[] expected = {0, 1, 2, 3};
         Assert.assertArrayEquals(expected, result);
 
+        // write the remaining
         streamBuffer.writeTo(channel);
         result = bos.toByteArray();
         Assert.assertArrayEquals(buffer.array(), result);
