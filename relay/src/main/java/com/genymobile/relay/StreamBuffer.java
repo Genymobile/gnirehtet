@@ -21,7 +21,7 @@ public class StreamBuffer {
     }
 
     public boolean isFull() {
-        return head + 1 == tail;
+        return (head + 1) % data.length == tail;
     }
 
     public int size() {
