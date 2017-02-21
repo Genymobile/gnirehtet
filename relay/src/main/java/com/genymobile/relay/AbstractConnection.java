@@ -20,7 +20,7 @@ public abstract class AbstractConnection implements Connection {
         disconnect();
     }
 
-    protected void sendToClient(IPv4Packet packet) {
-        route.sendToClient(packet);
+    protected boolean sendToClient(IPv4Packet packet) {
+        return route.sendToClient(packet);
     }
 }

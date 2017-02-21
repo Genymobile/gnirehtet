@@ -54,7 +54,7 @@ public class DatagramBuffer {
         return circularBufferLength - 1;
     }
 
-    public int writeTo(WritableByteChannel channel) throws IOException {
+    public boolean writeTo(WritableByteChannel channel) throws IOException {
         int length = readLength();
         wrapper.limit(tail + length).position(tail);
         tail += length;
@@ -64,8 +64,9 @@ public class DatagramBuffer {
         int w = channel.write(wrapper);
         if (w != length) {
             Log.e(TAG, "Cannot write the whole datagram to the channel (only " + w + "/" + length + ")");
+            return false;
         }
-        return w;
+        return true;
     }
 
     public boolean readFrom(ByteBuffer buffer) {

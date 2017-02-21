@@ -127,8 +127,10 @@ public class TCPConnection extends AbstractConnection {
             IPv4Packet packet = IPv4Packet.merge(responseIPv4Header, responseTCPHeader, buffer);
             updateHeaders(packet);
             packet.recompute();
-            Log.d(TAG, route.getKey() + " PACKET SEND TO CLIENT " + packet.getPayloadLength() + Binary.toString(packet.getRaw()));
-            sendToClient(packet);
+            if (sendToClient(packet)) {
+                Log.d(TAG, route.getKey() + " PACKET SEND TO CLIENT " + packet.getPayloadLength() + Binary.toString(packet.getRaw()));
+                // TODO
+            }
             sequenceNumber += packet.getPayloadLength();
 
             remaining = networkToClient.remaining();

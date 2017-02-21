@@ -53,10 +53,8 @@ public class Route {
         connection.sendToNetwork(packet);
     }
 
-    public void sendToClient(IPv4Packet packet) {
-        if (!client.sendToClient(packet)) {
-            Log.d(TAG, "Cannot queue packet to client, drop it");
-        }
+    public boolean sendToClient(IPv4Packet packet) {
+        return client.sendToClient(packet);
     }
 
     public static class Key {
