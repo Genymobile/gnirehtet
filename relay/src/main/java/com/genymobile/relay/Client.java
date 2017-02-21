@@ -14,7 +14,7 @@ public class Client {
     private final SelectionKey selectionKey;
     private final RemoveHandler<Client> removeHandler;
 
-    private final IPv4PacketInflater clientToNetwork = new IPv4PacketInflater();
+    private final IPv4PacketBuffer clientToNetwork = new IPv4PacketBuffer();
     private final StreamBuffer networkToClient = new StreamBuffer(16 * IPv4Packet.MAX_PACKET_LENGTH);
     private final Router router;
 
@@ -74,8 +74,9 @@ public class Client {
 
     private void pushToNetwork() {
         IPv4Packet packet;
-        while ((packet = clientToNetwork.inflateNext()) != null) {
+        while ((packet = clientToNetwork.asIPv4Packet()) != null) {
             router.sendToNetwork(packet);
+            clientToNetwork.next();
         }
     }
 

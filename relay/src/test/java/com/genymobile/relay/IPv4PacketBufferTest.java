@@ -3,10 +3,13 @@ package com.genymobile.relay;
 import org.junit.Assert;
 import org.junit.Test;
 
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.Channels;
+import java.nio.channels.ReadableByteChannel;
 
-public class IPv4PacketInflaterTest {
-
+public class IPv4PacketBufferTest {
     private ByteBuffer createMockPacket() {
         ByteBuffer buffer = ByteBuffer.allocate(32);
         writeMockPacketTo(buffer);
@@ -33,63 +36,42 @@ public class IPv4PacketInflaterTest {
         buffer.putInt(0x11223344); // payload
     }
 
+    private static ReadableByteChannel contentToChannel(ByteBuffer buffer) {
+        ByteArrayInputStream bis = new ByteArrayInputStream(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.limit());
+        return Channels.newChannel(bis);
+    }
+
     @Test
-    public void testNetworkInflate() {
+    public void testParseIPv4PacketBuffer() throws IOException {
         ByteBuffer buffer = createMockPacket();
 
-        IPv4PacketInflater inflater = new IPv4PacketInflater();
-        inflater.readFrom(buffer);
+        IPv4PacketBuffer packetBuffer = new IPv4PacketBuffer();
 
-        IPv4Packet packet = inflater.inflateNext();
+        packetBuffer.readFrom(contentToChannel(buffer));
+
+        IPv4Packet packet = packetBuffer.asIPv4Packet();
         Assert.assertNotNull(packet);
 
         checkPacketHeaders(packet);
     }
 
-//    @Test
-//    public void testPayloadInflate() {
-//        IPv4Packet packet = new IPv4Packet(createMockPacket());
-//        PayloadPacketSerializer serializer = new PayloadPacketSerializer(packet.getIpv4Header(), packet.getTransportHeader());
-//        IPv4PacketInflater inflater = new IPv4PacketInflater();
-//
-//        ByteBuffer buffer = ByteBuffer.allocate(32);
-//        buffer.putInt(0x55667788);
-//        buffer.flip();
-//        inflater.readFrom(buffer);
-//
-//        IPv4Packet inflated = inflater.inflateNext();
-//        Assert.assertNotNull(inflated);
-//
-//        checkPacketHeaders(inflated);
-//
-//        buffer.clear();
-//        buffer.putLong(0x1234567890123456L);
-//        buffer.flip();
-//        inflater.readFrom(buffer);
-//
-//        inflated = inflater.inflateNext();
-//        Assert.assertNotNull(inflated);
-//
-//        Assert.assertEquals(36, inflated.getIpv4Header().getTotalLength());
-//    }
-
     @Test
-    public void testFragmentedInflate() {
+    public void testParseFragmentedIPv4PacketBuffer() throws IOException {
         ByteBuffer buffer = createMockPacket();
 
-        IPv4PacketInflater inflater = new IPv4PacketInflater();
+        IPv4PacketBuffer packetBuffer = new IPv4PacketBuffer();
 
         // onReadable the first 14 bytes
         buffer.limit(14);
-        inflater.readFrom(buffer);
+        packetBuffer.readFrom(contentToChannel(buffer));
 
-        Assert.assertNull(inflater.inflateNext());
+        Assert.assertNull(packetBuffer.asIPv4Packet());
 
         // onReadable the remaining
-        buffer.limit(32);
-        inflater.readFrom(buffer);
+        buffer.limit(32).position(14);
+        packetBuffer.readFrom(contentToChannel(buffer));
 
-        IPv4Packet packet = inflater.inflateNext();
+        IPv4Packet packet = packetBuffer.asIPv4Packet();
         Assert.assertNotNull(packet);
 
         checkPacketHeaders(packet);
@@ -104,16 +86,17 @@ public class IPv4PacketInflaterTest {
     }
 
     @Test
-    public void testMultiPackets() {
+    public void testMultiPackets() throws IOException {
         ByteBuffer buffer = createMockPackets();
 
-        IPv4PacketInflater inflater = new IPv4PacketInflater();
-        inflater.readFrom(buffer);
+        IPv4PacketBuffer packetBuffer = new IPv4PacketBuffer();
+        packetBuffer.readFrom(contentToChannel(buffer));
 
         for (int i = 0; i < 3; ++i) {
-            IPv4Packet packet = inflater.inflateNext();
+            IPv4Packet packet = packetBuffer.asIPv4Packet();
             Assert.assertNotNull(packet);
             checkPacketHeaders(packet);
+            packetBuffer.next();
         }
     }
 
