@@ -41,16 +41,24 @@ public class DatagramBufferTest {
         WritableByteChannel channel = Channels.newChannel(bos);
 
         ByteBuffer datagram5 = createDatagram(5);
+        ByteBuffer datagram0 = createDatagram(0);
         ByteBuffer datagram3 = createDatagram(3);
         ByteBuffer datagram4 = createDatagram(4);
 
         datagramBuffer.readFrom(datagram5);
+        datagramBuffer.readFrom(datagram0);
         datagramBuffer.readFrom(datagram3);
         datagramBuffer.readFrom(datagram4);
 
         datagramBuffer.writeTo(channel);
         byte[] result = bos.toByteArray();
         Assert.assertArrayEquals(datagram5.array(), result);
+
+        bos.reset();
+
+        datagramBuffer.writeTo(channel);
+        result = bos.toByteArray();
+        Assert.assertArrayEquals(datagram0.array(), result);
 
         bos.reset();
 
