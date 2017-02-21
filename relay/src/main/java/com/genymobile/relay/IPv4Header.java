@@ -105,9 +105,16 @@ public class IPv4Header {
         setDestination(tmp);
     }
 
-    public void writeTo(ByteBuffer buffer) {
-        raw.position(0).limit(getHeaderLength());
-        buffer.put(raw);
+    public ByteBuffer getRaw() {
+        raw.rewind();
+        return raw.slice();
+    }
+
+    public IPv4Header copyTo(ByteBuffer target) {
+        raw.rewind();
+        ByteBuffer slice = Binary.slice(target, target.position(), getHeaderLength());
+        target.put(raw);
+        return new IPv4Header(slice);
     }
 
     public IPv4Header copy() {

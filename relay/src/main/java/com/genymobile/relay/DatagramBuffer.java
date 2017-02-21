@@ -18,7 +18,7 @@ import java.nio.channels.WritableByteChannel;
  */
 public class DatagramBuffer {
 
-    public static final String TAG = DatagramBuffer.class.getName();
+    private static final String TAG = DatagramBuffer.class.getName();
 
     // every datagram is stored along with a header storing its length, on 16 bits
     private static final int HEADER_LENGTH = 2;

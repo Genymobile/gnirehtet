@@ -168,4 +168,20 @@ public class TCPHeaderTest {
 
         Assert.assertEquals(checksum, tcpHeader.getChecksum());
     }
+
+    @Test
+    public void testCopyTo() {
+        ByteBuffer buffer = createMockTCPHeader();
+        TCPHeader header = new TCPHeader(buffer);
+
+        ByteBuffer target = ByteBuffer.allocate(40);
+        target.position(12);
+        TCPHeader copy = header.copyTo(target);
+        copy.setSourcePort(9999);
+
+        Assert.assertEquals(32, target.position());
+        Assert.assertEquals("Header must modify target", 9999, target.getShort(12));
+        Assert.assertEquals("Header must not modify buffer", 0x1234, buffer.getShort(0));
+
+    }
 }

@@ -104,6 +104,7 @@ public class TCPHeader implements TransportHeader {
         short dataOffsetAndFlags = raw.getShort(12);
         dataOffsetAndFlags = (short) (dataOffsetAndFlags & 0x0fff | (dataOffset << 12));
         raw.putShort(12, dataOffsetAndFlags);
+        headerLength = dataOffset << 2;
     }
 
     public boolean isFin() {
@@ -131,9 +132,17 @@ public class TCPHeader implements TransportHeader {
     }
 
     @Override
-    public void writeTo(ByteBuffer buffer) {
-        raw.position(0).limit(getHeaderLength());
-        buffer.put(raw);
+    public ByteBuffer getRaw() {
+        raw.rewind();
+        return raw.slice();
+    }
+
+    @Override
+    public TCPHeader copyTo(ByteBuffer target) {
+        raw.rewind();
+        ByteBuffer slice = Binary.slice(target, target.position(), getHeaderLength());
+        target.put(raw);
+        return new TCPHeader(slice);
     }
 
     @Override

@@ -36,8 +36,8 @@ public class IPv4Packet {
         transportHeader.setPayloadLength(payloadLength);
 
         ByteBuffer buffer = ByteBuffer.allocate(totalLength);
-        ipv4Header.writeTo(buffer);
-        transportHeader.writeTo(buffer);
+        buffer.put(ipv4Header.getRaw());
+        buffer.put(transportHeader.getRaw());
         buffer.put(payload);
         buffer.flip();
 

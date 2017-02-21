@@ -58,4 +58,20 @@ public class UDPHeaderTest {
         Assert.assertEquals(2222, sourcePort);
         Assert.assertEquals(1111, destinationPort);
     }
+
+    @Test
+    public void testCopyTo() {
+        ByteBuffer buffer = createMockHeaders();
+        UDPHeader header = new UDPHeader(buffer);
+
+        ByteBuffer target = ByteBuffer.allocate(32);
+        target.position(12);
+        UDPHeader copy = header.copyTo(target);
+        copy.setSourcePort(9999);
+
+        Assert.assertEquals(20, target.position());
+        Assert.assertEquals("Header must modify target", 9999, target.getShort(12));
+        Assert.assertEquals("Header must not modify buffer", 1234, buffer.getShort(0));
+
+    }
 }

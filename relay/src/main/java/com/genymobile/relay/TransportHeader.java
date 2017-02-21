@@ -16,7 +16,9 @@ public interface TransportHeader {
 
     void setPayloadLength(int payloadLength);
 
-    void writeTo(ByteBuffer buffer);
+    ByteBuffer getRaw();
+
+    TransportHeader copyTo(ByteBuffer buffer);
 
     TransportHeader copy();
 

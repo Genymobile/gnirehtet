@@ -16,8 +16,7 @@ public class UDPConnection extends AbstractConnection {
     private final ByteBuffer networkToClient = ByteBuffer.allocate(IPv4Packet.MAX_PACKET_LENGTH);
     private boolean pendingDatagramForClient;
 
-    private final IPv4Header responseIPv4Header;
-    private final UDPHeader responseUDPHeader;
+    private final Packetizer packetizer;
 
     private final DatagramChannel channel;
     private final SelectionKey selectionKey;
@@ -27,11 +26,9 @@ public class UDPConnection extends AbstractConnection {
     public UDPConnection(Route route, Selector selector, IPv4Header ipv4Header, UDPHeader udpHeader) throws IOException {
         super(route);
 
-        responseIPv4Header = ipv4Header.copy();
-        responseIPv4Header.switchSourceAndDestination();
-
-        responseUDPHeader = udpHeader.copy();
-        responseUDPHeader.switchSourceAndDestination();
+        packetizer = new Packetizer(ipv4Header, udpHeader);
+        packetizer.getResponseIPv4Header().switchSourceAndDestination();
+        packetizer.getResponseTransportHeader().switchSourceAndDestination();
 
         touch();
 
@@ -134,8 +131,7 @@ public class UDPConnection extends AbstractConnection {
 
     private void pushToClient() {
         assert pendingDatagramForClient;
-        IPv4Packet packet = IPv4Packet.merge(responseIPv4Header, responseUDPHeader, networkToClient);
-        packet.recompute();
+        IPv4Packet packet = packetizer.packetize(networkToClient);
         if (sendToClient(packet)) {
             Log.d(TAG, "PACKET SEND TO CLIENT");
             pendingDatagramForClient = false;

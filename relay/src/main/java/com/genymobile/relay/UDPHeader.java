@@ -51,9 +51,17 @@ public class UDPHeader implements TransportHeader {
     }
 
     @Override
-    public void writeTo(ByteBuffer buffer) {
-        raw.position(0).limit(getHeaderLength());
-        buffer.put(raw);
+    public ByteBuffer getRaw() {
+        raw.rewind();
+        return raw.slice();
+    }
+
+    @Override
+    public UDPHeader copyTo(ByteBuffer target) {
+        raw.rewind();
+        ByteBuffer slice = Binary.slice(target, target.position(), getHeaderLength());
+        target.put(raw);
+        return new UDPHeader(slice);
     }
 
     @Override

@@ -39,4 +39,19 @@ public class Binary {
         result.flip();
         return result;
     }
+
+    public static ByteBuffer slice(ByteBuffer buffer, int offset, int length) {
+        // save
+        int position = buffer.position();
+        int limit = buffer.limit();
+
+        // slice
+        buffer.limit(offset + length).position(offset);
+        ByteBuffer result = buffer.slice();
+
+        // restore
+        buffer.limit(limit).position(position);
+
+        return result;
+    }
 }
