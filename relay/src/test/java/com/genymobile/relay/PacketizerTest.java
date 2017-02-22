@@ -45,8 +45,43 @@ public class PacketizerTest {
         Assert.assertEquals(36, packet.getIpv4Header().getTotalLength());
 
         ByteBuffer packetPayload = packet.getPayload();
-        packetPayload.rewind();
         Assert.assertEquals(8, packetPayload.remaining());
         Assert.assertEquals(0x1122334455667788L, packetPayload.getLong());
+    }
+
+    @Test
+    public void testPacketizeChunks() {
+        IPv4Packet originalPacket = new IPv4Packet(createMockPacket());
+        IPv4Header ipv4Header = originalPacket.getIpv4Header();
+        TransportHeader transportHeader = originalPacket.getTransportHeader();
+
+        ByteBuffer payload = ByteBuffer.allocate(8);
+        payload.putLong(0x1122334455667788L);
+        payload.flip();
+
+        Packetizer packetizer = new Packetizer(ipv4Header, transportHeader);
+
+        IPv4Packet packet = packetizer.packetize(payload, 2);
+        ByteBuffer packetPayload = packet.getPayload();
+
+        Assert.assertEquals(30, packet.getIpv4Header().getTotalLength());
+        Assert.assertEquals(2, packetPayload.remaining());
+        Assert.assertEquals(0x1122, Short.toUnsignedInt(packetPayload.getShort()));
+
+        packet = packetizer.packetize(payload, 3);
+        packetPayload = packet.getPayload();
+        Assert.assertEquals(31, packet.getIpv4Header().getTotalLength());
+        Assert.assertEquals(3, packetPayload.remaining());
+        Assert.assertEquals(0x33, packetPayload.get());
+        Assert.assertEquals(0x44, packetPayload.get());
+        Assert.assertEquals(0x55, packetPayload.get());
+
+        packet = packetizer.packetize(payload, 1024);
+        packetPayload = packet.getPayload();
+        Assert.assertEquals(31, packet.getIpv4Header().getTotalLength());
+        Assert.assertEquals(3, packetPayload.remaining());
+        Assert.assertEquals(0x66, packetPayload.get());
+        Assert.assertEquals(0x77, packetPayload.get());
+        Assert.assertEquals((byte) 0x88, packetPayload.get());
     }
 }

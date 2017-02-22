@@ -13,6 +13,8 @@ public class TCPConnection extends AbstractConnection {
 
     private static final String TAG = TCPConnection.class.getName();
 
+    private static final int MAX_PAYLOAD_SIZE = 1400;
+
     private static final ByteBuffer ZERO_LENGTH_BUFFER = ByteBuffer.allocate(0);
     private static final Random RANDOM = new Random();
 
@@ -115,24 +117,18 @@ public class TCPConnection extends AbstractConnection {
     }
 
     private void pushToClient() {
-        ByteBuffer buffer = ByteBuffer.allocate(1300);
-        int remaining = networkToClient.remaining();
-        while (remaining > 0) {
-            buffer.rewind();
-            buffer.limit(Math.min(1300, remaining));
-            networkToClient.get(buffer.array(), 0, buffer.limit());
-
-            // TODO avoid copies
+        while (networkToClient.hasRemaining()) {
             TCPHeader tcpHeader = (TCPHeader) packetizer.getResponseTransportHeader();
             updateHeaders(tcpHeader, TCPHeader.FLAG_ACK | TCPHeader.FLAG_PSH);
-            IPv4Packet packet = packetizer.packetize(buffer);
+            IPv4Packet packet = packetizer.packetize(networkToClient, MAX_PAYLOAD_SIZE);
             if (sendToClient(packet)) {
                 Log.d(TAG, route.getKey() + " PACKET SEND TO CLIENT " + packet.getPayloadLength() + Binary.toString(packet.getRaw()));
                 // TODO
+            } else {
+                Log.d(TAG, route.getKey() + " PACKET NOT SENT !!!");
+                // TODO
             }
             sequenceNumber += packet.getPayloadLength();
-
-            remaining = networkToClient.remaining();
         }
     }
 

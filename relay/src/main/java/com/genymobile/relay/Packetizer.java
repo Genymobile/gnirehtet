@@ -41,4 +41,13 @@ public class Packetizer {
         packet.recompute();
         return packet;
     }
+
+    public IPv4Packet packetize(ByteBuffer payload, int maxChunkSize) {
+        int nextPayloadLength = Math.min(maxChunkSize, payload.remaining());
+        int savedLimit = payload.limit();
+        payload.limit(payload.position() + nextPayloadLength);
+        IPv4Packet packet = packetize(payload);
+        payload.limit(savedLimit);
+        return packet;
+    }
 }
