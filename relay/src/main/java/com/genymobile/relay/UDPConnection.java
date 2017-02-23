@@ -12,7 +12,8 @@ public class UDPConnection extends AbstractConnection {
     private static final String TAG = UDPConnection.class.getName();
 
     private final DatagramBuffer clientToNetwork = new DatagramBuffer(4 * IPv4Packet.MAX_PACKET_LENGTH);
-    private final UDPPacketBuilder networkToClient;
+    private final Packetizer networkToClient;
+    private IPv4Packet packetForClient;
 
     private final DatagramChannel channel;
     private final SelectionKey selectionKey;
@@ -22,7 +23,9 @@ public class UDPConnection extends AbstractConnection {
     public UDPConnection(Route route, Selector selector, IPv4Header ipv4Header, UDPHeader udpHeader) throws IOException {
         super(route);
 
-        networkToClient = new UDPPacketBuilder(ipv4Header, udpHeader);
+        networkToClient = new Packetizer(ipv4Header, udpHeader);
+        networkToClient.getResponseIPv4Header().switchSourceAndDestination();
+        networkToClient.getResponseTransportHeader().switchSourceAndDestination();
 
         touch();
 
@@ -103,7 +106,9 @@ public class UDPConnection extends AbstractConnection {
 
     private boolean read() {
         try {
-            return networkToClient.readFrom(channel);
+            assert packetForClient == null : "The IPv4Packet shares the networkToClient buffer, it must not be corrupted";
+            packetForClient = networkToClient.packetize(channel);
+            return packetForClient != null;
         } catch (IOException e) {
             Log.e(TAG, "Cannot read", e);
             return false;
@@ -120,16 +125,16 @@ public class UDPConnection extends AbstractConnection {
     }
 
     private void pushToClient() {
-        IPv4Packet packet = networkToClient.getPacket();
-        if (sendToClient(packet)) {
+        assert packetForClient != null;
+        if (sendToClient(packetForClient)) {
             Log.d(TAG, "PACKET SEND TO CLIENT");
-            networkToClient.clear();
+            packetForClient = null;
         }
     }
 
     protected void updateInterests() {
         int interestingOps = 0;
-        if (!networkToClient.hasPending()) {
+        if (packetForClient == null) {
             interestingOps |= SelectionKey.OP_READ;
         } else {
             Log.d(TAG, "DISABLE READ");
