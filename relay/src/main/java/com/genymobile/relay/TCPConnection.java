@@ -111,7 +111,7 @@ public class TCPConnection extends AbstractConnection {
         remoteClosed = true;
         if (state == State.CLOSE_WAIT) {
             IPv4Packet packet = createEmptyResponsePacket(TCPHeader.FLAG_FIN);
-            ++sequenceNumber; // FIN count as 1 byte
+            ++sequenceNumber; // FIN counts for 1 byte
             sendToClient(packet);
         }
     }
@@ -224,11 +224,11 @@ public class TCPConnection extends AbstractConnection {
 
     private void handleFin(IPv4Packet packet) {
         TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
-        acknowledgementNumber = tcpHeader.getSequenceNumber() + 1;
+        acknowledgementNumber = tcpHeader.getSequenceNumber() + 2; // FIN counts for 1 byte
         if (remoteClosed) {
             state = State.LAST_ACK;
             IPv4Packet response = createEmptyResponsePacket(TCPHeader.FLAG_FIN | TCPHeader.FLAG_ACK);
-            ++sequenceNumber; // FIN count as 1 byte
+            ++sequenceNumber; // FIN counts for 1 byte
             sendToClient(response);
         } else {
             state = State.CLOSE_WAIT;
@@ -264,10 +264,10 @@ public class TCPConnection extends AbstractConnection {
         }
 
         clientToNetwork.readFrom(packet.getPayload());
+        acknowledgementNumber += payloadLength;
 
         // send ACK to client
-        Log.d(TAG, route.getKey() + " Received a payload from the client (" + payloadLength + "), sending ACK");
-        acknowledgementNumber += payloadLength;
+        Log.d(TAG, route.getKey() + " Received a payload from the client (" + payloadLength + "), sending ACK " + acknowledgementNumber + " (seq=" + sequenceNumber+ ")");
         IPv4Packet responsePacket = createEmptyResponsePacket(TCPHeader.FLAG_ACK);
         sendToClient(responsePacket);
     }
@@ -281,7 +281,7 @@ public class TCPConnection extends AbstractConnection {
         Log.d(TAG, route.getKey() + " SYN_RECEIVED acking " + acknowledgementNumber);
         state = State.SYN_RECEIVED;
         IPv4Packet packet = createEmptyResponsePacket(TCPHeader.FLAG_SYN | TCPHeader.FLAG_ACK);
-        ++sequenceNumber; // SYN count as 1 byte
+        ++sequenceNumber; // SYN counts for 1 byte
         sendToClient(packet);
     }
 
