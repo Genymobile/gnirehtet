@@ -6,6 +6,7 @@ import org.junit.Test;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ByteChannel;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
@@ -31,6 +32,37 @@ public class StreamBufferTest {
         Assert.assertArrayEquals(buffer.array(), result);
     }
 
+    static class DevNullChannel implements ByteChannel {
+
+        private int writeChunkSize;
+
+        DevNullChannel(int writeChunkSize) {
+            this.writeChunkSize = writeChunkSize;
+        }
+
+        @Override
+        public int read(ByteBuffer byteBuffer) {
+            return 0;
+        }
+
+        @Override
+        public int write(ByteBuffer byteBuffer) {
+            int consume = Math.min(writeChunkSize, byteBuffer.remaining());
+            byteBuffer.position(byteBuffer.position() + consume);
+            return consume;
+        }
+
+        @Override
+        public boolean isOpen() {
+            return false;
+        }
+
+        @Override
+        public void close() {
+            // do nothing
+        }
+    }
+
     @Test
     public void testCircular() throws IOException {
         ByteBuffer buffer = createChunk();
@@ -39,12 +71,19 @@ public class StreamBufferTest {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         WritableByteChannel channel = Channels.newChannel(bos);
 
-        // write and consume 6 bytes
+        // put 6 bytes
         streamBuffer.readFrom(buffer);
-        streamBuffer.writeTo(Channels.newChannel(new ByteArrayOutputStream())); // forget
-        buffer.rewind();
+        // consume 3 bytes
+        streamBuffer.writeTo(new DevNullChannel(3));
 
+        // put test data
+        buffer.rewind();
         streamBuffer.readFrom(buffer);
+
+        // consume 3 bytes (so that the first 6 bytes are totally consumed, and the "tail" position is 6)
+        streamBuffer.writeTo(new DevNullChannel(3));
+
+        // consume test data
         streamBuffer.writeTo(channel);
 
         // StreamBuffer is expected to break writes at circular buffer boundaries (capacity + 1)
