@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 
 public class TCPHeaderTest {
 
-    private ByteBuffer createMockPacket() {
+    private static ByteBuffer createMockPacket() {
         ByteBuffer buffer = ByteBuffer.allocate(64);
 
         buffer.put((byte) ((4 << 4) | 5)); // versionAndIHL
@@ -34,7 +34,7 @@ public class TCPHeaderTest {
         return buffer;
     }
 
-    private ByteBuffer createMockOddPacket() {
+    private static ByteBuffer createMockOddPacket() {
         ByteBuffer buffer = ByteBuffer.allocate(64);
 
         buffer.put((byte) ((4 << 4) | 5)); // versionAndIHL
@@ -63,7 +63,7 @@ public class TCPHeaderTest {
         return buffer;
     }
 
-    private ByteBuffer createMockTCPHeader() {
+    private static ByteBuffer createMockTCPHeader() {
         ByteBuffer buffer = ByteBuffer.allocate(20);
 
         buffer.putShort((short) 0x1234); // source port

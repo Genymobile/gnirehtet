@@ -12,7 +12,7 @@ import java.nio.channels.WritableByteChannel;
 
 public class StreamBufferTest {
 
-    private ByteBuffer createChunk() {
+    private static ByteBuffer createChunk() {
         byte[] data = {0, 1, 2, 3, 4, 5};
         return ByteBuffer.wrap(data);
     }

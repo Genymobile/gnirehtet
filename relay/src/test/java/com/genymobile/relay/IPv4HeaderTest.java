@@ -44,7 +44,7 @@ public class IPv4HeaderTest {
         Assert.assertEquals("Wrong IP length field value", 0x123, firstPacketLength);
     }
 
-    private ByteBuffer createMockHeaders() {
+    private static ByteBuffer createMockHeaders() {
         ByteBuffer buffer = ByteBuffer.allocate(28);
 
         buffer.put((byte) ((4 << 4) | 5)); // versionAndIHL

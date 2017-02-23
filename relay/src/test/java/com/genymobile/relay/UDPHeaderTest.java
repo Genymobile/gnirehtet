@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 
 public class UDPHeaderTest {
 
-    private ByteBuffer createMockHeaders() {
+    private static ByteBuffer createMockHeaders() {
         ByteBuffer buffer = ByteBuffer.allocate(8);
 
         buffer.putShort((short) 1234); // source port
@@ -72,6 +72,5 @@ public class UDPHeaderTest {
         Assert.assertEquals(20, target.position());
         Assert.assertEquals("Header must modify target", 9999, target.getShort(12));
         Assert.assertEquals("Header must not modify buffer", 1234, buffer.getShort(0));
-
     }
 }

@@ -10,14 +10,15 @@ import java.nio.channels.Channels;
 import java.nio.channels.ReadableByteChannel;
 
 public class IPv4PacketBufferTest {
-    private ByteBuffer createMockPacket() {
+
+    private static ByteBuffer createMockPacket() {
         ByteBuffer buffer = ByteBuffer.allocate(32);
         writeMockPacketTo(buffer);
         buffer.flip();
         return buffer;
     }
 
-    private void writeMockPacketTo(ByteBuffer buffer) {
+    private static void writeMockPacketTo(ByteBuffer buffer) {
         buffer.put((byte) ((4 << 4) | 5)); // versionAndIHL
         buffer.put((byte) 0); // ToS
         buffer.putShort((short) 32); // total length 20 + 8 + 4
@@ -77,7 +78,7 @@ public class IPv4PacketBufferTest {
         checkPacketHeaders(packet);
     }
 
-    private ByteBuffer createMockPackets() {
+    private static ByteBuffer createMockPackets() {
         ByteBuffer buffer = ByteBuffer.allocate(32 * 3);
         for (int i = 0; i < 3; ++i)
             writeMockPacketTo(buffer);
@@ -100,7 +101,7 @@ public class IPv4PacketBufferTest {
         }
     }
 
-    private void checkPacketHeaders(IPv4Packet packet) {
+    private static void checkPacketHeaders(IPv4Packet packet) {
         IPv4Header ipv4Header = packet.getIpv4Header();
         Assert.assertEquals(20, ipv4Header.getHeaderLength());
         Assert.assertEquals(32, ipv4Header.getTotalLength());

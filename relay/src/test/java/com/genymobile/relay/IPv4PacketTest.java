@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 
 public class IPv4PacketTest {
 
-    private ByteBuffer createMockPacket() {
+    private static ByteBuffer createMockPacket() {
         ByteBuffer buffer = ByteBuffer.allocate(32);
 
         buffer.put((byte) ((4 << 4) | 5)); // versionAndIHL

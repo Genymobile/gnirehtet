@@ -11,7 +11,7 @@ import java.nio.channels.WritableByteChannel;
 
 public class DatagramBufferTest {
 
-    private ByteBuffer createDatagram(int size) {
+    private static ByteBuffer createDatagram(int size) {
         byte[] data = new byte[size];
         for (int i = 0; i < size; ++i) {
             data[i] = (byte) i;
