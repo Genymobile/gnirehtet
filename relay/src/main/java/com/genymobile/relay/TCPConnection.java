@@ -224,9 +224,10 @@ public class TCPConnection extends AbstractConnection {
 
     private void handleFin(IPv4Packet packet) {
         TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
-        acknowledgementNumber = tcpHeader.getSequenceNumber() + 2; // FIN counts for 1 byte
+        acknowledgementNumber = tcpHeader.getSequenceNumber() + 1;
         if (remoteClosed) {
             state = State.LAST_ACK;
+            Log.d(TAG, route.getKey() + " Received a FIN from the client, sending ACK+FIN " + acknowledgementNumber + " (seq=" + sequenceNumber+ ")");
             IPv4Packet response = createEmptyResponsePacket(TCPHeader.FLAG_FIN | TCPHeader.FLAG_ACK);
             ++sequenceNumber; // FIN counts for 1 byte
             sendToClient(response);
