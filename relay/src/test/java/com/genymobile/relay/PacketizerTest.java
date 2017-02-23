@@ -32,9 +32,9 @@ public class PacketizerTest {
 
     @Test
     public void testMergeHeadersAndPayload() {
-        IPv4Packet originalPacket = new IPv4Packet(createMockPacket());
-        IPv4Header ipv4Header = originalPacket.getIpv4Header();
-        TransportHeader transportHeader = originalPacket.getTransportHeader();
+        IPv4Packet referencePacket = new IPv4Packet(createMockPacket());
+        IPv4Header ipv4Header = referencePacket.getIpv4Header();
+        TransportHeader transportHeader = referencePacket.getTransportHeader();
 
         ByteBuffer payload = ByteBuffer.allocate(8);
         payload.putLong(0x1122334455667788L);

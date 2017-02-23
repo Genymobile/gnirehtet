@@ -1,7 +1,6 @@
 package com.genymobile.relay;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -13,10 +12,7 @@ public class UDPConnection extends AbstractConnection {
     private static final String TAG = UDPConnection.class.getName();
 
     private final DatagramBuffer clientToNetwork = new DatagramBuffer(4 * IPv4Packet.MAX_PACKET_LENGTH);
-    private final ByteBuffer networkToClient = ByteBuffer.allocate(IPv4Packet.MAX_PACKET_LENGTH);
-    private boolean pendingDatagramForClient;
-
-    private final Packetizer packetizer;
+    private final UDPPacketBuilder networkToClient;
 
     private final DatagramChannel channel;
     private final SelectionKey selectionKey;
@@ -26,9 +22,7 @@ public class UDPConnection extends AbstractConnection {
     public UDPConnection(Route route, Selector selector, IPv4Header ipv4Header, UDPHeader udpHeader) throws IOException {
         super(route);
 
-        packetizer = new Packetizer(ipv4Header, udpHeader);
-        packetizer.getResponseIPv4Header().switchSourceAndDestination();
-        packetizer.getResponseTransportHeader().switchSourceAndDestination();
+        networkToClient = new UDPPacketBuilder(ipv4Header, udpHeader);
 
         touch();
 
@@ -93,7 +87,6 @@ public class UDPConnection extends AbstractConnection {
     }
 
     private void processReceive() {
-        assert !pendingDatagramForClient;
         if (!read()) {
             destroy();
             return;
@@ -110,10 +103,7 @@ public class UDPConnection extends AbstractConnection {
 
     private boolean read() {
         try {
-            boolean ok = channel.read(networkToClient) != -1;
-            networkToClient.flip();
-            pendingDatagramForClient = true;
-            return ok;
+            return networkToClient.readFrom(channel);
         } catch (IOException e) {
             Log.e(TAG, "Cannot read", e);
             return false;
@@ -130,18 +120,16 @@ public class UDPConnection extends AbstractConnection {
     }
 
     private void pushToClient() {
-        assert pendingDatagramForClient;
-        IPv4Packet packet = packetizer.packetize(networkToClient);
+        IPv4Packet packet = networkToClient.getPacket();
         if (sendToClient(packet)) {
             Log.d(TAG, "PACKET SEND TO CLIENT");
-            pendingDatagramForClient = false;
             networkToClient.clear();
         }
     }
 
     protected void updateInterests() {
         int interestingOps = 0;
-        if (!pendingDatagramForClient) {
+        if (!networkToClient.hasPending()) {
             interestingOps |= SelectionKey.OP_READ;
         } else {
             Log.d(TAG, "DISABLE READ");
