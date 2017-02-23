@@ -27,12 +27,11 @@ public class TCPConnection extends AbstractConnection {
     }
 
     private final StreamBuffer clientToNetwork = new StreamBuffer(4 * IPv4Packet.MAX_PACKET_LENGTH);
-    private final ByteBuffer networkToClient = ByteBuffer.allocate(IPv4Packet.MAX_PACKET_LENGTH);
+    private final Packetizer networkToClient;
+    private IPv4Packet packetForClient;
 
     private final SocketChannel channel;
     private final SelectionKey selectionKey;
-
-    private final Packetizer packetizer;
 
     private State state;
     private int sequenceNumber;
@@ -46,9 +45,9 @@ public class TCPConnection extends AbstractConnection {
         TCPHeader shrinkedTcpHeader = tcpHeader.copy();
         shrinkedTcpHeader.shrinkOptions(); // no TCP options
 
-        packetizer = new Packetizer(ipv4Header, shrinkedTcpHeader);
-        packetizer.getResponseIPv4Header().switchSourceAndDestination();
-        packetizer.getResponseTransportHeader().switchSourceAndDestination();
+        networkToClient = new Packetizer(ipv4Header, shrinkedTcpHeader);
+        networkToClient.getResponseIPv4Header().switchSourceAndDestination();
+        networkToClient.getResponseTransportHeader().switchSourceAndDestination();
 
         SelectionHandler selectionHandler = (selectionKey) -> {
             if (selectionKey.isValid() && selectionKey.isConnectable()) {
@@ -80,12 +79,13 @@ public class TCPConnection extends AbstractConnection {
 
     private void processReceive() {
         try {
-            networkToClient.clear();
-            if (channel.read(networkToClient) == -1) {
+            assert packetForClient == null : "The IPv4Packet shares the networkToClient buffer, it must not be corrupted";
+            updateHeaders(TCPHeader.FLAG_ACK | TCPHeader.FLAG_PSH);
+            packetForClient = networkToClient.packetize(channel, MAX_PAYLOAD_SIZE);
+            if (packetForClient == null) {
                 eof();
                 return;
             }
-            networkToClient.flip();
             pushToClient();
         } catch (IOException e) {
             Log.e(TAG, "Cannot read", e);
@@ -117,18 +117,11 @@ public class TCPConnection extends AbstractConnection {
     }
 
     private void pushToClient() {
-        while (networkToClient.hasRemaining()) {
-            TCPHeader tcpHeader = (TCPHeader) packetizer.getResponseTransportHeader();
-            updateHeaders(tcpHeader, TCPHeader.FLAG_ACK | TCPHeader.FLAG_PSH);
-            IPv4Packet packet = packetizer.packetize(networkToClient, MAX_PAYLOAD_SIZE);
-            if (sendToClient(packet)) {
-                Log.d(TAG, route.getKey() + " PACKET SEND TO CLIENT " + packet.getPayloadLength() + Binary.toString(packet.getRaw()));
-                // TODO
-            } else {
-                Log.d(TAG, route.getKey() + " PACKET NOT SENT !!!");
-                // TODO
-            }
-            sequenceNumber += packet.getPayloadLength();
+        assert packetForClient != null;
+        if (sendToClient(packetForClient)) {
+            Log.d(TAG, route.getKey() + " PACKET SEND TO CLIENT " + packetForClient.getPayloadLength() + Binary.toString(packetForClient.getRaw()));
+            sequenceNumber += packetForClient.getPayloadLength();
+            packetForClient = null;
         }
     }
 
@@ -138,7 +131,8 @@ public class TCPConnection extends AbstractConnection {
         return false;
     }
 
-    private void updateHeaders(TCPHeader tcpHeader, int flags) {
+    private void updateHeaders(int flags) {
+        TCPHeader tcpHeader = (TCPHeader) networkToClient.getResponseTransportHeader();
         tcpHeader.setFlags(flags);
         tcpHeader.setSequenceNumber(sequenceNumber);
         tcpHeader.setAcknowledgementNumber(acknowledgementNumber);
@@ -308,9 +302,8 @@ public class TCPConnection extends AbstractConnection {
     }
 
     private IPv4Packet createEmptyResponsePacket(int flags) {
-        TCPHeader tcpHeader = (TCPHeader) packetizer.getResponseTransportHeader();
-        updateHeaders(tcpHeader, flags);
-        IPv4Packet packet = packetizer.packetize(ZERO_LENGTH_BUFFER);
+        updateHeaders(flags);
+        IPv4Packet packet = networkToClient.packetize(ZERO_LENGTH_BUFFER);
         Log.d(TAG, route.getKey() + " Forging empty response:" + Binary.toString(packet.getRaw()));
         return packet;
     }
