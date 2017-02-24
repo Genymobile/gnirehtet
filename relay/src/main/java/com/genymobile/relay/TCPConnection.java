@@ -119,7 +119,7 @@ public class TCPConnection extends AbstractConnection {
     private void pushToClient() {
         assert packetForClient != null;
         if (sendToClient(packetForClient)) {
-            Log.d(TAG, route.getKey() + " PACKET SEND TO CLIENT " + packetForClient.getPayloadLength() + Binary.toString(packetForClient.getRaw()));
+            Log.d(TAG, route.getKey() + " PACKET SEND TO CLIENT (seq=" + sequenceNumber + ") " + packetForClient.getPayloadLength() + Binary.toString(packetForClient.getRaw()));
             sequenceNumber += packetForClient.getPayloadLength();
             packetForClient = null;
         }
@@ -174,12 +174,14 @@ public class TCPConnection extends AbstractConnection {
         // expect packets in order
         if (packetSequenceNumber != acknowledgementNumber) {
             // ignore packet already received or out-of-order, retransmission is already managed by both sides
-            Log.d(TAG, route.getKey() + " Ignoring packet " + packetSequenceNumber + "; expecting " + acknowledgementNumber + "; isSyn()=" + tcpHeader.isSyn());
+            Log.d(TAG, route.getKey() + " Ignoring packet " + packetSequenceNumber + "; expecting " + acknowledgementNumber + "; flags=" + tcpHeader.getFlags());
             return;
         }
 
         Log.d(TAG, route.getKey() + " receiving expected paquet " + packetSequenceNumber + " (flags = " + tcpHeader.getFlags() + ")");
-//        acknowledgementNumber = packetSequenceNumber + packet.getPayloadLength();
+        if (tcpHeader.isAck()) {
+            Log.d(TAG, route.getKey() + " Client acked " + tcpHeader.getAcknowledgementNumber());
+        }
 
         if (tcpHeader.isSyn()) {
             // the client always initiates the connection
@@ -305,7 +307,10 @@ public class TCPConnection extends AbstractConnection {
     private IPv4Packet createEmptyResponsePacket(int flags) {
         updateHeaders(flags);
         IPv4Packet packet = networkToClient.packetize(ZERO_LENGTH_BUFFER);
-        Log.d(TAG, route.getKey() + " Forging empty response:" + Binary.toString(packet.getRaw()));
+        Log.d(TAG, route.getKey() + " Forging empty response (flags=" + flags + "):" + Binary.toString(packet.getRaw()));
+        if ((flags & TCPHeader.FLAG_ACK) != 0) {
+            Log.d(TAG, route.getKey() + " I'm acknowledging " + acknowledgementNumber + "(seq=" + sequenceNumber + ")");
+        }
         return packet;
     }
 
