@@ -116,6 +116,19 @@ public class TCPConnection extends AbstractConnection {
         }
     }
 
+    public void processPacketForClient() {
+        assert packetForClient != null;
+        updateAcknowledgementNumber(packetForClient);
+        pushToClient();
+        updateInterests();
+    }
+
+    private void updateAcknowledgementNumber(IPv4Packet packet) {
+        TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
+        tcpHeader.setAcknowledgementNumber(acknowledgementNumber);
+        packet.recompute();
+    }
+
     private void pushToClient() {
         assert packetForClient != null;
         if (sendToClient(packetForClient)) {
@@ -316,7 +329,7 @@ public class TCPConnection extends AbstractConnection {
 
     protected void updateInterests() {
         int interestingOps = 0;
-        if (!remoteClosed) {
+        if (!remoteClosed && packetForClient == null) {
             interestingOps |= SelectionKey.OP_READ;
         }
         if (hasPendingWrites()) {
