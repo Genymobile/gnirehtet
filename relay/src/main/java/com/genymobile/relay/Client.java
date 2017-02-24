@@ -8,7 +8,7 @@ import java.nio.channels.SocketChannel;
 
 public class Client {
 
-    private static final String TAG = Client.class.getName();
+    private static final String TAG = Client.class.getSimpleName();
 
     private final SocketChannel clientChannel;
     private final SelectionKey selectionKey;
@@ -102,7 +102,7 @@ public class Client {
     public boolean sendToClient(IPv4Packet packet) {
         if (networkToClient.remaining() < packet.getRawLength()) {
             // FIXME some parts of the app assume that a packet to the client is never lost
-            Log.d(TAG, "************ COMMUNICATION BROKEN **********");
+            Log.e(TAG, "************ COMMUNICATION BROKEN **********");
             return false;
         }
         networkToClient.readFrom(packet.getRaw());

@@ -11,7 +11,7 @@ import static java.nio.channels.SelectionKey.OP_READ;
 
 public class TCPConnection extends AbstractConnection {
 
-    private static final String TAG = TCPConnection.class.getName();
+    private static final String TAG = TCPConnection.class.getSimpleName();
 
     private static final int MAX_PAYLOAD_SIZE = 1400;
 
@@ -76,7 +76,7 @@ public class TCPConnection extends AbstractConnection {
         try {
             channel.close();
         } catch (IOException e) {
-            Log.e(TAG, "Cannot close connection channel", e);
+            Log.e(TAG, route.getKey() + " Cannot close connection channel", e);
         }
     }
 
@@ -94,7 +94,7 @@ public class TCPConnection extends AbstractConnection {
             }
             pushToClient();
         } catch (IOException e) {
-            Log.e(TAG, "Cannot read", e);
+            Log.e(TAG, route.getKey() + " Cannot read", e);
             resetConnection();
             destroy();
         }
@@ -107,7 +107,7 @@ public class TCPConnection extends AbstractConnection {
                 return;
             }
         } catch (IOException e) {
-            Log.e(TAG, "Cannot write", e);
+            Log.e(TAG, route.getKey() + " Cannot write", e);
             resetConnection();
             destroy();
         }
@@ -148,7 +148,10 @@ public class TCPConnection extends AbstractConnection {
     private void pushToClient() {
         assert packetForClient != null;
         if (sendToClient(packetForClient)) {
-            Log.d(TAG, route.getKey() + " PACKET SEND TO CLIENT (seq=" + sequenceNumber + ") " + packetForClient.getPayloadLength() + Binary.toString(packetForClient.getRaw()));
+            Log.d(TAG, route.getKey() + " Packet (" + packetForClient.getPayloadLength() + " bytes) sent to client " + numbers());
+            if (Log.isVerboseEnabled()) {
+                Log.v(TAG, Binary.toString(packetForClient.getRaw()));
+            }
             sequenceNumber += packetForClient.getPayloadLength();
             packetForClient = null;
         }
@@ -172,14 +175,14 @@ public class TCPConnection extends AbstractConnection {
         SocketChannel channel = SocketChannel.open();
         channel.configureBlocking(false);
         channel.connect(key.getDestination());
-        Log.d(TAG, "TCP dest = " + key.getDestination() + " (from " + key.getSourcePort() + ")");
+        Log.i(TAG, "Creating new connection: " + route.getKey());
         return channel;
     }
 
     @Override
     public void sendToNetwork(IPv4Packet packet) {
         handlePacket(packet);
-        Log.d(TAG, route.getKey() + " new ackNum = " + acknowledgementNumber);
+        Log.d(TAG, route.getKey() + " current ack=" + acknowledgementNumber);
         if (selectionKey.isValid()) {
             updateInterests();
         }
@@ -203,13 +206,13 @@ public class TCPConnection extends AbstractConnection {
         // expect packets in order
         if (packetSequenceNumber != acknowledgementNumber) {
             // ignore packet already received or out-of-order, retransmission is already managed by both sides
-            Log.d(TAG, route.getKey() + " Ignoring packet " + packetSequenceNumber + "; expecting " + acknowledgementNumber + "; flags=" + tcpHeader.getFlags());
+            Log.e(TAG, route.getKey() + " ***** Ignoring packet " + packetSequenceNumber + "; expecting " + acknowledgementNumber + "; flags=" + tcpHeader.getFlags());
             return;
         }
         clientWindow = tcpHeader.getWindow();
         theirAcknowledgementNumber = tcpHeader.getAcknowledgementNumber();
 
-        Log.d(TAG, route.getKey() + " receiving expected paquet " + packetSequenceNumber + " (flags = " + tcpHeader.getFlags() + ")");
+        Log.d(TAG, route.getKey() + " Receiving expected paquet " + packetSequenceNumber + " (flags = " + tcpHeader.getFlags() + ")");
         if (tcpHeader.isAck()) {
             Log.d(TAG, route.getKey() + " Client acked " + tcpHeader.getAcknowledgementNumber());
         }
@@ -232,7 +235,7 @@ public class TCPConnection extends AbstractConnection {
     }
 
     private void handleFirstPacket(IPv4Packet packet) {
-        Log.d(TAG, "handleFirstPacket");
+        Log.d(TAG, route.getKey() + " handleFirstPacket()");
         TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
         if (!tcpHeader.isSyn()) {
             resetConnection();
@@ -260,7 +263,7 @@ public class TCPConnection extends AbstractConnection {
         acknowledgementNumber = tcpHeader.getSequenceNumber() + 1;
         if (remoteClosed) {
             state = State.LAST_ACK;
-            Log.d(TAG, route.getKey() + " Received a FIN from the client, sending ACK+FIN " + acknowledgementNumber + " (seq=" + sequenceNumber+ ")");
+            Log.d(TAG, route.getKey() + " Received a FIN from the client, sending ACK+FIN " + numbers());
             IPv4Packet response = createEmptyResponsePacket(TCPHeader.FLAG_FIN | TCPHeader.FLAG_ACK);
             ++sequenceNumber; // FIN counts for 1 byte
             sendToClient(response);
@@ -272,19 +275,21 @@ public class TCPConnection extends AbstractConnection {
     }
 
     private void handleAck(IPv4Packet packet) {
-        Log.d(TAG, route.getKey() + " handleAck");
+        Log.d(TAG, route.getKey() + " handleAck()");
         if (state == State.SYN_RECEIVED) {
             Log.d(TAG, route.getKey() + " ESTABLISHED");
             state = State.ESTABLISHED;
             return;
         }
         if (state == State.LAST_ACK) {
-            Log.d(TAG, route.getKey() + " LAST_ACK --> destroy");
+            Log.d(TAG, route.getKey() + " LAST_ACK");
             destroy();
             return;
         }
 
-        System.out.println(Binary.toString(packet.getRaw()));
+        if (Log.isVerboseEnabled()) {
+            System.out.println(Binary.toString(packet.getRaw()));
+        }
 
         int payloadLength = packet.getPayloadLength();
         if (payloadLength == 0) {
@@ -293,7 +298,7 @@ public class TCPConnection extends AbstractConnection {
         }
 
         if (clientToNetwork.remaining() < payloadLength) {
-            Log.d(TAG, "Not enough space, drop packet");
+            Log.w(TAG, route.getKey() + " Not enough space, drop packet");
             return;
         }
 
@@ -301,18 +306,18 @@ public class TCPConnection extends AbstractConnection {
         acknowledgementNumber += payloadLength;
 
         // send ACK to client
-        Log.d(TAG, route.getKey() + " Received a payload from the client (" + payloadLength + "), sending ACK " + acknowledgementNumber + " (seq=" + sequenceNumber+ ")");
+        Log.d(TAG, route.getKey() + " Received a payload from the client (" + payloadLength + " bytes), sending ACK " + numbers());
         IPv4Packet responsePacket = createEmptyResponsePacket(TCPHeader.FLAG_ACK);
         sendToClient(responsePacket);
     }
 
     private void processConnect() {
-        Log.d(TAG, route.getKey() + " processConnect");
+        Log.d(TAG, route.getKey() + " processConnect()");
         if (!finishConnect()) {
             destroy();
             return;
         }
-        Log.d(TAG, route.getKey() + " SYN_RECEIVED acking " + acknowledgementNumber);
+        Log.d(TAG, route.getKey() + " SYN_RECEIVED, acking " + numbers());
         state = State.SYN_RECEIVED;
         IPv4Packet packet = createEmptyResponsePacket(TCPHeader.FLAG_SYN | TCPHeader.FLAG_ACK);
         ++sequenceNumber; // SYN counts for 1 byte
@@ -323,13 +328,13 @@ public class TCPConnection extends AbstractConnection {
         try {
             return channel.finishConnect();
         } catch (IOException e) {
-            Log.e(TAG, "Cannot finish connect", e);
+            Log.e(TAG, route.getKey() + " Cannot finish connect", e);
             return false;
         }
     }
 
     private void resetConnection() {
-        Log.d(TAG, route.getKey() + " I'm resetting connection " + route.getKey().getDestination());
+        Log.d(TAG, route.getKey() + " Resetting connection");
         state = null;
         IPv4Packet packet = createEmptyResponsePacket(TCPHeader.FLAG_RST);
         route.sendToClient(packet);
@@ -338,9 +343,12 @@ public class TCPConnection extends AbstractConnection {
     private IPv4Packet createEmptyResponsePacket(int flags) {
         updateHeaders(flags);
         IPv4Packet packet = networkToClient.packetize(ZERO_LENGTH_BUFFER);
-        Log.d(TAG, route.getKey() + " Forging empty response (flags=" + flags + "):" + Binary.toString(packet.getRaw()));
+        Log.d(TAG, route.getKey() + " Forging empty response (flags=" + flags + ") " + numbers());
+        if (Log.isVerboseEnabled()) {
+            Log.d(TAG, Binary.toString(packet.getRaw()));
+        }
         if ((flags & TCPHeader.FLAG_ACK) != 0) {
-            Log.d(TAG, route.getKey() + " I'm acknowledging " + acknowledgementNumber + "(seq=" + sequenceNumber + ")");
+            Log.d(TAG, route.getKey() + " Acking " + numbers());
         }
         return packet;
     }
@@ -369,5 +377,9 @@ public class TCPConnection extends AbstractConnection {
 
     private boolean mayConnect() {
         return state == State.SYN_SENT;
+    }
+
+    private String numbers() {
+        return "(seq=" + sequenceNumber + ", ack=" + acknowledgementNumber + ")";
     }
 }

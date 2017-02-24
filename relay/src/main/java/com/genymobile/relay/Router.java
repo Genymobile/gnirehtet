@@ -7,7 +7,7 @@ import java.util.List;
 
 public class Router {
 
-    private static final String TAG = Router.class.getName();
+    private static final String TAG = Router.class.getSimpleName();
 
     private final Client client;
     private final Selector selector;
@@ -22,7 +22,10 @@ public class Router {
 
     public void sendToNetwork(IPv4Packet packet) {
         if (!packet.isValid()) {
-            Log.d(TAG, "Dropping invalid packet");
+            Log.w(TAG, "Dropping invalid packet");
+            if (Log.isVerboseEnabled()) {
+                Log.v(TAG, String.valueOf(packet.getRaw()));
+            }
             return;
         }
         try {

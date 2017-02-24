@@ -9,7 +9,7 @@ public class UDPConnection extends AbstractConnection {
 
     public static final long IDLE_TIMEOUT = 2 * 60 * 1000;
 
-    private static final String TAG = UDPConnection.class.getName();
+    private static final String TAG = UDPConnection.class.getSimpleName();
 
     private final DatagramBuffer clientToNetwork = new DatagramBuffer(4 * IPv4Packet.MAX_PACKET_LENGTH);
     private final Packetizer networkToClient;
@@ -48,7 +48,7 @@ public class UDPConnection extends AbstractConnection {
     @Override
     public void sendToNetwork(IPv4Packet packet) {
         if (!clientToNetwork.readFrom(packet.getPayload())) {
-            Log.d(TAG, "Cannot processSend to network, drop packet");
+            Log.d(TAG, route.getKey() + " Cannot send to network, drop packet");
             return;
         }
         updateInterests();
@@ -60,7 +60,7 @@ public class UDPConnection extends AbstractConnection {
         try {
             channel.close();
         } catch (IOException e) {
-            Log.e(TAG, "Cannot close connection channel", e);
+            Log.e(TAG, route.getKey() + " Cannot close connection channel", e);
         }
     }
 
@@ -78,14 +78,13 @@ public class UDPConnection extends AbstractConnection {
         DatagramChannel channel = DatagramChannel.open();
         channel.configureBlocking(false);
         channel.connect(key.getDestination());
-        Log.d(TAG, "UDP dest = " + key.getDestination());
+        Log.d(TAG, "Creating new connection: " + route.getKey());
         return channel;
     }
 
     private void touch() {
         idleSince = System.currentTimeMillis();
     }
-
 
     private void processReceive() {
         if (!read()) {
@@ -108,7 +107,7 @@ public class UDPConnection extends AbstractConnection {
             packetForClient = networkToClient.packetize(channel);
             return packetForClient != null;
         } catch (IOException e) {
-            Log.e(TAG, "Cannot read", e);
+            Log.e(TAG, route.getKey() + " Cannot read", e);
             return false;
         }
     }
@@ -117,7 +116,7 @@ public class UDPConnection extends AbstractConnection {
         try {
             return clientToNetwork.writeTo(channel);
         } catch (IOException e) {
-            Log.e(TAG, "Cannot write", e);
+            Log.e(TAG, route.getKey() + " Cannot write", e);
             return false;
         }
     }
@@ -125,7 +124,10 @@ public class UDPConnection extends AbstractConnection {
     private void pushToClient() {
         assert packetForClient != null;
         if (sendToClient(packetForClient)) {
-            Log.d(TAG, "PACKET SEND TO CLIENT");
+            Log.d(TAG, route.getKey() + " Packet (" + packetForClient.getPayloadLength() + " bytes) sent to client");
+            if (Log.isVerboseEnabled()) {
+                Log.v(TAG, Binary.toString(packetForClient.getRaw()));
+            }
             packetForClient = null;
         }
     }

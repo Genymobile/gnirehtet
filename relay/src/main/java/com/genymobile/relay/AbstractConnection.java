@@ -2,7 +2,7 @@ package com.genymobile.relay;
 
 public abstract class AbstractConnection implements Connection {
 
-    private static final String TAG = AbstractConnection.class.getName();
+    private static final String TAG = AbstractConnection.class.getSimpleName();
 
     protected final Route route;
 
@@ -11,7 +11,7 @@ public abstract class AbstractConnection implements Connection {
     }
 
     protected void destroy() {
-        Log.d(TAG, "destroy()");
+        Log.i(TAG, route.getKey() + " destroy()");
 
         // remove the route from the router
         route.discard();

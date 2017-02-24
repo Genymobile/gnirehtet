@@ -8,13 +8,10 @@ public class Binary {
         // not instantiable
     }
 
-    public static String toString(byte[] data) {
-        if (!Relay.VERBOSE) {
-            return "[length = " + data.length + "]";
-        }
+    public static String toString(byte[] data, int offset, int length) {
         StringBuilder builder = new StringBuilder();
-        int i = 0;
-        for (byte b : data) {
+        for (int i = 0; i < length; ++i) {
+            byte b = data[offset + i];
             if (i % 16 == 0)
                 builder.append('\n');
             else if (i % 8 == 0)
@@ -25,10 +22,12 @@ public class Binary {
         return builder.toString();
     }
 
+    public static String toString(byte[] data) {
+        return toString(data, 0, data.length);
+    }
+
     public static String toString(ByteBuffer buffer) {
-        byte[] data = new byte[buffer.limit()];
-        System.arraycopy(buffer.array(), 0, data, 0, data.length);
-        return toString(data);
+        return toString(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
     }
 
     public static ByteBuffer copy(ByteBuffer buffer) {

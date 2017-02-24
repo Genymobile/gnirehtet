@@ -5,7 +5,7 @@ import java.nio.ByteBuffer;
 
 public class IPv4Packet {
 
-    private static final String TAG = IPv4Packet.class.getName();
+    private static final String TAG = IPv4Packet.class.getSimpleName();
 
     public static final int MAX_PACKET_LENGTH = 1 << 16; // packet length is stored on 16 bits
 

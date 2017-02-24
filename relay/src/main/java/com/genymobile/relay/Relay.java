@@ -13,9 +13,7 @@ import java.util.Set;
 
 public class Relay {
 
-    public static final boolean VERBOSE = false;
-
-    private static final String TAG = Relay.class.getName();
+    private static final String TAG = Relay.class.getSimpleName();
 
     private static final int DEFAULT_PORT = 1080;
 
@@ -87,7 +85,7 @@ public class Relay {
     }
 
     public static void main(String... args) throws IOException {
-        Log.d(TAG, "Starting server...");
+        Log.i(TAG, "Starting server...");
         new Relay().start();
     }
 }

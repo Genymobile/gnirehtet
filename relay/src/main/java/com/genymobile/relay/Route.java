@@ -8,8 +8,6 @@ import java.nio.channels.Selector;
 
 public class Route {
 
-    private static final String TAG = Route.class.getName();
-
     private final Client client;
     private final Key key;
     private final Connection connection;
@@ -114,7 +112,7 @@ public class Route {
 
         @Override
         public String toString() {
-            return protocol + "{ " + getSource() + " -> " + getDestination() + " }";
+            return protocol + " {" + getSource() + " -> " + getDestination() + "}";
         }
     }
 
