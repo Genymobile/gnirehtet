@@ -37,6 +37,9 @@ public class TCPConnection extends AbstractConnection {
     private int sequenceNumber;
     private int acknowledgementNumber;
 
+    private int theirAcknowledgementNumber;
+    private int clientWindow;
+
     private boolean remoteClosed;
 
     public TCPConnection(Route route, Selector selector, IPv4Header ipv4Header, TCPHeader tcpHeader) throws IOException {
@@ -80,8 +83,11 @@ public class TCPConnection extends AbstractConnection {
     private void processReceive() {
         try {
             assert packetForClient == null : "The IPv4Packet shares the networkToClient buffer, it must not be corrupted";
+            int remainingClientWindow = getRemainingClientWindow();
+            assert remainingClientWindow > 0 : "If remainingClientWindow is 0, then processReceive() should not have been called";
+            int maxPayloadSize = Math.min(remainingClientWindow, MAX_PAYLOAD_SIZE);
             updateHeaders(TCPHeader.FLAG_ACK | TCPHeader.FLAG_PSH);
-            packetForClient = networkToClient.packetize(channel, MAX_PAYLOAD_SIZE);
+            packetForClient = networkToClient.packetize(channel, maxPayloadSize);
             if (packetForClient == null) {
                 eof();
                 return;
@@ -114,6 +120,16 @@ public class TCPConnection extends AbstractConnection {
             ++sequenceNumber; // FIN counts for 1 byte
             sendToClient(packet);
         }
+    }
+
+    private int getRemainingClientWindow() {
+        // in Java, (signed) integer overflow is well-defined: it wraps around
+        int remaining = theirAcknowledgementNumber + clientWindow - sequenceNumber;
+        if (remaining < 0 || remaining > clientWindow) {
+            // our sequence number is outside their window
+            return 0;
+        }
+        return remaining;
     }
 
     public void processPacketForClient() {
@@ -182,7 +198,7 @@ public class TCPConnection extends AbstractConnection {
             return;
         }
 
-        // TODO incorrect if receive packet out-of-order from the client
+        // XXX incorrect if receive packet out-of-order from the client
         int packetSequenceNumber = tcpHeader.getSequenceNumber();
         // expect packets in order
         if (packetSequenceNumber != acknowledgementNumber) {
@@ -190,6 +206,8 @@ public class TCPConnection extends AbstractConnection {
             Log.d(TAG, route.getKey() + " Ignoring packet " + packetSequenceNumber + "; expecting " + acknowledgementNumber + "; flags=" + tcpHeader.getFlags());
             return;
         }
+        clientWindow = tcpHeader.getWindow();
+        theirAcknowledgementNumber = tcpHeader.getAcknowledgementNumber();
 
         Log.d(TAG, route.getKey() + " receiving expected paquet " + packetSequenceNumber + " (flags = " + tcpHeader.getFlags() + ")");
         if (tcpHeader.isAck()) {
@@ -329,19 +347,27 @@ public class TCPConnection extends AbstractConnection {
 
     protected void updateInterests() {
         int interestingOps = 0;
-        if (!remoteClosed && packetForClient == null) {
+        if (mayRead()) {
             interestingOps |= SelectionKey.OP_READ;
         }
-        if (hasPendingWrites()) {
+        if (mayWrite()) {
             interestingOps |= SelectionKey.OP_WRITE;
         }
-        if (state == State.SYN_SENT) {
+        if (mayConnect()) {
             interestingOps |= SelectionKey.OP_CONNECT;
         }
         selectionKey.interestOps(interestingOps);
     }
 
-    private boolean hasPendingWrites() {
+    private boolean mayRead() {
+        return !remoteClosed && packetForClient == null && getRemainingClientWindow() > 0;
+    }
+
+    private boolean mayWrite() {
         return !clientToNetwork.isEmpty();
+    }
+
+    private boolean mayConnect() {
+        return state == State.SYN_SENT;
     }
 }

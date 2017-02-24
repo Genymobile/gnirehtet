@@ -66,7 +66,8 @@ public class UDPConnection extends AbstractConnection {
 
     @Override
     public boolean isExpired() {
-        if (hasPendingWrites()) {
+        if (mayWrite()) {
+            // some writes are pending, do not expire
             return false;
         }
         return System.currentTimeMillis() >= idleSince + IDLE_TIMEOUT;
@@ -85,9 +86,6 @@ public class UDPConnection extends AbstractConnection {
         idleSince = System.currentTimeMillis();
     }
 
-    private boolean hasPendingWrites() {
-        return !clientToNetwork.isEmpty();
-    }
 
     private void processReceive() {
         if (!read()) {
@@ -134,14 +132,20 @@ public class UDPConnection extends AbstractConnection {
 
     protected void updateInterests() {
         int interestingOps = 0;
-        if (packetForClient == null) {
+        if (mayRead()) {
             interestingOps |= SelectionKey.OP_READ;
-        } else {
-            Log.d(TAG, "DISABLE READ");
         }
-        if (hasPendingWrites()) {
+        if (mayWrite()) {
             interestingOps |= SelectionKey.OP_WRITE;
         }
         selectionKey.interestOps(interestingOps);
+    }
+
+    private boolean mayRead() {
+        return packetForClient == null;
+    }
+
+    private boolean mayWrite() {
+        return !clientToNetwork.isEmpty();
     }
 }

@@ -18,6 +18,7 @@ public class TCPHeader implements TransportHeader {
     private int sequenceNumber;
     private int acknowledgementNumber;
     private int flags;
+    private int window;
 
     public TCPHeader(ByteBuffer raw) {
         this.raw = raw;
@@ -31,7 +32,13 @@ public class TCPHeader implements TransportHeader {
         headerLength = (dataOffsetAndFlags & 0xf000) >> 10;
         flags = dataOffsetAndFlags & 0x1ff;
 
+        window = Short.toUnsignedInt(raw.getShort(14));
+
         raw.limit(headerLength);
+    }
+
+    public int getWindow() {
+        return window;
     }
 
     @Override
