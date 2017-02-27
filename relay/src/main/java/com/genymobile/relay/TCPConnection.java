@@ -165,32 +165,9 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
     private void handlePacket(IPv4Packet packet) {
         TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
-        if (tcpHeader.isRst()) {
-            Log.d(TAG, route.getKey() + " Reset requested, closing");
-            destroy();
-            return;
-        }
-
         if (state == null) {
             handleFirstPacket(packet);
             return;
-        }
-
-        // XXX incorrect if receive packet out-of-order from the client
-        int packetSequenceNumber = tcpHeader.getSequenceNumber();
-        // expect packets in order
-        if (packetSequenceNumber != acknowledgementNumber) {
-            // ignore packet already received or out-of-order, retransmission is already managed by both sides
-            Log.e(TAG, route.getKey() + " ***** Ignoring packet " + packetSequenceNumber + "; expecting " + acknowledgementNumber + "; flags=" + tcpHeader.getFlags());
-            sendToClient(createEmptyResponsePacket(TCPHeader.FLAG_ACK)); // re-ack
-            return;
-        }
-        clientWindow = tcpHeader.getWindow();
-        theirAcknowledgementNumber = tcpHeader.getAcknowledgementNumber();
-
-        Log.d(TAG, route.getKey() + " Receiving expected paquet " + packetSequenceNumber + " (flags = " + tcpHeader.getFlags() + ")");
-        if (tcpHeader.isAck()) {
-            Log.d(TAG, route.getKey() + " Client acked " + tcpHeader.getAcknowledgementNumber());
         }
 
         if (tcpHeader.isSyn()) {
@@ -198,6 +175,29 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
             // at this point, any SYN packet received is duplicate
             handleDuplicateSyn(packet);
             return;
+        }
+
+        int packetSequenceNumber = tcpHeader.getSequenceNumber();
+        if (packetSequenceNumber != acknowledgementNumber) {
+            // ignore packet already received or out-of-order, retransmission is already managed by both sides
+            Log.e(TAG, route.getKey() + " ***** Ignoring packet " + packetSequenceNumber + "; expecting " + acknowledgementNumber + "; flags=" + tcpHeader.getFlags());
+            sendToClient(createEmptyResponsePacket(TCPHeader.FLAG_ACK)); // re-ack
+            return;
+        }
+
+        clientWindow = tcpHeader.getWindow();
+        theirAcknowledgementNumber = tcpHeader.getAcknowledgementNumber();
+
+        Log.d(TAG, route.getKey() + " Receiving expected paquet " + packetSequenceNumber + " (flags = " + tcpHeader.getFlags() + ")");
+
+        if (tcpHeader.isRst()) {
+            Log.d(TAG, route.getKey() + " Reset requested, closing");
+            destroy();
+            return;
+        }
+
+        if (tcpHeader.isAck()) {
+            Log.d(TAG, route.getKey() + " Client acked " + tcpHeader.getAcknowledgementNumber());
         }
 
         if (tcpHeader.isFin()) {
@@ -213,14 +213,17 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     private void handleFirstPacket(IPv4Packet packet) {
         Log.d(TAG, route.getKey() + " handleFirstPacket()");
         TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
+        acknowledgementNumber = tcpHeader.getSequenceNumber() + 1;
         if (!tcpHeader.isSyn()) {
+            Log.e(TAG, route.getKey() + " ***** Unexpected first packet " + tcpHeader.getSequenceNumber() + "; acking " + tcpHeader.getAcknowledgementNumber() + "; flags=" + tcpHeader.getFlags());
+            sequenceNumber = tcpHeader.getAcknowledgementNumber(); // make a RST in the window client
             resetConnection();
             return;
         }
 
         sequenceNumber = RANDOM.nextInt();
-        acknowledgementNumber = tcpHeader.getSequenceNumber() + 1;
         Log.d(TAG, route.getKey() + " initialized seqNum=" + sequenceNumber + "; ackNum=" + acknowledgementNumber);
+        clientWindow = tcpHeader.getWindow();
         state = State.SYN_SENT;
     }
 
