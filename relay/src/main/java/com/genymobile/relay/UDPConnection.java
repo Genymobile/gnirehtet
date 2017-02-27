@@ -37,9 +37,7 @@ public class UDPConnection extends AbstractConnection {
             if (selectionKey.isValid() && selectionKey.isWritable()) {
                 processSend();
             }
-            if (selectionKey.isValid()) {
-                updateInterests();
-            }
+            updateInterests();
         };
         channel = createChannel();
         selectionKey = channel.register(selector, SelectionKey.OP_READ, selectionHandler);
@@ -133,6 +131,9 @@ public class UDPConnection extends AbstractConnection {
     }
 
     protected void updateInterests() {
+        if (!selectionKey.isValid()) {
+            return;
+        }
         int interestingOps = 0;
         if (mayRead()) {
             interestingOps |= SelectionKey.OP_READ;

@@ -62,9 +62,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
             if (selectionKey.isValid() && selectionKey.isWritable()) {
                 processSend();
             }
-            if (selectionKey.isValid()) {
-                updateInterests();
-            }
+            updateInterests();
         };
         channel = createChannel();
         selectionKey = channel.register(selector, OP_READ | SelectionKey.OP_CONNECT, selectionHandler);
@@ -158,9 +156,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     public void sendToNetwork(IPv4Packet packet) {
         handlePacket(packet);
         Log.d(TAG, route.getKey() + " current ack=" + acknowledgementNumber);
-        if (selectionKey.isValid()) {
-            updateInterests();
-        }
+        updateInterests();
     }
 
     private void handlePacket(IPv4Packet packet) {
@@ -333,6 +329,9 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     }
 
     protected void updateInterests() {
+        if (!selectionKey.isValid()) {
+            return;
+        }
         int interestingOps = 0;
         if (mayRead()) {
             interestingOps |= SelectionKey.OP_READ;
