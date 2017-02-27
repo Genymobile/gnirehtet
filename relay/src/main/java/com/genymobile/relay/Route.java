@@ -55,6 +55,10 @@ public class Route {
         return client.sendToClient(packet);
     }
 
+    public void consume(PacketSource source) {
+        client.consume(source);
+    }
+
     public static class Key {
         private IPv4Header.Protocol protocol;
         private int sourceIp;

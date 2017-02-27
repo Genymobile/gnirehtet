@@ -5,6 +5,9 @@ import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
 
 public class Client {
 
@@ -17,6 +20,8 @@ public class Client {
     private final IPv4PacketBuffer clientToNetwork = new IPv4PacketBuffer();
     private final StreamBuffer networkToClient = new StreamBuffer(16 * IPv4Packet.MAX_PACKET_LENGTH);
     private final Router router;
+
+    private final List<PacketSource> pendingPacketSources = new ArrayList<>();
 
     public Client(Selector selector, SocketChannel clientChannel, RemoveHandler<Client> removeHandler) throws ClosedChannelException {
         this.clientChannel = clientChannel;
@@ -52,6 +57,7 @@ public class Client {
             destroy();
             return;
         }
+        processPending();
     }
 
     private boolean read() {
@@ -101,13 +107,38 @@ public class Client {
 
     public boolean sendToClient(IPv4Packet packet) {
         if (networkToClient.remaining() < packet.getRawLength()) {
-            // FIXME some parts of the app assume that a packet to the client is never lost
-            Log.e(TAG, "************ COMMUNICATION BROKEN **********");
+            Log.w(TAG, "Client buffer full, delaying packet processing");
             return false;
         }
         networkToClient.readFrom(packet.getRaw());
         updateInterests();
         return true;
+    }
+
+    public void consume(PacketSource source) {
+        IPv4Packet packet = source.get();
+        if (sendToClient(packet)) {
+            source.next();
+            return;
+        }
+        assert !pendingPacketSources.contains(source);
+        pendingPacketSources.add(source);
+    }
+
+    private void processPending() {
+        Iterator<PacketSource> iterator = pendingPacketSources.iterator();
+        while (iterator.hasNext()) {
+            PacketSource packetSource = iterator.next();
+            IPv4Packet packet = packetSource.get();
+            if (sendToClient(packet)) {
+                packetSource.next();
+                Log.d(TAG, "Pending packet sent to client (" + packet.getRawLength() + ")");
+                iterator.remove();
+            } else {
+                Log.w(TAG, "Pending packet not sent to client (" + packet.getRawLength() + "), client buffer full again");
+                return;
+            }
+        }
     }
 
     public void cleanExpiredConnections() {
