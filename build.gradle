@@ -32,4 +32,5 @@ task clientStart(type: Exec, dependsOn: [':forwardPort', ':app:run']) {
     commandLine 'adb', 'shell', 'am', 'start', '-a', 'com.genymobile.gnirehtet.VPN'
 }
 
-task serverStart(dependsOn: ':relay:run') {}
+task serverStart(dependsOn: ':relay:run')
+task debug(dependsOn: [':app:assembleDebug', ':relay:jar'])
