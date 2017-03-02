@@ -29,7 +29,12 @@ task forwardPort(type: Exec) {
 
 task clientStart(type: Exec, dependsOn: [':forwardPort', ':app:run']) {
     // linux
-    commandLine 'adb', 'shell', 'am', 'start', '-a', 'com.genymobile.gnirehtet.VPN'
+    commandLine 'adb', 'shell', 'am', 'startservice', '-a', 'com.genymobile.gnirehtet.START'
+}
+
+task clientStop(type: Exec) {
+    // linux
+    commandLine 'adb', 'shell', 'am', 'startservice', '-a', 'com.genymobile.gnirehtet.STOP'
 }
 
 task serverStart(dependsOn: ':relay:run')

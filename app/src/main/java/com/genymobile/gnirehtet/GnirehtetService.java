@@ -1,6 +1,7 @@
 package com.genymobile.gnirehtet;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
@@ -22,10 +23,12 @@ public class GnirehtetService extends VpnService {
 
     public static final boolean VERBOSE = false;
 
+    public static final String ACTION_CLOSE_VPN = "com.genymobile.gnirehtet.CLOSE_VPN";
+
     private static final String TAG = VpnService.class.getName();
 
-    private static final InetAddress VPN_ADDRESS = getInetAddress(new byte[]{10, 0, 0, 2});
-    private static final InetAddress VPN_ROUTE = getInetAddress(new byte[]{0, 0, 0, 0}); // intercept everything
+    private static final InetAddress VPN_ADDRESS = getInetAddress(new byte[] {10, 0, 0, 2});
+    private static final InetAddress VPN_ROUTE = getInetAddress(new byte[] {0, 0, 0, 0}); // intercept everything
 
     private static final int MAX_PACKET_SIZE = 4096;
 
@@ -41,9 +44,12 @@ public class GnirehtetService extends VpnService {
     }
 
     @Override
-    public void onDestroy() {
-        super.onDestroy();
-        cleanUp();
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        String action = intent.getAction();
+        if (ACTION_CLOSE_VPN.equals(action)) {
+            close();
+        }
+        return START_NOT_STICKY;
     }
 
     private static InetAddress getInetAddress(byte[] raw) {
@@ -73,7 +79,7 @@ public class GnirehtetService extends VpnService {
             Network vpnNetwork = findVpnNetwork();
             if (vpnNetwork != null) {
                 // so that applications knows that network is available
-                setUnderlyingNetworks(new Network[]{vpnNetwork});
+                setUnderlyingNetworks(new Network[] {vpnNetwork});
             }
         } else {
             Log.w(TAG, "Cannot set underlying network, API version " + Build.VERSION.SDK_INT + " < 22");
@@ -115,11 +121,16 @@ public class GnirehtetService extends VpnService {
         }
     }
 
-    private void cleanUp() {
+    private void close() {
+        if (vpnInterface == null) {
+            // already closed
+            return;
+        }
         try {
             vpnInterface.close();
+            vpnInterface = null;
         } catch (IOException e) {
-            Log.w(TAG, "Clean up failed", e);
+            Log.w(TAG, "Cannot close VPN file descriptor", e);
         }
     }
 

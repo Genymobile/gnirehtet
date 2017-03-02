@@ -2,26 +2,19 @@ package com.genymobile.gnirehtet;
 
 import android.app.Activity;
 import android.content.Intent;
-import android.net.VpnService;
 import android.os.Bundle;
 
-public class GnirehtetActivity extends Activity {
+public class AuthorizationActivity extends Activity {
 
-    private static final int VPN_REQUEST_CODE = 1;
+    public static final String KEY_VPN_INTENT = "com.genymobile.gnirehtet.VPN_INTENT";
+
+    private static final int VPN_REQUEST_CODE = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        startVpn();
-    }
-
-    private void startVpn() {
-        Intent vpnIntent = VpnService.prepare(this);
-        if (vpnIntent == null) {
-            startVpnService();
-        } else {
-            startActivityForResult(vpnIntent, VPN_REQUEST_CODE);
-        }
+        Intent vpnIntent = getIntent().getParcelableExtra(KEY_VPN_INTENT);
+        startActivityForResult(vpnIntent, VPN_REQUEST_CODE);
     }
 
     @Override
@@ -30,10 +23,10 @@ public class GnirehtetActivity extends Activity {
         if (requestCode == VPN_REQUEST_CODE && resultCode == RESULT_OK) {
             startVpnService();
         }
+        finish();
     }
 
     private void startVpnService() {
         startService(new Intent(this, GnirehtetService.class));
-        finish();
     }
 }

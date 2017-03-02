@@ -11,6 +11,14 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme">
         <service
+            android:name="com.genymobile.gnirehtet.GnirehtetControlService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.genymobile.gnirehtet.START" />
+                <action android:name="com.genymobile.gnirehtet.STOP" />
+            </intent-filter>
+        </service>
+        <service
             android:name="com.genymobile.gnirehtet.GnirehtetService"
             android:enabled="true"
             android:exported="true"
@@ -21,13 +29,8 @@
         </service>
 
         <activity
-            android:name="com.genymobile.gnirehtet.GnirehtetActivity"
-            android:theme="@style/Theme.Transparent">
-            <intent-filter>
-                <action android:name="com.genymobile.gnirehtet.VPN" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
+            android:name="com.genymobile.gnirehtet.AuthorizationActivity"
+            android:theme="@style/Theme.Transparent" />
     </application>
 
 </manifest>
