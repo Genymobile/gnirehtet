@@ -51,7 +51,7 @@ public class GnirehtetControlService extends Service {
         if (vpnIntent == null) {
             Log.d(TAG, "VPN was already authorized");
             // we got the permission, start the service now
-            startVpnService();
+            GnirehtetService.start(this);
         } else {
             Log.d(TAG, "VPN requires the authorization from the user, requesting...");
             requestAuthorization(vpnIntent);
@@ -59,13 +59,7 @@ public class GnirehtetControlService extends Service {
     }
 
     private void stopGnirehtet() {
-        Intent intent = new Intent(this, GnirehtetService.class);
-        intent.setAction(GnirehtetService.ACTION_CLOSE_VPN);
-        startService(intent);
-    }
-
-    private void startVpnService() {
-        startService(new Intent(this, GnirehtetService.class));
+        GnirehtetService.stop(this);
     }
 
     private void requestAuthorization(Intent vpnIntent) {

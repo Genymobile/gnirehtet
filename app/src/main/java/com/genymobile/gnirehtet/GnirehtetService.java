@@ -23,9 +23,10 @@ public class GnirehtetService extends VpnService {
 
     public static final boolean VERBOSE = false;
 
-    public static final String ACTION_CLOSE_VPN = "com.genymobile.gnirehtet.CLOSE_VPN";
+    private static final String ACTION_START_VPN = "com.genymobile.gnirehtet.START_VPN";
+    private static final String ACTION_CLOSE_VPN = "com.genymobile.gnirehtet.CLOSE_VPN";
 
-    private static final String TAG = VpnService.class.getName();
+    private static final String TAG = GnirehtetService.class.getName();
 
     private static final InetAddress VPN_ADDRESS = getInetAddress(new byte[] {10, 0, 0, 2});
     private static final InetAddress VPN_ROUTE = getInetAddress(new byte[] {0, 0, 0, 0}); // intercept everything
@@ -36,28 +37,32 @@ public class GnirehtetService extends VpnService {
     private Thread deviceToTunnelThread;
     private Thread tunnelToDeviceThread;
 
-    @Override
-    public void onCreate() {
-        super.onCreate();
-        setupVpn();
-        startForwarding();
+    public static void start(Context context) {
+        Intent intent = new Intent(context, GnirehtetService.class);
+        intent.setAction(ACTION_START_VPN);
+        context.startService(intent);
+    }
+
+    public static void stop(Context context) {
+        Intent intent = new Intent(context, GnirehtetService.class);
+        intent.setAction(ACTION_CLOSE_VPN);
+        context.startService(intent);
     }
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent.getAction();
-        if (ACTION_CLOSE_VPN.equals(action)) {
+        if (ACTION_START_VPN.equals(action)) {
+            startVpn();
+        } else if (ACTION_CLOSE_VPN.equals(action)) {
             close();
         }
         return START_NOT_STICKY;
     }
 
-    private static InetAddress getInetAddress(byte[] raw) {
-        try {
-            return InetAddress.getByAddress(raw);
-        } catch (UnknownHostException e) {
-            throw new AssertionError("Invalid address");
-        }
+    private void startVpn() {
+        setupVpn();
+        startForwarding();
     }
 
     private void setupVpn() {
@@ -65,8 +70,6 @@ public class GnirehtetService extends VpnService {
         builder.addAddress(VPN_ADDRESS, 32);
         builder.addRoute(VPN_ROUTE, 0);
         builder.setSession(getString(R.string.app_name));
-//        builder.addDnsServer("194.79.128.150");
-        //builder.addDnsServer("192.168.0.127");
         builder.addDnsServer("8.8.8.8");
 
         // non-blocking by default, but FileChannel is not selectable, that's stupid!
@@ -75,6 +78,10 @@ public class GnirehtetService extends VpnService {
 
         vpnInterface = builder.establish();
 
+        setAsUndernlyingNetwork();
+    }
+
+    private void setAsUndernlyingNetwork() {
         if (Build.VERSION.SDK_INT >= 22) {
             Network vpnNetwork = findVpnNetwork();
             if (vpnNetwork != null) {
@@ -91,7 +98,6 @@ public class GnirehtetService extends VpnService {
         Network[] networks = cm.getAllNetworks();
         for (Network network : networks) {
             LinkProperties linkProperties = cm.getLinkProperties(network);
-            Log.d(TAG, "" + linkProperties);
             List<LinkAddress> addresses = linkProperties.getLinkAddresses();
             for (LinkAddress addr : addresses) {
                 if (addr.getAddress().equals(VPN_ADDRESS)) {
@@ -212,4 +218,13 @@ public class GnirehtetService extends VpnService {
             }
         }
     }
+
+    private static InetAddress getInetAddress(byte[] raw) {
+        try {
+            return InetAddress.getByAddress(raw);
+        } catch (UnknownHostException e) {
+            throw new AssertionError("Invalid address");
+        }
+    }
+
 }

@@ -21,12 +21,8 @@ public class AuthorizationActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == VPN_REQUEST_CODE && resultCode == RESULT_OK) {
-            startVpnService();
+            GnirehtetService.start(this);
         }
         finish();
-    }
-
-    private void startVpnService() {
-        startService(new Intent(this, GnirehtetService.class));
     }
 }
