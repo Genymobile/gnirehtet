@@ -11,9 +11,6 @@ import android.os.Build;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
-import java.io.FileDescriptor;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -31,11 +28,8 @@ public class GnirehtetService extends VpnService {
     private static final InetAddress VPN_ADDRESS = getInetAddress(new byte[] {10, 0, 0, 2});
     private static final InetAddress VPN_ROUTE = getInetAddress(new byte[] {0, 0, 0, 0}); // intercept everything
 
-    private static final int MAX_PACKET_SIZE = 4096;
-
     private ParcelFileDescriptor vpnInterface = null;
-    private Thread deviceToTunnelThread;
-    private Thread tunnelToDeviceThread;
+    private Forwarder forwarder;
 
     public static void start(Context context) {
         Intent intent = new Intent(context, GnirehtetService.class);
@@ -109,21 +103,13 @@ public class GnirehtetService extends VpnService {
     }
 
     private void startForwarding() {
-        Tunnel tunnel = new RelayTunnel(new RelayClient(this));
-
-        FileDescriptor fileDescriptor = vpnInterface.getFileDescriptor();
-        deviceToTunnelThread = new Thread(new DeviceToTunnelForwarder(fileDescriptor, tunnel));
-        deviceToTunnelThread.start();
-        tunnelToDeviceThread = new Thread(new TunnelToDeviceForwarder(fileDescriptor, tunnel));
-        tunnelToDeviceThread.start();
+        forwarder = new Forwarder(this, vpnInterface.getFileDescriptor());
+        forwarder.forward();
     }
 
     private void stopForwarding() {
-        if (deviceToTunnelThread != null) {
-            deviceToTunnelThread.interrupt();
-            tunnelToDeviceThread.interrupt();
-            deviceToTunnelThread = null;
-            tunnelToDeviceThread = null;
+        if (forwarder != null) {
+            forwarder.stop();
         }
     }
 
@@ -133,89 +119,11 @@ public class GnirehtetService extends VpnService {
             return;
         }
         try {
+            stopForwarding();
             vpnInterface.close();
             vpnInterface = null;
         } catch (IOException e) {
             Log.w(TAG, "Cannot close VPN file descriptor", e);
-        }
-    }
-
-    private static class DeviceToTunnelForwarder implements Runnable {
-
-        private FileDescriptor vpnFileDescriptor;
-        private Tunnel tunnel;
-
-        DeviceToTunnelForwarder(FileDescriptor vpnFileDescriptor, Tunnel tunnel) {
-            this.vpnFileDescriptor = vpnFileDescriptor;
-            this.tunnel = tunnel;
-        }
-
-        @Override
-        public void run() {
-            try {
-                tunnel.open();
-                Log.d(TAG, "Device to tunnel forwarding started");
-
-                FileInputStream vpnInput = new FileInputStream(vpnFileDescriptor);
-
-                byte[] buffer = new byte[MAX_PACKET_SIZE];
-                while (!Thread.interrupted()) {
-                    // blocking read
-                    int r = vpnInput.read(buffer);
-                    if (r == -1) {
-                        Log.d(TAG, "Tunnel closed");
-                        break;
-                    }
-                    if (r > 0) {
-                        tunnel.send(buffer, r);
-                    }
-                }
-                Log.d(TAG, "Device to tunnel forwarding stopped");
-            } catch (IOException e) {
-                Log.e(TAG, e.getMessage(), e);
-            }
-        }
-    }
-
-    private static class TunnelToDeviceForwarder implements Runnable {
-
-        private FileDescriptor vpnFileDescriptor;
-        private Tunnel tunnel;
-
-        TunnelToDeviceForwarder(FileDescriptor vpnFileDescriptor, Tunnel tunnel) {
-            this.vpnFileDescriptor = vpnFileDescriptor;
-            this.tunnel = tunnel;
-        }
-
-        @Override
-        public void run() {
-            try {
-                tunnel.waitForOpened();
-                Log.d(TAG, "Tunnel to device forwarding started");
-
-                FileOutputStream vpnOutput = new FileOutputStream(vpnFileDescriptor);
-                IPPacketOutputStream packetOutputStream = new IPPacketOutputStream(vpnOutput);
-
-                byte[] buffer = new byte[MAX_PACKET_SIZE];
-                while (!Thread.interrupted()) {
-                    // blocking receive
-                    int w = tunnel.receive(buffer);
-                    if (w == -1) {
-                        Log.d(TAG, "Tunnel closed");
-                        break;
-                    }
-                    if (w > 0) {
-                        if (GnirehtetService.VERBOSE) {
-                            Log.d(TAG, "WRITING " + w + "..." + Binary.toString(buffer, w));
-                        }
-                        packetOutputStream.write(buffer, 0, w);
-                    }
-                }
-            } catch (IOException e) {
-                Log.e(TAG, e.getMessage(), e);
-            } catch (InterruptedException e) {
-                Log.e(TAG, e.getMessage(), e);
-            }
         }
     }
 

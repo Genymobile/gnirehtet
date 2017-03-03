@@ -1,28 +1,29 @@
 package com.genymobile.gnirehtet;
 
+import android.net.VpnService;
 import android.util.Log;
 
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 
 public class RelayTunnel implements Tunnel {
 
     private static final String TAG = RelayTunnel.class.getName();
 
-    private final RelayClient client;
+    private final SocketChannel channel;
 
-    public RelayTunnel(RelayClient client) {
-        this.client = client;
+    private RelayTunnel(SocketChannel channel) {
+        this.channel = channel;
     }
 
-    @Override
-    public void open() throws IOException {
-        client.connect();
-    }
-
-    @Override
-    public void waitForOpened() throws InterruptedException {
-        client.waitForConnected();
+    public static RelayTunnel open(VpnService vpnService) throws IOException {
+        SocketChannel channel = SocketChannel.open();
+        vpnService.protect(channel.socket());
+        channel.connect(new InetSocketAddress(Inet4Address.getLocalHost(), 1080));
+        return new RelayTunnel(channel);
     }
 
     @Override
@@ -32,16 +33,26 @@ public class RelayTunnel implements Tunnel {
         }
         ByteBuffer buffer = ByteBuffer.wrap(packet, 0, len);
         while (buffer.hasRemaining()) {
-            client.getChannel().write(buffer);
+            channel.write(buffer);
         }
     }
 
     @Override
     public int receive(byte[] packet) throws IOException {
-        int r = client.getChannel().read(ByteBuffer.wrap(packet));
+        int r = channel.read(ByteBuffer.wrap(packet));
         if (GnirehtetService.VERBOSE) {
             Log.d(TAG, "Receiving..." + Binary.toString(packet, r));
         }
         return r;
+    }
+
+    @Override
+    public void close() {
+        try {
+            channel.close();
+        } catch (IOException e) {
+            // what could we do?
+            throw new RuntimeException(e);
+        }
     }
 }
