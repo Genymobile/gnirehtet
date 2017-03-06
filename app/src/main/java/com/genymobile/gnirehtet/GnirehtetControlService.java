@@ -6,6 +6,8 @@ import android.net.VpnService;
 import android.os.IBinder;
 import android.util.Log;
 
+import static com.genymobile.gnirehtet.AuthorizationActivity.EXTRA_VPN_CONFIGURATION;
+
 /**
  * Service to expose {@link #ACTION_GNIREHTET_START START} and {@link #ACTION_GNIREHTET_STOP}
  * actions.
@@ -31,13 +33,16 @@ public class GnirehtetControlService extends Service {
     public static final String ACTION_GNIREHTET_START = "com.genymobile.gnirehtet.START";
     public static final String ACTION_GNIREHTET_STOP = "com.genymobile.gnirehtet.STOP";
 
+    public static final String EXTRA_DNS_SERVERS = "dnsServers";
+
     private static final String TAG = GnirehtetControlService.class.getSimpleName();
 
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent.getAction();
         if (ACTION_GNIREHTET_START.equals(action)) {
-            startGnirehtet();
+            VpnConfiguration config = createConfig(intent);
+            startGnirehtet(config);
         } else if (ACTION_GNIREHTET_STOP.equals(action)) {
             stopGnirehtet();
         }
@@ -45,16 +50,24 @@ public class GnirehtetControlService extends Service {
         return START_NOT_STICKY;
     }
 
-    private void startGnirehtet() {
+    private static VpnConfiguration createConfig(Intent intent) {
+        String[] vpnServers = intent.getStringArrayExtra(EXTRA_DNS_SERVERS);
+        if (vpnServers == null) {
+            vpnServers = new String[0];
+        }
+        return new VpnConfiguration(vpnServers);
+    }
+
+    private void startGnirehtet(VpnConfiguration config) {
         Log.d(TAG, "Received request " + ACTION_GNIREHTET_START);
         Intent vpnIntent = VpnService.prepare(this);
         if (vpnIntent == null) {
             Log.d(TAG, "VPN was already authorized");
             // we got the permission, start the service now
-            GnirehtetService.start(this);
+            GnirehtetService.start(this, config);
         } else {
             Log.d(TAG, "VPN requires the authorization from the user, requesting...");
-            requestAuthorization(vpnIntent);
+            requestAuthorization(vpnIntent, config);
         }
     }
 
@@ -62,10 +75,11 @@ public class GnirehtetControlService extends Service {
         GnirehtetService.stop(this);
     }
 
-    private void requestAuthorization(Intent vpnIntent) {
+    private void requestAuthorization(Intent vpnIntent, VpnConfiguration config) {
         // we must send the intent with startActivityForResult, so we need to send it from an activity
         Intent intent = new Intent(this, AuthorizationActivity.class);
-        intent.putExtra(AuthorizationActivity.KEY_VPN_INTENT, vpnIntent);
+        intent.putExtra(AuthorizationActivity.EXTRA_VPN_INTENT, vpnIntent);
+        intent.putExtra(EXTRA_VPN_CONFIGURATION, config);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         startActivity(intent);
     }

@@ -34,7 +34,7 @@ task forwardPort(type: Exec) {
 
 task start(type: Exec, dependsOn: ['installDebug', 'forwardPort']) {
     // linux
-    commandLine 'adb', 'shell', 'am', 'startservice', '-a', 'com.genymobile.gnirehtet.START'
+    commandLine 'adb', 'shell', 'am', 'startservice', '-a', 'com.genymobile.gnirehtet.START', '--esa', 'dnsServers', '8.8.8.8'
 }
 
 task stop(type: Exec) {

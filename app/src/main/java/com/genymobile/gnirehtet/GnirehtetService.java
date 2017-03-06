@@ -22,6 +22,7 @@ public class GnirehtetService extends VpnService {
 
     private static final String ACTION_START_VPN = "com.genymobile.gnirehtet.START_VPN";
     private static final String ACTION_CLOSE_VPN = "com.genymobile.gnirehtet.CLOSE_VPN";
+    private static final String EXTRA_VPN_CONFIGURATION = "vpnConfiguration";
 
     private static final String TAG = GnirehtetService.class.getName();
 
@@ -31,9 +32,10 @@ public class GnirehtetService extends VpnService {
     private ParcelFileDescriptor vpnInterface = null;
     private Forwarder forwarder;
 
-    public static void start(Context context) {
+    public static void start(Context context, VpnConfiguration config) {
         Intent intent = new Intent(context, GnirehtetService.class);
         intent.setAction(ACTION_START_VPN);
+        intent.putExtra(GnirehtetService.EXTRA_VPN_CONFIGURATION, config);
         context.startService(intent);
     }
 
@@ -47,24 +49,37 @@ public class GnirehtetService extends VpnService {
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent.getAction();
         if (ACTION_START_VPN.equals(action)) {
-            startVpn();
+            VpnConfiguration config = intent.getParcelableExtra(EXTRA_VPN_CONFIGURATION);
+            if (config == null) {
+                config = new VpnConfiguration();
+            }
+            startVpn(config);
         } else if (ACTION_CLOSE_VPN.equals(action)) {
             close();
         }
         return START_NOT_STICKY;
     }
 
-    private void startVpn() {
-        setupVpn();
+    private void startVpn(VpnConfiguration config) {
+        setupVpn(config);
         startForwarding();
     }
 
-    private void setupVpn() {
+    private void setupVpn(VpnConfiguration config) {
         Builder builder = new Builder();
         builder.addAddress(VPN_ADDRESS, 32);
         builder.addRoute(VPN_ROUTE, 0);
         builder.setSession(getString(R.string.app_name));
-        builder.addDnsServer("8.8.8.8");
+
+        String[] dnsServers = config.getDnsServers();
+        if (dnsServers.length == 0) {
+            // no DNS server defined, use Google DNS
+            builder.addDnsServer("8.8.8.8");
+        } else {
+            for (String dnsServer : dnsServers) {
+                builder.addDnsServer(dnsServer);
+            }
+        }
 
         // non-blocking by default, but FileChannel is not selectable, that's stupid!
         // so switch to synchronous I/O to avoid polling
