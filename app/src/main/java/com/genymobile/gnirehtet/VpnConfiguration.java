@@ -3,25 +3,39 @@ package com.genymobile.gnirehtet;
 import android.os.Parcel;
 import android.os.Parcelable;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+
 public class VpnConfiguration implements Parcelable {
 
-    private String[] dnsServers;
+    private InetAddress[] dnsServers;
 
-    public VpnConfiguration(String... dnsServers) {
+    public VpnConfiguration(InetAddress... dnsServers) {
         this.dnsServers = dnsServers;
     }
 
     private VpnConfiguration(Parcel source) {
-        dnsServers = source.createStringArray();
+        int count = source.readInt();
+        dnsServers = new InetAddress[count];
+        try {
+            for (int i = 0; i < count; ++i) {
+                dnsServers[i] = InetAddress.getByAddress(source.createByteArray());
+            }
+        } catch (UnknownHostException e) {
+            throw new AssertionError("Invalid address", e);
+        }
     }
 
-    public String[] getDnsServers() {
+    public InetAddress[] getDnsServers() {
         return dnsServers;
     }
 
     @Override
     public void writeToParcel(Parcel dest, int flags) {
-        dest.writeStringArray(dnsServers);
+        dest.writeInt(dnsServers.length);
+        for (InetAddress addr : dnsServers) {
+            dest.writeByteArray(addr.getAddress());
+        }
     }
 
     @Override

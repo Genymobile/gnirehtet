@@ -51,11 +51,11 @@ public class GnirehtetControlService extends Service {
     }
 
     private static VpnConfiguration createConfig(Intent intent) {
-        String[] vpnServers = intent.getStringArrayExtra(EXTRA_DNS_SERVERS);
-        if (vpnServers == null) {
-            vpnServers = new String[0];
+        String[] dnsServers = intent.getStringArrayExtra(EXTRA_DNS_SERVERS);
+        if (dnsServers == null) {
+            dnsServers = new String[0];
         }
-        return new VpnConfiguration(vpnServers);
+        return new VpnConfiguration(Net.toInetAddresses(dnsServers));
     }
 
     private void startGnirehtet(VpnConfiguration config) {

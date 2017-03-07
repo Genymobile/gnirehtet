@@ -9,11 +9,13 @@ import android.net.Network;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
+import android.os.SystemClock;
 import android.util.Log;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.net.ServerSocket;
+import java.net.Socket;
 import java.util.List;
 
 public class GnirehtetService extends VpnService {
@@ -26,8 +28,8 @@ public class GnirehtetService extends VpnService {
 
     private static final String TAG = GnirehtetService.class.getName();
 
-    private static final InetAddress VPN_ADDRESS = getInetAddress(new byte[] {10, 0, 0, 2});
-    private static final InetAddress VPN_ROUTE = getInetAddress(new byte[] {0, 0, 0, 0}); // intercept everything
+    private static final InetAddress VPN_ADDRESS = Net.toInetAddress(new byte[] {10, 0, 0, 2});
+    private static final InetAddress VPN_ROUTE = Net.toInetAddress(new byte[] {0, 0, 0, 0}); // intercept everything
 
     private ParcelFileDescriptor vpnInterface = null;
     private Forwarder forwarder;
@@ -71,12 +73,12 @@ public class GnirehtetService extends VpnService {
         builder.addRoute(VPN_ROUTE, 0);
         builder.setSession(getString(R.string.app_name));
 
-        String[] dnsServers = config.getDnsServers();
+        InetAddress[] dnsServers = config.getDnsServers();
         if (dnsServers.length == 0) {
             // no DNS server defined, use Google DNS
             builder.addDnsServer("8.8.8.8");
         } else {
-            for (String dnsServer : dnsServers) {
+            for (InetAddress dnsServer : dnsServers) {
                 builder.addDnsServer(dnsServer);
             }
         }
@@ -141,13 +143,4 @@ public class GnirehtetService extends VpnService {
             Log.w(TAG, "Cannot close VPN file descriptor", e);
         }
     }
-
-    private static InetAddress getInetAddress(byte[] raw) {
-        try {
-            return InetAddress.getByAddress(raw);
-        } catch (UnknownHostException e) {
-            throw new AssertionError("Invalid address");
-        }
-    }
-
 }
