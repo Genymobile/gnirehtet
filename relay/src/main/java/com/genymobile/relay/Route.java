@@ -1,9 +1,7 @@
 package com.genymobile.relay;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.nio.channels.Selector;
 
 public class Route {
@@ -78,16 +76,28 @@ public class Route {
             return protocol;
         }
 
-        public InetSocketAddress getSource() {
-            return new InetSocketAddress(toInetAddress(sourceIp), Short.toUnsignedInt(sourcePort));
+        private InetSocketAddress getSource() {
+            return new InetSocketAddress(Net.toInetAddress(sourceIp), Short.toUnsignedInt(sourcePort));
         }
 
-        public InetSocketAddress getDestination() {
-            return new InetSocketAddress(toInetAddress(destIp), Short.toUnsignedInt(destPort));
+        private InetSocketAddress getDestination() {
+            return new InetSocketAddress(Net.toInetAddress(destIp), Short.toUnsignedInt(destPort));
+        }
+
+        public int getSourceIp() {
+            return sourceIp;
         }
 
         public int getSourcePort() {
             return Short.toUnsignedInt(sourcePort);
+        }
+
+        public int getDestinationIp() {
+            return destIp;
+        }
+
+        public int getDestinationPort() {
+            return Short.toUnsignedInt(destPort);
         }
 
         @Override
@@ -127,20 +137,5 @@ public class Route {
         int destinationAddress = ipv4Header.getDestination();
         short destinationPort = (short) transportHeader.getDestinationPort();
         return new Key(protocol, sourceAddress, sourcePort, destinationAddress, destinationPort);
-    }
-
-    public static InetAddress toInetAddress(int ipAddr) {
-        byte[] ip = {
-                (byte) (ipAddr >>> 24),
-                (byte) ((ipAddr >> 16) & 0xff),
-                (byte) ((ipAddr >> 8) & 0xff),
-                (byte) (ipAddr & 0xff)
-        };
-        try {
-            return InetAddress.getByAddress(ip);
-        } catch (UnknownHostException e) {
-            // should never happen
-            throw new AssertionError(e);
-        }
     }
 }

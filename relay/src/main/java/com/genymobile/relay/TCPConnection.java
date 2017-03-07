@@ -147,7 +147,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         Route.Key key = route.getKey();
         SocketChannel channel = SocketChannel.open();
         channel.configureBlocking(false);
-        channel.connect(key.getDestination());
+        channel.connect(getRewrittenDestination());
         Log.i(TAG, "Creating new connection: " + route.getKey());
         return channel;
     }

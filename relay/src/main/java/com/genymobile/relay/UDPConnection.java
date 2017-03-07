@@ -75,7 +75,7 @@ public class UDPConnection extends AbstractConnection {
         Route.Key key = route.getKey();
         DatagramChannel channel = DatagramChannel.open();
         channel.configureBlocking(false);
-        channel.connect(key.getDestination());
+        channel.connect(getRewrittenDestination());
         Log.d(TAG, "Creating new connection: " + route.getKey());
         return channel;
     }
