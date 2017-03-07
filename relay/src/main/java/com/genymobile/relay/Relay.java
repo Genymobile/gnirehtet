@@ -83,9 +83,4 @@ public class Relay {
             client.cleanExpiredConnections();
         }
     }
-
-    public static void main(String... args) throws IOException {
-        Log.i(TAG, "Starting server...");
-        new Relay().start();
-    }
 }
