@@ -23,7 +23,7 @@ public class Log {
 
     private static Level threshold = Level.DEBUG;
 
-    private static final DateFormat FORMAT = new SimpleDateFormat("YYYY-MM-dd HH:mm:ss.S");
+    private static final DateFormat FORMAT = new SimpleDateFormat("YYYY-MM-dd HH:mm:ss.SSS");
     private static final Date date = new Date();
 
     private Log() {
