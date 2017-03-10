@@ -1,0 +1,79 @@
+#!/bin/bash
+
+syntax() {
+    echo "Syntax: $0 (start|stop|relay) ..." >&2
+    echo
+    echo "  $0 start [serial] [-d DNS[,DNS2,...]]"
+    echo "      Start a client on the Android device and exit."
+    echo "      If several devices are connected via adb, then serial must be"
+    echo "      specified."
+    echo "      If -d is given, then make the Android device use the specified"
+    echo "      DNS server(s). Otherwise, use 8.8.8.8 (Google public DNS)."
+    echo "      If the client is already started, then do nothing, and ignore"
+    echo "      DNS servers parameter."
+    echo "      To use the host 'localhost' as DNS, use 10.0.2.2."
+    echo
+    echo "  $0 stop [serial]"
+    echo "      Stop the client on the Android device and exit."
+    echo "      If several devices are connected via adb, then serial must be"
+    echo "      specified."
+    echo
+    echo "  $0 relay"
+    echo "      Start the relay server in the current terminal."
+    exit 1
+}
+
+adbs() {
+    local serial="$1"
+    cmd=adb
+    [[ "$serial" ]] && cmd+=" -s '$serial'"
+    echo "$cmd"
+}
+
+evalv() {
+    echo "$@"
+    eval "$@"
+}
+
+start() {
+    echo 'Starting gnirehtet...'
+    local dns=
+    eval set -- $(getopt -o d: -- "$@")
+    while true;
+    do
+        case "$1" in
+            -d) dns="$2"; shift 2;;
+            --) shift; break;;
+            *)  break;;
+        esac
+    done
+    local serial="$1"
+    evalv $(adbs "$serial") reverse tcp:1080 tcp:1080
+    local dparam=
+    [[ "$dns" ]] && dparam=" --esa dnsServers $dns"
+    evalv $(adbs "$serial") shell am startservice -a com.genymobile.gnirehtet.START$dparam
+}
+
+stop() {
+    echo 'Stopping gnirehtet...'
+    local serial="$1"
+    evalv $(adbs "$serial") shell am startservice -a com.genymobile.gnirehtet.STOP
+}
+
+relay() {
+    evalv java -jar relay/build/libs/relay.jar
+}
+
+case "$1" in
+start)
+    shift
+    start "$@";;
+stop)
+    shift
+    stop "$@";;
+relay)
+    shift
+    relay "$@";;
+*)
+    syntax;;
+esac
