@@ -14,7 +14,7 @@ import java.nio.ByteBuffer;
  */
 public class IPPacketOutputStream extends OutputStream {
 
-    private static final String TAG = IPPacketOutputStream.class.getName();
+    private static final String TAG = IPPacketOutputStream.class.getSimpleName();
 
     private static final int MAX_IP_PACKET_LENGTH = 1 << 16; // packet length is stored on 16 bits
 

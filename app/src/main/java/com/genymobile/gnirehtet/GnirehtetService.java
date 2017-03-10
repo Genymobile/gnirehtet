@@ -23,7 +23,7 @@ public class GnirehtetService extends VpnService {
     private static final String ACTION_CLOSE_VPN = "com.genymobile.gnirehtet.CLOSE_VPN";
     private static final String EXTRA_VPN_CONFIGURATION = "vpnConfiguration";
 
-    private static final String TAG = GnirehtetService.class.getName();
+    private static final String TAG = GnirehtetService.class.getSimpleName();
 
     private static final InetAddress VPN_ADDRESS = Net.toInetAddress(new byte[] {10, 0, 0, 2});
     private static final InetAddress VPN_ROUTE = Net.toInetAddress(new byte[] {0, 0, 0, 0}); // intercept everything

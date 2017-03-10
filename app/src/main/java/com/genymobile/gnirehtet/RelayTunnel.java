@@ -11,7 +11,7 @@ import java.nio.channels.SocketChannel;
 
 public class RelayTunnel implements Tunnel {
 
-    private static final String TAG = RelayTunnel.class.getName();
+    private static final String TAG = RelayTunnel.class.getSimpleName();
 
     private final SocketChannel channel;
 
