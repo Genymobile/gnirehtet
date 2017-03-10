@@ -8,6 +8,8 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -62,7 +64,7 @@ public class Forwarder {
         tunnel.close();
         tunnelToDeviceFuture.cancel(true);
         deviceToTunnelFuture.cancel(true);
-        // vpnInterface must also be closed (externally) so that the forwarding runnables complete
+        wakeUpReadWorkaround();
     }
 
     private void forwardDeviceToTunnel(Tunnel tunnel) throws IOException {
@@ -106,5 +108,28 @@ public class Forwarder {
             }
         }
         Log.d(TAG, "Tunnel to device forwarding stopped");
+    }
+
+    /**
+     * Neither vpnInterface.close() nor vpnInputStream.close() wake up a blocking
+     * vpnInputStream.read().
+     * <p>
+     * Therefore, we need to make Android send a packet to the VPN interface (here by requesting a
+     * name resolution), so that any blocking read will be woken up.
+     * <p>
+     * Since the tunnel is closed at this point, it will never reach the network.
+     */
+    private void wakeUpReadWorkaround() {
+        // network actions may not be called from the main thread
+        EXECUTOR_SERVICE.execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    InetAddress.getByName("__fake_request__");
+                } catch (UnknownHostException e) {
+                    // ignore
+                }
+            }
+        });
     }
 }
