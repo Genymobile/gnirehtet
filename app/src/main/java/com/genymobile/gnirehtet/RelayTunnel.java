@@ -20,6 +20,7 @@ public class RelayTunnel implements Tunnel {
     }
 
     public static RelayTunnel open(VpnService vpnService) throws IOException {
+        Log.d(TAG, "Opening a new relay tunnel...");
         SocketChannel channel = SocketChannel.open();
         vpnService.protect(channel.socket());
         channel.connect(new InetSocketAddress(Inet4Address.getLocalHost(), 1080));

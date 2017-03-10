@@ -130,19 +130,14 @@ public class GnirehtetService extends VpnService {
         forwarder.forward();
     }
 
-    private void stopForwarding() {
-        if (forwarder != null) {
-            forwarder.stop();
-        }
-    }
-
     private void close() {
         if (!isRunning()) {
             // already closed
             return;
         }
         try {
-            stopForwarding();
+            forwarder.stop();
+            forwarder = null;
             vpnInterface.close();
             vpnInterface = null;
         } catch (IOException e) {

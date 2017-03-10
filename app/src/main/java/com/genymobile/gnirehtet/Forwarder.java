@@ -7,11 +7,10 @@ import java.io.FileDescriptor;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.Semaphore;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 public class Forwarder {
 
@@ -21,77 +20,27 @@ public class Forwarder {
 
     private static final int BUFSIZE = 4096;
 
-    private VpnService vpnService;
-    private FileDescriptor vpnFileDescriptor;
-
-    private final AtomicBoolean stopped = new AtomicBoolean();
+    private final FileDescriptor vpnFileDescriptor;
+    private final Tunnel tunnel;
 
     private Future<?> deviceToTunnelFuture;
     private Future<?> tunnelToDeviceFuture;
 
     public Forwarder(VpnService vpnService, FileDescriptor vpnFileDescriptor) {
-        this.vpnService = vpnService;
         this.vpnFileDescriptor = vpnFileDescriptor;
+        tunnel = new PersistentRelayTunnel(vpnService);
     }
 
     public void forward() {
-        EXECUTOR_SERVICE.execute(new Runnable() {
-            @Override
-            public void run() {
-                forwardSync();
-            }
-        });
-    }
-
-    private void forwardSync() {
-        boolean first = true;
-        while (!stopped.get()) {
-            try {
-                if (!first) {
-                    Thread.sleep(5000);
-                } else {
-                    first = false;
-                }
-                if (!stopped.get()) {
-                    connectAndRelay();
-                }
-            } catch (IOException | InterruptedException e) {
-                Log.d(TAG, "Forwarding failed", e);
-            }
-        }
-        Log.d(TAG, "Forwarding stopped");
-    }
-
-    public void stop() {
-        stopped.set(true);
-    }
-
-    private void connectAndRelay() throws IOException, InterruptedException {
-        Tunnel tunnel = RelayTunnel.open(vpnService);
-
-        Semaphore semaphore = new Semaphore(0);
-
-        startForwardingTasks(tunnel, semaphore);
-
-        // wait for the completion of any of the two tasks
-        semaphore.acquire();
-
-        // cause all asynchronous tasks to complete
-        deviceToTunnelFuture.cancel(true);
-        tunnelToDeviceFuture.cancel(true);
-        tunnel.close();
-    }
-
-    private synchronized void startForwardingTasks(final Tunnel tunnel, final Semaphore semaphore) {
         deviceToTunnelFuture = EXECUTOR_SERVICE.submit(new Runnable() {
             @Override
             public void run() {
                 try {
                     forwardDeviceToTunnel(tunnel);
+                } catch (InterruptedIOException e) {
+                    Log.d(TAG, "Device to tunnel interrupted");
                 } catch (IOException e) {
                     Log.e(TAG, "Device to tunnel exception", e);
-                } finally {
-                    semaphore.release();
                 }
             }
         });
@@ -100,13 +49,20 @@ public class Forwarder {
             public void run() {
                 try {
                     forwardTunnelToDevice(tunnel);
+                } catch (InterruptedIOException e) {
+                    Log.d(TAG, "Device to tunnel interrupted");
                 } catch (IOException e) {
                     Log.e(TAG, "Tunnel to device exception", e);
-                } finally {
-                    semaphore.release();
                 }
             }
         });
+    }
+
+    public void stop() {
+        tunnel.close();
+        tunnelToDeviceFuture.cancel(true);
+        deviceToTunnelFuture.cancel(true);
+        // vpnInterface must also be closed (externally) so that the forwarding runnables complete
     }
 
     private void forwardDeviceToTunnel(Tunnel tunnel) throws IOException {
