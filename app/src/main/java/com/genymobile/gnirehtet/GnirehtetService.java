@@ -9,13 +9,10 @@ import android.net.Network;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.ParcelFileDescriptor;
-import android.os.SystemClock;
 import android.util.Log;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.ServerSocket;
-import java.net.Socket;
 import java.util.List;
 
 public class GnirehtetService extends VpnService {
@@ -51,15 +48,23 @@ public class GnirehtetService extends VpnService {
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent.getAction();
         if (ACTION_START_VPN.equals(action)) {
-            VpnConfiguration config = intent.getParcelableExtra(EXTRA_VPN_CONFIGURATION);
-            if (config == null) {
-                config = new VpnConfiguration();
+            if (isRunning()) {
+                Log.d(TAG, "VPN already running, ignore START request");
+            } else {
+                VpnConfiguration config = intent.getParcelableExtra(EXTRA_VPN_CONFIGURATION);
+                if (config == null) {
+                    config = new VpnConfiguration();
+                }
+                startVpn(config);
             }
-            startVpn(config);
         } else if (ACTION_CLOSE_VPN.equals(action)) {
             close();
         }
         return START_NOT_STICKY;
+    }
+
+    private boolean isRunning() {
+        return vpnInterface != null;
     }
 
     private void startVpn(VpnConfiguration config) {
@@ -131,7 +136,7 @@ public class GnirehtetService extends VpnService {
     }
 
     private void close() {
-        if (vpnInterface == null) {
+        if (!isRunning()) {
             // already closed
             return;
         }
