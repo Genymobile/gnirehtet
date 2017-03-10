@@ -47,6 +47,7 @@ public class GnirehtetService extends VpnService {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent.getAction();
+        Log.d(TAG, "Received request " + action);
         if (ACTION_START_VPN.equals(action)) {
             if (isRunning()) {
                 Log.d(TAG, "VPN already running, ignore START request");

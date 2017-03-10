@@ -40,6 +40,7 @@ public class GnirehtetControlService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         String action = intent.getAction();
+        Log.d(TAG, "Received request " + action);
         if (ACTION_GNIREHTET_START.equals(action)) {
             VpnConfiguration config = createConfig(intent);
             startGnirehtet(config);
@@ -59,14 +60,13 @@ public class GnirehtetControlService extends Service {
     }
 
     private void startGnirehtet(VpnConfiguration config) {
-        Log.d(TAG, "Received request " + ACTION_GNIREHTET_START);
         Intent vpnIntent = VpnService.prepare(this);
         if (vpnIntent == null) {
             Log.d(TAG, "VPN was already authorized");
             // we got the permission, start the service now
             GnirehtetService.start(this, config);
         } else {
-            Log.d(TAG, "VPN requires the authorization from the user, requesting...");
+            Log.w(TAG, "VPN requires the authorization from the user, requesting...");
             requestAuthorization(vpnIntent, config);
         }
     }
