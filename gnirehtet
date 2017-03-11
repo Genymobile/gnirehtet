@@ -1,7 +1,17 @@
 #!/bin/bash
 
 syntax() {
-    echo "Syntax: $0 (start|stop|relay) ..." >&2
+    echo "Syntax: $0 (install|uninstall|start|stop|relay) ..." >&2
+    echo
+    echo "  $0 install [serial]"
+    echo "      Install the client on the Android device and exit."
+    echo "      If several devices are connected via adb, then serial must be"
+    echo "      specified."
+    echo
+    echo "  $0 uninstall [serial]"
+    echo "      Uninstall the client from the Android device and exit."
+    echo "      If several devices are connected via adb, then serial must be"
+    echo "      specified."
     echo
     echo "  $0 start [serial] [-d DNS[,DNS2,...]]"
     echo "      Start a client on the Android device and exit."
@@ -35,8 +45,8 @@ evalv() {
     eval "$@"
 }
 
-get_relay_path() {
-    for file in relay.jar relay/build/libs/relay.jar
+locate_file() {
+    for file in "$@"
     do
         if [[ -r "$file" ]]
         then
@@ -44,8 +54,31 @@ get_relay_path() {
             return
         fi
     done
-    # not found, use the default name
-    echo relay.jar
+    # not found, use the name having the highest priority
+    echo "$1"
+}
+
+get_relay_path() {
+    locate_file relay.jar \
+                relay/build/libs/relay.jar
+}
+
+get_apk_path() {
+    locate_file gnirehtet.apk \
+                app/build/outputs/apk/app-release.apk \
+                app/build/outputs/apk/app-debug.apk
+}
+
+apk_install() {
+    echo 'Installing gnirehtet...'
+    local serial="$1"
+    evalv $(adbs "$serial") install -r "$(get_apk_path)"
+}
+
+apk_uninstall() {
+    echo 'Uninstalling gnirehtet...'
+    local serial="$1"
+    evalv $(adbs "$serial") uninstall com.genymobile.gnirehtet
 }
 
 start() {
@@ -78,6 +111,12 @@ relay() {
 }
 
 case "$1" in
+install)
+    shift
+    apk_install "$@";;
+uninstall)
+    shift
+    apk_uninstall "$@";;
 start)
     shift
     start "$@";;
