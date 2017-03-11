@@ -35,6 +35,19 @@ evalv() {
     eval "$@"
 }
 
+get_relay_path() {
+    for file in relay.jar relay/build/libs/relay.jar
+    do
+        if [[ -r "$file" ]]
+        then
+            echo "$file"
+            return
+        fi
+    done
+    # not found, use the default name
+    echo relay.jar
+}
+
 start() {
     echo 'Starting gnirehtet...'
     local dns=
@@ -61,7 +74,7 @@ stop() {
 }
 
 relay() {
-    evalv java -jar relay/build/libs/relay.jar
+    evalv java -jar "$(get_relay_path)"
 }
 
 case "$1" in
