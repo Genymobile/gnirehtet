@@ -8,8 +8,9 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.net.DatagramPacket;
+import java.net.DatagramSocket;
 import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -75,7 +76,7 @@ public class Forwarder {
             // blocking read
             int r = vpnInput.read(buffer);
             if (r == -1) {
-                Log.d(TAG, "Tunnel closed");
+                Log.d(TAG, "VPN closed");
                 break;
             }
             if (r > 0) {
@@ -114,8 +115,8 @@ public class Forwarder {
      * Neither vpnInterface.close() nor vpnInputStream.close() wake up a blocking
      * vpnInputStream.read().
      * <p>
-     * Therefore, we need to make Android send a packet to the VPN interface (here by requesting a
-     * name resolution), so that any blocking read will be woken up.
+     * Therefore, we need to make Android send a packet to the VPN interface (here by sending a UDP
+     * packet), so that any blocking read will be woken up.
      * <p>
      * Since the tunnel is closed at this point, it will never reach the network.
      */
@@ -125,8 +126,11 @@ public class Forwarder {
             @Override
             public void run() {
                 try {
-                    InetAddress.getByName("__fake_request__");
-                } catch (UnknownHostException e) {
+                    DatagramSocket socket = new DatagramSocket();
+                    InetAddress addr = InetAddress.getByAddress(new byte[] {42, 42, 42, 42});
+                    DatagramPacket packet = new DatagramPacket(new byte[0], 0, addr, 4242);
+                    socket.send(packet);
+                } catch (IOException e) {
                     // ignore
                 }
             }
