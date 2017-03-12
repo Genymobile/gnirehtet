@@ -23,7 +23,18 @@ task clean(type: Delete) {
 }
 
 task debug(dependsOn: [':app:assembleDebug', ':relay:jar'])
-task clientStart(dependsOn: ':app:start')
-task clientStop(dependsOn: ':app:stop')
-task serverStart(dependsOn: ':relay:run')
+task release(dependsOn: [':app:assembleRelease', ':relay:jar'])
+
+task clientStart(type: Exec, dependsOn: [':app:installDebug']) {
+    // linux
+    commandLine './gnirehtet', 'start'
+}
+
+task clientStop(type: Exec) {
+    // linux
+    commandLine './gnirehtet', 'stop'
+}
+
+task serverStart(dependsOn: ':relay:run');
+
 task start(dependsOn: ['clientStart', 'serverStart'])

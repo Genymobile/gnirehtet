@@ -44,18 +44,3 @@ dependencies {
     })
     testCompile 'junit:junit:4.12'
 }
-
-task forwardPort(type: Exec) {
-    // linux
-    commandLine 'adb', 'reverse', 'tcp:1080', 'tcp:1080'
-}
-
-task start(type: Exec, dependsOn: ['installDebug', 'forwardPort']) {
-    // linux
-    commandLine 'adb', 'shell', 'am', 'startservice', '-a', 'com.genymobile.gnirehtet.START', '--esa', 'dnsServers', '8.8.8.8'
-}
-
-task stop(type: Exec) {
-    // linux
-    commandLine 'adb', 'shell', 'am', 'startservice', '-a', 'com.genymobile.gnirehtet.STOP'
-}
