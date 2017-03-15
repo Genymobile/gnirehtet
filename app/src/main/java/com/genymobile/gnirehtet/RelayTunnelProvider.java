@@ -30,7 +30,9 @@ public class RelayTunnelProvider {
     }
 
     public synchronized void invalidateTunnel() {
-        tunnel.close();
-        tunnel = null;
+        if (tunnel != null) {
+            tunnel.close();
+            tunnel = null;
+        }
     }
 }
