@@ -4,6 +4,7 @@ android {
     compileSdkVersion 25
     buildToolsVersion "25.0.2"
     defaultConfig {
+        archivesBaseName = "gnirehtet" // change apk name
         applicationId "com.genymobile.gnirehtet"
         minSdkVersion 21
         targetSdkVersion 25
@@ -33,6 +34,13 @@ android {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             signingConfig signingConfigs.release
+
+            applicationVariants.all { variant ->
+                variant.outputs.each { output ->
+                    def file = output.outputFile
+                    output.outputFile = new File(file.parent, file.name.replace("-release", ""))
+                }
+            }
         }
     }
 }

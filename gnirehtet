@@ -65,8 +65,8 @@ get_relay_path() {
 
 get_apk_path() {
     locate_file gnirehtet.apk \
-                app/build/outputs/apk/app-release.apk \
-                app/build/outputs/apk/app-debug.apk
+                app/build/outputs/apk/gnirehtet.apk \
+                app/build/outputs/apk/gnirehtet-debug.apk
 }
 
 apk_install() {
