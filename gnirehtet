@@ -1,5 +1,8 @@
 #!/bin/bash
 
+ADB=adb
+JAVA=java
+
 syntax() {
     echo "Syntax: $0 (install|uninstall|start|stop|relay) ..." >&2
     echo
@@ -35,7 +38,7 @@ syntax() {
 
 adbs() {
     local serial="$1"
-    cmd=adb
+    cmd="'$ADB'"
     [[ "$serial" ]] && cmd+=" -s '$serial'"
     echo "$cmd"
 }
@@ -107,7 +110,7 @@ stop() {
 }
 
 relay() {
-    evalv java -jar "$(get_relay_path)"
+    evalv "'$JAVA'" -jar "$(get_relay_path)"
 }
 
 case "$1" in
