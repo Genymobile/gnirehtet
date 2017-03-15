@@ -1,0 +1,21 @@
+#!/bin/bash
+# Make a gnirehtet release.
+#
+# Put your keystore properties into ~/.gradle/gradle.properties
+# (check app/build.gradle)
+#
+
+GRADLE=gradle  # remplace by ./gradlew if you want to
+DIST=dist
+
+version=$(git describe --tags) &&
+"$GRADLE" release &&
+mkdir -p "$DIST" &&
+cd "$DIST" &&
+cp ../app/build/outputs/apk/gnirehtet.apk . &&
+cp ../relay/build/libs/relay.jar . &&
+cp ../gnirehtet . &&
+target=gnirehtet-"$version".zip &&
+rm -f "$target"&&
+zip "$target" gnirehtet.apk relay.jar gnirehtet &&
+cd -
