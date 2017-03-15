@@ -65,7 +65,8 @@ public class Packetizer {
         responseIPv4Header.setTotalLength(totalLength);
         responseTransportHeader.setPayloadLength(payloadLength);
 
-        // TODO documentation: use the same buffer to avoid copies, don't use this IPv4Packet after another call to createPacket()
+        // In order to avoid copies, buffer is shared with this IPv4Packet instance that is returned.
+        // Don't use it after another call to createPacket()!
         IPv4Packet packet = new IPv4Packet(buffer);
         packet.recompute();
         return packet;

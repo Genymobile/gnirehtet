@@ -10,5 +10,6 @@ public interface Tunnel {
     // blocking
     int receive(byte[] packet) throws IOException;
 
+    // blocking
     void close();
 }

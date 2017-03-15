@@ -37,7 +37,8 @@ public class IPv4PacketBuffer {
         buffer.limit(length).position(0);
         ByteBuffer packetBuffer = buffer.slice();
         buffer.limit(limit).position(length);
-        // TODO documentation: use the same buffer to avoid copies, don't use this IPv4Packet after a call to next()!
+        // In order to avoid copies, packetBuffer is shared with this IPv4Packet instance that is returned.
+        // Don't use it after another call to next()!
         return new IPv4Packet(packetBuffer);
     }
 

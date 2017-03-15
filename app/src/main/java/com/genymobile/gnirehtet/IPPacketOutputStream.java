@@ -6,9 +6,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-
-// TODO change the protocol to send the length before the packet?
-
 /**
  * Wrapper for writing one IP packet at a time to an {@link OutputStream}.
  */
