@@ -4,7 +4,7 @@ ADB=adb
 JAVA=java
 
 syntax() {
-    echo "Syntax: $0 (install|uninstall|start|stop|relay) ..." >&2
+    echo "Syntax: $0 (install|uninstall|rt|start|stop|relay) ..." >&2
     echo
     echo "  $0 install [serial]"
     echo "      Install the client on the Android device and exit."
@@ -15,6 +15,12 @@ syntax() {
     echo "      Uninstall the client from the Android device and exit."
     echo "      If several devices are connected via adb, then serial must be"
     echo "      specified."
+    echo
+    echo "  $0 rt [serial] [-d DNS[,DNS2,...]]"
+    echo "      Enable reverse tethering for exactly one device:"
+    echo "        - start the client;"
+    echo "        - start the relay server;"
+    echo "        - on Ctrl+C, stop both the relay server and the client."
     echo
     echo "  $0 start [serial] [-d DNS[,DNS2,...]]"
     echo "      Start a client on the Android device and exit."
@@ -130,6 +136,10 @@ stop)
 relay)
     shift
     relay "$@";;
+rt)
+    shift
+    trap stop INT
+    start "$@" && relay;;
 *)
     syntax;;
 esac
