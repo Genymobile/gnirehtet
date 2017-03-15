@@ -98,6 +98,7 @@ start() {
     done
     local serial="$1"
     evalv $(adbs "$serial") reverse tcp:1080 tcp:1080
+    [[ $? = 0 ]] || return
     local dparam=
     [[ "$dns" ]] && dparam=" --esa dnsServers $dns"
     evalv $(adbs "$serial") shell am startservice -a com.genymobile.gnirehtet.START$dparam
