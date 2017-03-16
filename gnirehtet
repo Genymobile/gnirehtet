@@ -18,6 +18,7 @@ syntax() {
     echo
     echo "  $0 rt [serial] [-d DNS[,DNS2,...]]"
     echo "      Enable reverse tethering for exactly one device:"
+    echo "        - install the client if necessary;"
     echo "        - start the client;"
     echo "        - start the relay server;"
     echo "        - on Ctrl+C, stop both the relay server and the client."
@@ -84,6 +85,11 @@ apk_install() {
     evalv $(adbs "$serial") install -r "$(get_apk_path)"
 }
 
+apk_require_installed() {
+    [[ "$(eval $(adbs "$serial") shell pm list packages com.genymobile.gnirehtet)" ]] ||
+        apk_install
+}
+
 apk_uninstall() {
     echo 'Uninstalling gnirehtet...'
     local serial="$1"
@@ -138,7 +144,8 @@ relay)
     relay "$@";;
 rt)
     shift
-    trap stop INT
+    apk_require_installed &&
+    trap stop INT &&
     start "$@" && relay;;
 *)
     syntax;;
