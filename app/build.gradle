@@ -15,7 +15,7 @@ android {
     signingConfigs {
         release {
 /*
-            Put this in ~/.gradle/gradle.properties:
+            Put this in ~/.gradle/gradle.properties or ./gradle.properties:
             RELEASE_STORE_FILE={path to your keystore}
             RELEASE_STORE_PASSWORD=*****
             RELEASE_KEY_ALIAS=*****
