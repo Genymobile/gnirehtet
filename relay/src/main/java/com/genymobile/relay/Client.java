@@ -38,7 +38,7 @@ public class Client {
                 updateInterests();
             }
         };
-        // on start, we are interested only in reading (there is nothing to onWritable)
+        // on start, we are interested only in reading (there is nothing to write)
         selectionKey = clientChannel.register(selector, SelectionKey.OP_READ, selectionHandler);
 
         this.removeHandler = removeHandler;
@@ -98,7 +98,7 @@ public class Client {
     }
 
     private void updateInterests() {
-        int interestingOps = SelectionKey.OP_READ; // we always want to onReadable
+        int interestingOps = SelectionKey.OP_READ; // we always want to read
         if (!networkToClient.isEmpty()) {
             interestingOps |= SelectionKey.OP_WRITE;
         }
