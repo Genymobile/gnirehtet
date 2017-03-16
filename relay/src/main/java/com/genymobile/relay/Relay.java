@@ -15,7 +15,7 @@ public class Relay {
 
     private static final String TAG = Relay.class.getSimpleName();
 
-    private static final int DEFAULT_PORT = 1080;
+    private static final int DEFAULT_PORT = 31416;
 
     private int port;
     private final List<Client> clients = new ArrayList<>();

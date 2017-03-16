@@ -13,6 +13,8 @@ public class RelayTunnel implements Tunnel {
 
     private static final String TAG = RelayTunnel.class.getSimpleName();
 
+    private static final int DEFAULT_PORT = 31416;
+
     private final SocketChannel channel;
 
     private RelayTunnel(SocketChannel channel) {
@@ -23,7 +25,7 @@ public class RelayTunnel implements Tunnel {
         Log.d(TAG, "Opening a new relay tunnel...");
         SocketChannel channel = SocketChannel.open();
         vpnService.protect(channel.socket());
-        channel.connect(new InetSocketAddress(Inet4Address.getLocalHost(), 1080));
+        channel.connect(new InetSocketAddress(Inet4Address.getLocalHost(), DEFAULT_PORT));
         return new RelayTunnel(channel);
     }
 

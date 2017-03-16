@@ -109,7 +109,7 @@ start() {
         esac
     done
     local serial="$1"
-    evalv $(adbs "$serial") reverse tcp:1080 tcp:1080
+    evalv $(adbs "$serial") reverse tcp:31416 tcp:31416
     [[ $? = 0 ]] || return
     local dparam=
     [[ "$dns" ]] && dparam=" --esa dnsServers $dns"
