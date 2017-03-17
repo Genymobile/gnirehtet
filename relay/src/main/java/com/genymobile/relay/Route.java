@@ -126,7 +126,7 @@ public class Route {
 
         @Override
         public String toString() {
-            return protocol + " {" + getSource() + " -> " + getDestination() + "}";
+            return protocol + " " + Net.toString(getSource()) + " -> " + Net.toString(getDestination());
         }
     }
 

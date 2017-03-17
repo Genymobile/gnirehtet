@@ -1,6 +1,7 @@
 package com.genymobile.relay;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
 public class Net {
@@ -40,5 +41,9 @@ public class Net {
                 (byte) (ipAddr & 0xff)
         };
         return toInetAddress(ip);
+    }
+
+    public static String toString(InetSocketAddress address) {
+        return address.getAddress().getHostAddress() + ":" + address.getPort();
     }
 }
