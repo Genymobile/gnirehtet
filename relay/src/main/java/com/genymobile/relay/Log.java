@@ -27,13 +27,14 @@ public class Log {
     private static final Date date = new Date();
 
     private Log() {
+        // not instantiable
     }
 
-    private static Level getThreshold() {
+    public static Level getThreshold() {
         return threshold;
     }
 
-    private static void setThreshold(Level threshold) {
+    public static void setThreshold(Level threshold) {
         Log.threshold = threshold;
     }
 
