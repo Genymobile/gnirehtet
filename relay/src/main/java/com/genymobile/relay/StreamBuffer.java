@@ -4,6 +4,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
+/**
+ * Circular buffer to store a stream. Read/write boundaries are not preserved.
+ */
 public class StreamBuffer {
 
     private final byte[] data;
@@ -72,16 +75,14 @@ public class StreamBuffer {
     }
 
     /**
-     * To avoid unnecessary copies, StreamBuffer writes at most until the "end"
-     * of the circular buffer, which is subobtimal (it could have written more
-     * data if they have been contiguous).
+     * To avoid unnecessary copies, StreamBuffer writes at most until the "end" of the circular
+     * buffer, which is subobtimal (it could have written more data if they have been contiguous).
      * <p>
-     * In order to minimize the occurrence of this event, reset the head and
-     * tail to 0 when the buffer is empty (no copy is involved).
+     * In order to minimize the occurrence of this event, reset the head and tail to 0 when the
+     * buffer is empty (no copy is involved).
      * <p>
-     * This is especially useful when the StreamBuffer is used to read/write
-     * one packet at a time, so the "end" of the buffer is guaranteed to never
-     * be reached.
+     * This is especially useful when the StreamBuffer is used to read/write one packet at a time,
+     * so the "end" of the buffer is guaranteed to never be reached.
      */
     private void optimize() {
         if (isEmpty()) {

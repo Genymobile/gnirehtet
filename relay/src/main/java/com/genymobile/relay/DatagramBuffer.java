@@ -5,12 +5,14 @@ import java.nio.ByteBuffer;
 import java.nio.channels.WritableByteChannel;
 
 /**
+ * Circular buffer to store datagrams (preserving their boundaries).
+ * <p>
  * <pre>
  *     circularBufferLength
  * |<------------------------->| extra space for storing the last datagram in one block
  * +---------------------------+------+
  * |                           |      |
- * |[B4]     [  B1  ][ B2 ][  B3  ]   |
+ * |[D4]     [  D1  ][ D2 ][  D3  ]   |
  * +---------------------------+------+
  *     ^     ^
  *  head     tail
