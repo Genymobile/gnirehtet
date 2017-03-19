@@ -40,7 +40,13 @@ public class PersistentRelayTunnel implements Tunnel {
         while (!stopped) {
             try {
                 Tunnel tunnel = provider.getCurrentTunnel();
-                return tunnel.receive(packet);
+                int r = tunnel.receive(packet);
+                if (r == -1) {
+                    Log.d(TAG, "Tunnel read EOF");
+                    provider.invalidateTunnel();
+                    continue;
+                }
+                return r;
             } catch (IOException | InterruptedException e) {
                 Log.e(TAG, "Cannot send to tunnel", e);
                 provider.invalidateTunnel();
