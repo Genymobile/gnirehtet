@@ -34,6 +34,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     private final SelectionKey selectionKey;
 
     private State state;
+    private int synSequenceNumber;
     private int sequenceNumber;
     private int acknowledgementNumber;
 
@@ -94,7 +95,6 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         } catch (IOException e) {
             loge(TAG, "Cannot read", e);
             resetConnection();
-            destroy();
         }
     }
 
@@ -107,7 +107,6 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         } catch (IOException e) {
             loge(TAG, "Cannot write", e);
             resetConnection();
-            destroy();
         }
     }
 
@@ -208,13 +207,15 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     private void handleFirstPacket(IPv4Packet packet) {
         logd(TAG, "handleFirstPacket()");
         TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
-        acknowledgementNumber = tcpHeader.getSequenceNumber() + 1;
+        int receivedSequenceNumber = tcpHeader.getSequenceNumber();
+        acknowledgementNumber = receivedSequenceNumber + 1;
         if (!tcpHeader.isSyn()) {
             logw(TAG, "Unexpected first packet " + tcpHeader.getSequenceNumber() + "; acking " + tcpHeader.getAcknowledgementNumber() + "; flags=" + tcpHeader.getFlags());
             sequenceNumber = tcpHeader.getAcknowledgementNumber(); // make a RST in the window client
             resetConnection();
             return;
         }
+        synSequenceNumber = receivedSequenceNumber;
 
         sequenceNumber = RANDOM.nextInt();
         logd(TAG, "initialized seqNum=" + sequenceNumber + "; ackNum=" + acknowledgementNumber);
@@ -223,11 +224,14 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     }
 
     private void handleDuplicateSyn(IPv4Packet packet) {
+        TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
+        int receivedSequenceNumber = tcpHeader.getSequenceNumber();
         if (state == State.SYN_SENT) {
-            TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
             // we didn't call finishConnect() yet, we can accept this packet as if it were the first SYN
-            acknowledgementNumber = tcpHeader.getSequenceNumber() + 1;
-        } else {
+            synSequenceNumber = receivedSequenceNumber;
+            acknowledgementNumber = receivedSequenceNumber + 1;
+        } else if (receivedSequenceNumber != synSequenceNumber) {
+            // duplicate SYN with different sequence number
             resetConnection();
         }
     }
@@ -312,6 +316,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         state = null;
         IPv4Packet packet = createEmptyResponsePacket(TCPHeader.FLAG_RST);
         sendToClient(packet);
+        destroy();
     }
 
     private IPv4Packet createEmptyResponsePacket(int flags) {

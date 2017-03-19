@@ -51,15 +51,16 @@ public class Relay {
 
         while (true) {
             selector.select();
+            Set<SelectionKey> selectedKeys = selector.selectedKeys();
 
             if (selectorAlarm.accept()) {
                 cleanUp();
+            } else if (selectedKeys.isEmpty()) {
+                throw new AssertionError("selector.select() returned without any event, an invalid SelectionKey was probably been registered");
             }
 
-            Set<SelectionKey> selectedKeys = selector.selectedKeys();
             for (SelectionKey selectedKey : selectedKeys) {
                 SelectionHandler selectionHandler = (SelectionHandler) selectedKey.attachment();
-                //Log.d(TAG, "selected… " + selectedKey.readyOps());
                 selectionHandler.onReady(selectedKey);
             }
             // by design, we handled everything
