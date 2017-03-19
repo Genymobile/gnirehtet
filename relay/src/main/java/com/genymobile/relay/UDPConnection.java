@@ -46,7 +46,7 @@ public class UDPConnection extends AbstractConnection {
     @Override
     public void sendToNetwork(IPv4Packet packet) {
         if (!clientToNetwork.readFrom(packet.getPayload())) {
-            Log.d(TAG, route.getKey() + " Cannot send to network, drop packet");
+            logd(TAG, "Cannot send to network, drop packet");
             return;
         }
         updateInterests();
@@ -58,7 +58,7 @@ public class UDPConnection extends AbstractConnection {
         try {
             channel.close();
         } catch (IOException e) {
-            Log.e(TAG, route.getKey() + " Cannot close connection channel", e);
+            loge(TAG, "Cannot close connection channel", e);
         }
     }
 
@@ -72,7 +72,7 @@ public class UDPConnection extends AbstractConnection {
     }
 
     private DatagramChannel createChannel() throws IOException {
-        Log.d(TAG, route.getKey() + " Open");
+        logd(TAG, "Open");
         DatagramChannel channel = DatagramChannel.open();
         channel.configureBlocking(false);
         channel.connect(getRewrittenDestination());
@@ -104,7 +104,7 @@ public class UDPConnection extends AbstractConnection {
             packetForClient = networkToClient.packetize(channel);
             return packetForClient != null;
         } catch (IOException e) {
-            Log.e(TAG, route.getKey() + " Cannot read", e);
+            loge(TAG, "Cannot read", e);
             return false;
         }
     }
@@ -113,7 +113,7 @@ public class UDPConnection extends AbstractConnection {
         try {
             return clientToNetwork.writeTo(channel);
         } catch (IOException e) {
-            Log.e(TAG, route.getKey() + " Cannot write", e);
+            loge(TAG, "Cannot write", e);
             return false;
         }
     }
@@ -121,9 +121,9 @@ public class UDPConnection extends AbstractConnection {
     private void pushToClient() {
         assert packetForClient != null;
         if (sendToClient(packetForClient)) {
-            Log.d(TAG, route.getKey() + " Packet (" + packetForClient.getPayloadLength() + " bytes) sent to client");
+            logd(TAG, "Packet (" + packetForClient.getPayloadLength() + " bytes) sent to client");
             if (Log.isVerboseEnabled()) {
-                Log.v(TAG, Binary.toString(packetForClient.getRaw()));
+                logv(TAG, Binary.toString(packetForClient.getRaw()));
             }
             packetForClient = null;
         }

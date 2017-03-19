@@ -48,4 +48,44 @@ public abstract class AbstractConnection implements Connection {
         int port = key.getDestinationPort();
         return new InetSocketAddress(getRewrittenAddress(destIp), port);
     }
+
+    public void logv(String tag, String message, Throwable e) {
+        Log.v(tag, route.getKey() + " " + message);
+    }
+
+    public void logv(String tag, String message) {
+        logv(tag, message, null);
+    }
+
+    public void logd(String tag, String message, Throwable e) {
+        Log.d(tag, route.getKey() + " " + message);
+    }
+
+    public void logd(String tag, String message) {
+        logd(tag, message, null);
+    }
+
+    public void logi(String tag, String message, Throwable e) {
+        Log.i(tag, route.getKey() + " " + message);
+    }
+
+    public void logi(String tag, String message) {
+        logi(tag, message, null);
+    }
+
+    public void logw(String tag, String message, Throwable e) {
+        Log.w(tag, route.getKey() + " " + message);
+    }
+
+    public void logw(String tag, String message) {
+        logw(tag, message, null);
+    }
+
+    public void loge(String tag, String message, Throwable e) {
+        Log.e(tag, route.getKey() + " " + message);
+    }
+
+    public void loge(String tag, String message) {
+        loge(tag, message, null);
+    }
 }
