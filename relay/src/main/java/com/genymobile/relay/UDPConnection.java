@@ -72,11 +72,10 @@ public class UDPConnection extends AbstractConnection {
     }
 
     private DatagramChannel createChannel() throws IOException {
-        Route.Key key = route.getKey();
+        Log.d(TAG, route.getKey() + " Open");
         DatagramChannel channel = DatagramChannel.open();
         channel.configureBlocking(false);
         channel.connect(getRewrittenDestination());
-        Log.d(TAG, "Creating new connection: " + route.getKey());
         return channel;
     }
 

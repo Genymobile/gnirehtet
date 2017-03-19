@@ -144,11 +144,10 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     }
 
     private SocketChannel createChannel() throws IOException {
-        Route.Key key = route.getKey();
+        Log.i(TAG, route.getKey() + " Open");
         SocketChannel channel = SocketChannel.open();
         channel.configureBlocking(false);
         channel.connect(getRewrittenDestination());
-        Log.i(TAG, "Creating new connection: " + route.getKey());
         return channel;
     }
 
@@ -176,7 +175,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         int packetSequenceNumber = tcpHeader.getSequenceNumber();
         if (packetSequenceNumber != acknowledgementNumber) {
             // ignore packet already received or out-of-order, retransmission is already managed by both sides
-            Log.e(TAG, route.getKey() + " ***** Ignoring packet " + packetSequenceNumber + "; expecting " + acknowledgementNumber + "; flags=" + tcpHeader.getFlags());
+            Log.w(TAG, route.getKey() + " Ignoring packet " + packetSequenceNumber + "; expecting " + acknowledgementNumber + "; flags=" + tcpHeader.getFlags());
             sendToClient(createEmptyResponsePacket(TCPHeader.FLAG_ACK)); // re-ack
             return;
         }
@@ -211,7 +210,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
         acknowledgementNumber = tcpHeader.getSequenceNumber() + 1;
         if (!tcpHeader.isSyn()) {
-            Log.e(TAG, route.getKey() + " ***** Unexpected first packet " + tcpHeader.getSequenceNumber() + "; acking " + tcpHeader.getAcknowledgementNumber() + "; flags=" + tcpHeader.getFlags());
+            Log.w(TAG, route.getKey() + " Unexpected first packet " + tcpHeader.getSequenceNumber() + "; acking " + tcpHeader.getAcknowledgementNumber() + "; flags=" + tcpHeader.getFlags());
             sequenceNumber = tcpHeader.getAcknowledgementNumber(); // make a RST in the window client
             resetConnection();
             return;

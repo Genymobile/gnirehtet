@@ -1,9 +1,7 @@
 package com.genymobile.relay;
 
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 
 public abstract class AbstractConnection implements Connection {
 
@@ -18,7 +16,7 @@ public abstract class AbstractConnection implements Connection {
     }
 
     protected void destroy() {
-        Log.i(TAG, route.getKey() + " destroy()");
+        Log.i(TAG, route.getKey() + " Close");
 
         // remove the route from the router
         route.discard();
