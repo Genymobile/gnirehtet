@@ -11,19 +11,20 @@ public class RelayTunnelProvider {
 
     private final VpnService vpnService;
     private RelayTunnel tunnel;
-    private boolean first;
+    private boolean first = true;
 
     public RelayTunnelProvider(VpnService vpnService) {
         this.vpnService = vpnService;
     }
 
     public synchronized RelayTunnel getCurrentTunnel() throws IOException, InterruptedException {
-        if (!first) {
-            // add delay between attempts
-            Thread.sleep(5000);
-            first = true;
-        }
         if (tunnel == null) {
+            if (!first) {
+                // add delay between attempts
+                Thread.sleep(5000);
+            } else {
+                first = false;
+            }
             tunnel = RelayTunnel.open(vpnService);
         }
         return tunnel;
