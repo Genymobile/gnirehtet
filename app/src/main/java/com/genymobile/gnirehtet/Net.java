@@ -19,7 +19,7 @@ package com.genymobile.gnirehtet;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
-public class Net {
+public final class Net {
     private Net() {
         // not instantiable
     }

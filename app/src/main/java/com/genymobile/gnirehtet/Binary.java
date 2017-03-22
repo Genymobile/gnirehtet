@@ -16,7 +16,7 @@
 
 package com.genymobile.gnirehtet;
 
-public class Binary {
+public final class Binary {
 
     private Binary() {
         // not instantiable
@@ -31,14 +31,15 @@ public class Binary {
     }
 
     public static long unsigned(int value) {
-        return value & 0xffffffffl;
+        return value & 0xffffffffL;
     }
 
     public static String toString(byte[] data, int len) {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < len; ++i) {
-            if (i % 8 == 0)
+            if (i % 8 == 0) {
                 builder.append('\n');
+            }
             builder.append(String.format("%02X ", data[i] & 0xff));
         }
         return builder.toString();

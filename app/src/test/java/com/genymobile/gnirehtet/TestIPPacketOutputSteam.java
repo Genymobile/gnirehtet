@@ -83,7 +83,7 @@ public class TestIPPacketOutputSteam {
                 super.write(b, off, len);
                 ++packetCount;
             }
-        };
+        }
         CapturingOutputStream cos = new CapturingOutputStream();
         IPPacketOutputStream pos = new IPPacketOutputStream(cos);
 

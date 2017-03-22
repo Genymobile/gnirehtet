@@ -79,7 +79,9 @@ public class IPPacketOutputStream extends OutputStream {
 
     private void sink() throws IOException {
         // sink all packets
-        while (sinkPacket()) ;
+        while (sinkPacket()) {
+            // continue
+        }
     }
 
     private boolean sinkPacket() throws IOException {

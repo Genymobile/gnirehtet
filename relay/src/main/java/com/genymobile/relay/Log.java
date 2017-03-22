@@ -21,7 +21,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
-public class Log {
+public final class Log {
 
     enum Level {
         VERBOSE("V"),
@@ -40,7 +40,7 @@ public class Log {
     private static Level threshold = Level.INFO;
 
     private static final DateFormat FORMAT = new SimpleDateFormat("YYYY-MM-dd HH:mm:ss.SSS");
-    private static final Date date = new Date();
+    private static final Date DATE = new Date();
 
     private Log() {
         // not instantiable
@@ -79,8 +79,8 @@ public class Log {
     }
 
     private static String getDate() {
-        date.setTime(System.currentTimeMillis());
-        return FORMAT.format(date);
+        DATE.setTime(System.currentTimeMillis());
+        return FORMAT.format(DATE);
     }
 
     private static String format(Level level, String tag, String message) {

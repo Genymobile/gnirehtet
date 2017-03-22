@@ -25,7 +25,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-public class RelayTunnel implements Tunnel {
+public final class RelayTunnel implements Tunnel {
 
     private static final String TAG = RelayTunnel.class.getSimpleName();
 

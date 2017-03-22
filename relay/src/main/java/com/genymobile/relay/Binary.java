@@ -18,7 +18,7 @@ package com.genymobile.relay;
 
 import java.nio.ByteBuffer;
 
-public class Binary {
+public final class Binary {
 
     private Binary() {
         // not instantiable
@@ -28,10 +28,11 @@ public class Binary {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < length; ++i) {
             byte b = data[offset + i];
-            if (i % 16 == 0)
+            if (i % 16 == 0) {
                 builder.append('\n');
-            else if (i % 8 == 0)
+            } else if (i % 8 == 0) {
                 builder.append(' ');
+            }
             ++i;
             builder.append(String.format("%02X ", b & 0xff));
         }

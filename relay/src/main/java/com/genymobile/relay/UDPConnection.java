@@ -89,10 +89,10 @@ public class UDPConnection extends AbstractConnection {
 
     private DatagramChannel createChannel() throws IOException {
         logd(TAG, "Open");
-        DatagramChannel channel = DatagramChannel.open();
-        channel.configureBlocking(false);
-        channel.connect(getRewrittenDestination());
-        return channel;
+        DatagramChannel datagramChannel = DatagramChannel.open();
+        datagramChannel.configureBlocking(false);
+        datagramChannel.connect(getRewrittenDestination());
+        return datagramChannel;
     }
 
     private void touch() {

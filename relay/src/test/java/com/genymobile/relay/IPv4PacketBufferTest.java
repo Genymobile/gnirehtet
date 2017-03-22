@@ -96,8 +96,9 @@ public class IPv4PacketBufferTest {
 
     private static ByteBuffer createMockPackets() {
         ByteBuffer buffer = ByteBuffer.allocate(32 * 3);
-        for (int i = 0; i < 3; ++i)
+        for (int i = 0; i < 3; ++i) {
             writeMockPacketTo(buffer);
+        }
         buffer.flip();
         return buffer;
     }

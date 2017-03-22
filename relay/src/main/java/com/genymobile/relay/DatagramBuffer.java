@@ -90,7 +90,8 @@ public class DatagramBuffer {
     public boolean readFrom(ByteBuffer buffer) {
         int length = buffer.remaining();
         if (length > MAX_DATAGRAM_LENGTH) {
-            throw new IllegalArgumentException("Datagram length (" + buffer.remaining() + ") may not be greater than " + MAX_DATAGRAM_LENGTH + " bytes");
+            throw new IllegalArgumentException("Datagram length (" + buffer.remaining() + ") may not be greater than "
+                    + MAX_DATAGRAM_LENGTH + " bytes");
         }
         if (!hasEnoughSpaceFor(length)) {
             return false;

@@ -71,8 +71,9 @@ public class IPv4Packet {
                 return new UDPHeader(getRawTransport());
             case TCP:
                 return new TCPHeader(getRawTransport());
+            default:
+                throw new AssertionError("Should be unreachable if ipv4Header.isSupported()");
         }
-        throw new AssertionError("Should be unreachable if ipv4Header.isSupported()");
     }
 
     private ByteBuffer getRawTransport() {

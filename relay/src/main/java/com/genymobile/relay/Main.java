@@ -18,8 +18,12 @@ package com.genymobile.relay;
 
 import java.io.IOException;
 
-public class Main {
+public final class Main {
     private static final String TAG = Main.class.getSimpleName();
+
+    private Main() {
+        // not instantiable
+    }
 
     public static void main(String... args) throws IOException {
         Log.i(TAG, "Starting server...");

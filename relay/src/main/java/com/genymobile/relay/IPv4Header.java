@@ -59,8 +59,8 @@ public class IPv4Header {
         byte versionAndIHL = raw.get(0);
         version = (byte) (versionAndIHL >> 4);
 
-        byte IHL = (byte) (versionAndIHL & 0xf);
-        headerLength = IHL << 2;
+        byte ihl = (byte) (versionAndIHL & 0xf);
+        headerLength = ihl << 2;
 
         raw.limit(headerLength);
 

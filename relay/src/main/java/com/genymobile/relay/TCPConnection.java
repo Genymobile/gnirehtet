@@ -160,10 +160,10 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
     private SocketChannel createChannel() throws IOException {
         logi(TAG, "Open");
-        SocketChannel channel = SocketChannel.open();
-        channel.configureBlocking(false);
-        channel.connect(getRewrittenDestination());
-        return channel;
+        SocketChannel socketChannel = SocketChannel.open();
+        socketChannel.configureBlocking(false);
+        socketChannel.connect(getRewrittenDestination());
+        return socketChannel;
     }
 
     @Override
@@ -226,7 +226,8 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         int receivedSequenceNumber = tcpHeader.getSequenceNumber();
         acknowledgementNumber = receivedSequenceNumber + 1;
         if (!tcpHeader.isSyn()) {
-            logw(TAG, "Unexpected first packet " + tcpHeader.getSequenceNumber() + "; acking " + tcpHeader.getAcknowledgementNumber() + "; flags=" + tcpHeader.getFlags());
+            logw(TAG, "Unexpected first packet " + tcpHeader.getSequenceNumber() + "; acking " + tcpHeader.getAcknowledgementNumber()
+                    + "; flags=" + tcpHeader.getFlags());
             sequenceNumber = tcpHeader.getAcknowledgementNumber(); // make a RST in the window client
             resetConnection();
             return;

@@ -108,13 +108,5 @@ public class IPv4PacketTest {
         packetPayload.rewind();
         Assert.assertEquals(8, packetPayload.remaining());
         Assert.assertEquals(0x1122334455667788L, packetPayload.getLong());
-
-//        int sum = 0x4500 + 0x0024 + 0x0000 + 0x0000 + 0x0011 + 0x0000 + 0x1234 + 0x5678 + 0x4242 + 0x4242;
-//        while ((sum & ~0xffff) != 0) {
-//            sum = (sum & 0xffff) + (sum >> 16);
-//        }
-//        short checksum = (short) ~sum;
-//
-//        Assert.assertEquals("Checksum must be set", checksum, packet.getIpv4Header().getChecksum());
     }
 }

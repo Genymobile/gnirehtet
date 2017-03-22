@@ -27,7 +27,8 @@ public class Route {
     private final Connection connection;
     private final RemoveHandler<Route.Key> removeHandler;
 
-    public Route(Client client, Selector selector, Key key, IPv4Header ipv4Header, TransportHeader transportHeader, RemoveHandler<Route.Key> removeHandler) throws IOException {
+    public Route(Client client, Selector selector, Key key, IPv4Header ipv4Header, TransportHeader transportHeader,
+                 RemoveHandler<Route.Key> removeHandler) throws IOException {
         this.client = client;
         this.key = key;
         connection = createConnection(selector, key, ipv4Header, transportHeader);
@@ -118,15 +119,27 @@ public class Route {
 
         @Override
         public boolean equals(Object o) {
-            if (this == o) return true;
-            if (o == null || getClass() != o.getClass()) return false;
+            if (this == o) {
+                return true;
+            }
+            if (o == null || getClass() != o.getClass()) {
+                return false;
+            }
 
             Key key = (Key) o;
 
-            if (sourceIp != key.sourceIp) return false;
-            if (sourcePort != key.sourcePort) return false;
-            if (destIp != key.destIp) return false;
-            if (destPort != key.destPort) return false;
+            if (sourceIp != key.sourceIp) {
+                return false;
+            }
+            if (sourcePort != key.sourcePort) {
+                return false;
+            }
+            if (destIp != key.destIp) {
+                return false;
+            }
+            if (destPort != key.destPort) {
+                return false;
+            }
             return protocol == key.protocol;
         }
 
