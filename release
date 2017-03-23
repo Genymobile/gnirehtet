@@ -8,7 +8,7 @@
 GRADLE=gradle  # remplace by ./gradlew if you want to
 DIST=dist
 
-version=$(git describe --tags) &&
+version=$(git describe --tags --always) &&
 "$GRADLE" release &&
 mkdir -p "$DIST" &&
 cd "$DIST" &&
