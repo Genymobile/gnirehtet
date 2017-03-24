@@ -19,6 +19,4 @@ target=gnirehtet-"$version".zip &&
 rm -f "$target" &&
 zip "$target" gnirehtet.apk relay.jar gnirehtet &&
 sha256sum "$target" > SHA256SUM.txt &&
-rm -f SHA256SUM.txt.asc &&
-gpg2 --armor --detach-sign --digest-algo SHA256 SHA256SUM.txt &&
 cd -
