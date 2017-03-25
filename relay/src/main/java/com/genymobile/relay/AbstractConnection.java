@@ -25,7 +25,7 @@ public abstract class AbstractConnection implements Connection {
 
     private static final int LOCALHOST_FORWARD = 0x0a000202; // 10.0.2.2 must be forwarded to localhost
 
-    protected final Route route;
+    private final Route route;
 
     protected AbstractConnection(Route route) {
         this.route = route;
