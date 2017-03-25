@@ -44,6 +44,21 @@ public class IPv4Header {
         }
     }
 
+    private static final int IPV4_HEADER_MIN_LENGTH = 20;
+    private static final int IPV4_VERSION_SHIFT_RELATED_TO_VERSION_AND_IHL = 4;
+    private static final int MASK_4_LOWEST_BITS = 0xf;
+    private static final int MASK_4_HIGHEST_BITS_IN_ONE_BYTE = 0xf0;
+    private static final int MASK_16_LOWEST_BITS = 0xffff;
+    private static final int MASK_ALL_EXCEPT_16_LOWEST_BITS = ~MASK_16_LOWEST_BITS;
+    private static final int IPV4_PROTOCOL_NUMBER_OFFSET = 9;
+    private static final int IPV4_SOURCE_OFFSET = 12;
+    private static final int IPV4_DESTINATION_OFFSET = 16;
+    private static final int IPV4_CHECKSUM_OFFSET = 10;
+    private static final int IPV4_LENGTH_OFFSET = 2;
+    private static final int IPV4_LENGTH_LENGTH = 2;
+    private static final int IPV4_VERSION = 4;
+    private static final int ONE_BYTE_IN_BITS = 8;
+
     private ByteBuffer raw;
     private byte version;
     private int headerLength;
@@ -53,13 +68,13 @@ public class IPv4Header {
     private int destination;
 
     public IPv4Header(ByteBuffer raw) {
-        assert raw.limit() >= 20 : "IPv4 headers length must be at least 20 bytes";
+        assert raw.limit() >= IPV4_HEADER_MIN_LENGTH : "IPv4 headers length must be at least 20 bytes";
         this.raw = raw;
 
         byte versionAndIHL = raw.get(0);
-        version = (byte) (versionAndIHL >> 4);
+        version = (byte) (versionAndIHL >> IPV4_VERSION_SHIFT_RELATED_TO_VERSION_AND_IHL);
 
-        byte ihl = (byte) (versionAndIHL & 0xf);
+        byte ihl = (byte) (versionAndIHL & MASK_4_LOWEST_BITS);
         headerLength = ihl << 2;
 
         raw.limit(headerLength);
@@ -68,15 +83,15 @@ public class IPv4Header {
         //raw.limit(); // by design
         //assert totalLength == Binary.unsigned(raw.getShort(2)) : "Inconsistent packet length";
 
-        int protocolNumber = Short.toUnsignedInt(raw.get(9));
+        int protocolNumber = Short.toUnsignedInt(raw.get(IPV4_PROTOCOL_NUMBER_OFFSET));
         protocol = Protocol.fromNumber(protocolNumber);
 
-        source = raw.getInt(12);
-        destination = raw.getInt(16);
+        source = raw.getInt(IPV4_SOURCE_OFFSET);
+        destination = raw.getInt(IPV4_DESTINATION_OFFSET);
     }
 
     public boolean isSupported() {
-        return version == 4 && protocol != Protocol.OTHER;
+        return version == IPV4_VERSION && protocol != Protocol.OTHER;
     }
 
     public Protocol getProtocol() {
@@ -107,12 +122,12 @@ public class IPv4Header {
 
     public void setSource(int source) {
         this.source = source;
-        raw.putInt(12, source);
+        raw.putInt(IPV4_SOURCE_OFFSET, source);
     }
 
     public void setDestination(int destination) {
         this.destination = destination;
-        raw.putInt(16, destination);
+        raw.putInt(IPV4_DESTINATION_OFFSET, destination);
     }
 
     public void switchSourceAndDestination() {
@@ -146,18 +161,18 @@ public class IPv4Header {
         while (raw.hasRemaining()) {
             sum += Short.toUnsignedInt(raw.getShort());
         }
-        while ((sum & ~0xffff) != 0) {
-            sum = (sum & 0xffff) + (sum >> 16);
+        while ((sum & MASK_ALL_EXCEPT_16_LOWEST_BITS) != 0) {
+            sum = (sum & MASK_16_LOWEST_BITS) + (sum >> (2 * ONE_BYTE_IN_BITS));
         }
         setChecksum((short) ~sum);
     }
 
     private void setChecksum(short checksum) {
-        raw.putShort(10, checksum);
+        raw.putShort(IPV4_CHECKSUM_OFFSET, checksum);
     }
 
     public short getChecksum() {
-        return raw.getShort(10);
+        return raw.getShort(IPV4_CHECKSUM_OFFSET);
     }
 
     /**
@@ -173,7 +188,7 @@ public class IPv4Header {
         }
         // version is stored in the 4 first bits
         byte versionAndIHL = buffer.get(0);
-        return (versionAndIHL & 0xf0) >> 4;
+        return (versionAndIHL & MASK_4_HIGHEST_BITS_IN_ONE_BYTE) >> IPV4_VERSION_SHIFT_RELATED_TO_VERSION_AND_IHL;
     }
 
     /**
@@ -183,7 +198,7 @@ public class IPv4Header {
      * @return the packet length, or {@code -1} if not available
      */
     public static int readLength(ByteBuffer buffer) {
-        if (buffer.limit() < 4) {
+        if (buffer.limit() < IPV4_LENGTH_OFFSET + IPV4_LENGTH_LENGTH) {
             // buffer does not even contains the length field
             return -1;
         }

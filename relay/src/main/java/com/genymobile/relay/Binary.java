@@ -20,6 +20,10 @@ import java.nio.ByteBuffer;
 
 public final class Binary {
 
+    private static final int BUFFER_STRING_NEWLINE_AT = 16;
+    private static final int BUFFER_STRING_SPACE_AT = 8;
+    private static final int MASK_8_LOWEST_BITS = 0xff;
+
     private Binary() {
         // not instantiable
     }
@@ -28,13 +32,13 @@ public final class Binary {
         StringBuilder builder = new StringBuilder();
         for (int i = 0; i < length; ++i) {
             byte b = data[offset + i];
-            if (i % 16 == 0) {
+            if (i % BUFFER_STRING_NEWLINE_AT == 0) {
                 builder.append('\n');
-            } else if (i % 8 == 0) {
+            } else if (i % BUFFER_STRING_SPACE_AT == 0) {
                 builder.append(' ');
             }
             ++i;
-            builder.append(String.format("%02X ", b & 0xff));
+            builder.append(String.format("%02X ", b & MASK_8_LOWEST_BITS));
         }
         return builder.toString();
     }

@@ -40,8 +40,14 @@ public class DatagramBuffer {
 
     // every datagram is stored along with a header storing its length, on 16 bits
     private static final int HEADER_LENGTH = 2;
-    private static final int MAX_DATAGRAM_LENGTH = 1 << 16;
+    private static final int MAX_DATAGRAM_LENGTH_LOG = 16;
+    private static final int MAX_DATAGRAM_LENGTH = 1 << MAX_DATAGRAM_LENGTH_LOG;
     private static final int MAX_BLOCK_LENGTH = HEADER_LENGTH + MAX_DATAGRAM_LENGTH;
+
+    private static final int MASK_8_LOWEST_BITS = 0xff;
+    private static final int MASK_16_LOWEST_BITS = 0xffff;
+    private static final int MASK_ALL_EXCEPT_16_LOWEST_BITS = ~MASK_16_LOWEST_BITS;
+    private static final int ONE_BYTE_IN_BITS = 8;
 
     private final byte[] data;
     private final ByteBuffer wrapper;
@@ -106,13 +112,13 @@ public class DatagramBuffer {
     }
 
     private void writeLength(int length) {
-        assert (length & ~0xffff) == 0 : "Length must be stored on 16 bits";
-        data[head++] = (byte) ((length >> 8) & 0xff);
-        data[head++] = (byte) (length & 0xff);
+        assert (length & MASK_ALL_EXCEPT_16_LOWEST_BITS) == 0 : "Length must be stored on 16 bits";
+        data[head++] = (byte) ((length >> ONE_BYTE_IN_BITS) & MASK_8_LOWEST_BITS);
+        data[head++] = (byte) (length & MASK_8_LOWEST_BITS);
     }
 
     private int readLength() {
-        int length = ((data[tail] & 0xff) << 8) | (data[tail + 1] & 0xff);
+        int length = ((data[tail] & MASK_8_LOWEST_BITS) << ONE_BYTE_IN_BITS) | (data[tail + 1] & MASK_8_LOWEST_BITS);
         tail += 2;
         return length;
     }

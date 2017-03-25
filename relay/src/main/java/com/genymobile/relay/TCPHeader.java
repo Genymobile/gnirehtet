@@ -20,12 +20,19 @@ import java.nio.ByteBuffer;
 
 public class TCPHeader implements TransportHeader {
 
-    public static final int FLAG_FIN = 1 << 0;
-    public static final int FLAG_SYN = 1 << 1;
-    public static final int FLAG_RST = 1 << 2;
-    public static final int FLAG_PSH = 1 << 3;
-    public static final int FLAG_ACK = 1 << 4;
-    public static final int FLAG_URG = 1 << 5;
+    private static final int FLAG_FIN_INDEX = 0;
+    private static final int FLAG_SYN_INDEX = 1;
+    private static final int FLAG_RST_INDEX = 2;
+    private static final int FLAG_PSH_INDEX = 3;
+    private static final int FLAG_ACK_INDEX = 4;
+    private static final int FLAG_URG_INDEX = 5;
+
+    public static final int FLAG_FIN = 1 << FLAG_FIN_INDEX;
+    public static final int FLAG_SYN = 1 << FLAG_SYN_INDEX;
+    public static final int FLAG_RST = 1 << FLAG_RST_INDEX;
+    public static final int FLAG_PSH = 1 << FLAG_PSH_INDEX;
+    public static final int FLAG_ACK = 1 << FLAG_ACK_INDEX;
+    public static final int FLAG_URG = 1 << FLAG_URG_INDEX;
 
     private ByteBuffer raw;
     private int sourcePort;
