@@ -13,7 +13,8 @@
         android:theme="@style/AppTheme">
         <service
             android:name="com.genymobile.gnirehtet.GnirehtetControlService"
-            android:exported="true">
+            android:exported="true"
+            android:permission="android.permission.WRITE_SECURE_SETTINGS">
             <intent-filter>
                 <action android:name="com.genymobile.gnirehtet.START" />
                 <action android:name="com.genymobile.gnirehtet.STOP" />
