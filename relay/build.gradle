@@ -13,4 +13,4 @@ jar.manifest {
     )
 }
 
-apply from: rootProject.file("config/java-checkstyle.gradle")
+apply from: "$project.rootDir/config/java-checkstyle.gradle"
