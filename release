@@ -3,20 +3,20 @@
 #
 # Put your keystore properties into ~/.gradle/gradle.properties
 # (check app/build.gradle)
-#
+
+set -e # fail on error
 
 GRADLE=gradle  # remplace by ./gradlew if you want to
 DIST=dist
 
-version=$(git describe --tags --always) &&
-"$GRADLE" release &&
-mkdir -p "$DIST" &&
-cd "$DIST" &&
-cp ../app/build/outputs/apk/gnirehtet.apk . &&
-cp ../relay/build/libs/relay.jar . &&
-cp ../gnirehtet . &&
-target=gnirehtet-"$version".zip &&
-rm -f "$target" &&
-zip "$target" gnirehtet.apk relay.jar gnirehtet &&
-sha256sum "$target" > SHA256SUM.txt &&
-cd -
+version=$(git describe --tags --always)
+"$GRADLE" release
+mkdir -p "$DIST"
+cd "$DIST"
+cp ../app/build/outputs/apk/gnirehtet.apk .
+cp ../relay/build/libs/relay.jar .
+cp ../gnirehtet .
+target=gnirehtet-"$version".zip
+rm -f "$target"
+zip "$target" gnirehtet.apk relay.jar gnirehtet
+sha256sum "$target" > SHA256SUM.txt
