@@ -102,8 +102,12 @@ apk_install() {
 }
 
 apk_require_installed() {
-    [[ "$(eval $(adbs "$serial") shell pm list packages com.genymobile.gnirehtet)" ]] ||
+    if [[ ! "$(eval $(adbs "$serial") shell pm list packages com.genymobile.gnirehtet)" ]]
+    then
         apk_install
+        # wait a bit after the app is installed so that intent actions are correctly registered
+        sleep 0.5
+    fi
 }
 
 apk_uninstall() {
