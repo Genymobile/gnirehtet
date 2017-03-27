@@ -13,7 +13,7 @@ version=$(git describe --tags --always)
 "$GRADLE" release
 mkdir -p "$DIST"
 cd "$DIST"
-cp ../app/build/outputs/apk/gnirehtet.apk .
+cp ../app/build/outputs/apk/gnirehtet-release.apk gnirehtet.apk
 cp ../relay/build/libs/relay.jar .
 cp ../gnirehtet .
 target=gnirehtet-"$version".zip
