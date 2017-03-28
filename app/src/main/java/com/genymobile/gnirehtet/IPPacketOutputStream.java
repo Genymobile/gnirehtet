@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 /**
  * Wrapper for writing one IP packet at a time to an {@link OutputStream}.
  */
+@SuppressWarnings("checkstyle:MagicNumber")
 public class IPPacketOutputStream extends OutputStream {
 
     private static final String TAG = IPPacketOutputStream.class.getSimpleName();

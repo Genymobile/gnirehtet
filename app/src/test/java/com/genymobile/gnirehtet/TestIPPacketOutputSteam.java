@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 
+@SuppressWarnings("checkstyle:MagicNumber")
 public class TestIPPacketOutputSteam {
 
     private ByteBuffer createMockPacket() {

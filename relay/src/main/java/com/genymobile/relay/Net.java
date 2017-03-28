@@ -49,6 +49,7 @@ public final class Net {
         }
     }
 
+    @SuppressWarnings("checkstyle:MagicNumber")
     public static InetAddress toInetAddress(int ipAddr) {
         byte[] ip = {
                 (byte) (ipAddr >>> 24),

@@ -18,6 +18,7 @@ package com.genymobile.relay;
 
 import java.nio.ByteBuffer;
 
+@SuppressWarnings("checkstyle:MagicNumber")
 public class IPv4Header {
 
     public enum Protocol {
@@ -44,6 +45,8 @@ public class IPv4Header {
         }
     }
 
+    private static final int MIN_IPV4_HEADER_LENGTH = 20;
+
     private ByteBuffer raw;
     private byte version;
     private int headerLength;
@@ -53,7 +56,7 @@ public class IPv4Header {
     private int destination;
 
     public IPv4Header(ByteBuffer raw) {
-        assert raw.limit() >= 20 : "IPv4 headers length must be at least 20 bytes";
+        assert raw.limit() >= MIN_IPV4_HEADER_LENGTH : "IPv4 headers length must be at least 20 bytes";
         this.raw = raw;
 
         byte versionAndIHL = raw.get(0);

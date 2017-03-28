@@ -18,6 +18,7 @@ package com.genymobile.relay;
 
 import java.nio.ByteBuffer;
 
+@SuppressWarnings("checkstyle:MagicNumber")
 public class UDPHeader implements TransportHeader {
 
     private static final int UDP_HEADER_LENGTH = 8;

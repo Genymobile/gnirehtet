@@ -25,6 +25,8 @@ import java.io.IOException;
  */
 public class RelayTunnelProvider {
 
+    private static final int DELAY_BETWEEN_ATTEMPTS_MS = 5000;
+
     private final VpnService vpnService;
     private RelayTunnel tunnel;
     private boolean first = true;
@@ -36,8 +38,7 @@ public class RelayTunnelProvider {
     public synchronized RelayTunnel getCurrentTunnel() throws IOException, InterruptedException {
         if (tunnel == null) {
             if (!first) {
-                // add delay between attempts
-                Thread.sleep(5000);
+                Thread.sleep(DELAY_BETWEEN_ATTEMPTS_MS);
             } else {
                 first = false;
             }

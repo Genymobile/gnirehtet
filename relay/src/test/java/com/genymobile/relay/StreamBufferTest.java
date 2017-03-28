@@ -26,6 +26,7 @@ import java.nio.channels.ByteChannel;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
+@SuppressWarnings("checkstyle:MagicNumber")
 public class StreamBufferTest {
 
     private static ByteBuffer createChunk() {

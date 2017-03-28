@@ -89,6 +89,7 @@ public class GnirehtetService extends VpnService {
         startForwarding();
     }
 
+    @SuppressWarnings("checkstyle:MagicNumber")
     private void setupVpn(VpnConfiguration config) {
         Builder builder = new Builder();
         builder.addAddress(VPN_ADDRESS, 32);
@@ -114,6 +115,7 @@ public class GnirehtetService extends VpnService {
         setAsUndernlyingNetwork();
     }
 
+    @SuppressWarnings("checkstyle:MagicNumber")
     private void setAsUndernlyingNetwork() {
         if (Build.VERSION.SDK_INT >= 22) {
             Network vpnNetwork = findVpnNetwork();

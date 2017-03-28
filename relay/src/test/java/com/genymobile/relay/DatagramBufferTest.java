@@ -25,6 +25,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.Channels;
 import java.nio.channels.WritableByteChannel;
 
+@SuppressWarnings("checkstyle:MagicNumber")
 public class DatagramBufferTest {
 
     private static ByteBuffer createDatagram(int size) {

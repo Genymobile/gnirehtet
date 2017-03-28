@@ -23,6 +23,7 @@ public class IPv4Packet {
 
     private static final String TAG = IPv4Packet.class.getSimpleName();
 
+    @SuppressWarnings("checkstyle:MagicNumber")
     public static final int MAX_PACKET_LENGTH = 1 << 16; // packet length is stored on 16 bits
 
     private final ByteBuffer raw;

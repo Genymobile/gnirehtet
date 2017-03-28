@@ -18,6 +18,7 @@ package com.genymobile.relay;
 
 import java.nio.ByteBuffer;
 
+@SuppressWarnings("checkstyle:MagicNumber")
 public class TCPHeader implements TransportHeader {
 
     public static final int FLAG_FIN = 1 << 0;

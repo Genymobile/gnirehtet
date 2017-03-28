@@ -16,6 +16,7 @@
 
 package com.genymobile.gnirehtet;
 
+@SuppressWarnings("checkstyle:MagicNumber")
 public final class Binary {
 
     private Binary() {

@@ -21,6 +21,7 @@ import org.junit.Test;
 
 import java.nio.ByteBuffer;
 
+@SuppressWarnings("checkstyle:MagicNumber")
 public class UDPHeaderTest {
 
     private static ByteBuffer createMockHeaders() {

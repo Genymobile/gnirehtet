@@ -28,6 +28,7 @@ public class IPv4PacketBuffer {
         return channel.read(buffer);
     }
 
+    @SuppressWarnings("checkstyle:MagicNumber")
     private int getAvailablePacketLength() {
         int length = IPv4Header.readLength(buffer);
         assert length == -1 || IPv4Header.readVersion(buffer) == 4 : "This function must not be called when the packet is not IPv4";

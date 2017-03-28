@@ -39,6 +39,9 @@ public class Forwarder {
 
     private static final int BUFSIZE = 4096;
 
+    private static final byte[] DUMMY_ADDRESS = {42, 42, 42, 42};
+    private static final int DUMMY_PORT = 4242;
+
     private final FileDescriptor vpnFileDescriptor;
     private final Tunnel tunnel;
 
@@ -143,8 +146,8 @@ public class Forwarder {
             public void run() {
                 try {
                     DatagramSocket socket = new DatagramSocket();
-                    InetAddress addr = InetAddress.getByAddress(new byte[] {42, 42, 42, 42});
-                    DatagramPacket packet = new DatagramPacket(new byte[0], 0, addr, 4242);
+                    InetAddress dummyAddr = InetAddress.getByAddress(DUMMY_ADDRESS);
+                    DatagramPacket packet = new DatagramPacket(new byte[0], 0, dummyAddr, DUMMY_PORT);
                     socket.send(packet);
                 } catch (IOException e) {
                     // ignore

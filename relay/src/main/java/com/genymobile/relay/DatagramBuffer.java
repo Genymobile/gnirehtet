@@ -34,6 +34,7 @@ import java.nio.channels.WritableByteChannel;
  *  head     tail
  * </pre>
  */
+@SuppressWarnings("checkstyle:MagicNumber")
 public class DatagramBuffer {
 
     private static final String TAG = DatagramBuffer.class.getSimpleName();

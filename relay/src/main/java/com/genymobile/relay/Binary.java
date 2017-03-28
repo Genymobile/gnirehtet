@@ -18,6 +18,7 @@ package com.genymobile.relay;
 
 import java.nio.ByteBuffer;
 
+@SuppressWarnings("checkstyle:MagicNumber")
 public final class Binary {
 
     private Binary() {

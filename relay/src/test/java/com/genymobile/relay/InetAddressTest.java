@@ -21,6 +21,7 @@ import org.junit.Test;
 
 import java.net.InetAddress;
 
+@SuppressWarnings("checkstyle:MagicNumber")
 public class InetAddressTest {
 
     @Test
