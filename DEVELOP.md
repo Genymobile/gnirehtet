@@ -8,21 +8,17 @@ You need the [Android SDK] (_Android Studio_) and the JDK 8 (`openjdk-8-jdk`).
 [Android SDK]: https://developer.android.com/studio/index.html
 
 
-## Build and test
+## Build
 
 If `gradle` is installed on your computer:
 
-    gradle debug
+    gradle build
 
 Otherwise, you can call the [gradle wrapper]:
 
-    ./gradlew debug
+    ./gradlew build
 
 You can also import the project in _Android Studio_: File → Import…
-
-To run the tests:
-
-    gradle test
 
 [gradle wrapper]: https://docs.gradle.org/current/userguide/gradle_wrapper.html
 
