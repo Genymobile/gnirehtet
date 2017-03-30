@@ -159,3 +159,10 @@ Read the [developers page].
     WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
     See the License for the specific language governing permissions and
     limitations under the License.
+
+
+## Our blog posts introducing gnirehtet
+
+- <https://medium.com/@rom1v/gnirehtet-reverse-tethering-android-2afacdbdaec7> (in
+English)
+- <http://blog.rom1v.com/2017/03/gnirehtet/> (in French)
