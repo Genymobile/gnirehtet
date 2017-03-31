@@ -14,18 +14,6 @@ support [IPv6] (yet?).
 [IPv6]: https://en.wikipedia.org/wiki/IPv6
 
 
-However, since the `gnirehtet` script is written in [Bash], it's a bit more
-complicated on _Windows_. If you are using _Windows_, then you have several
-choices:
- - execute some commands [manually](#manually);
- - run _bash_ (using [cygwin] or [gitbash]);
- - contribute a new script `gnirehtet.bat` for _Windows_.
-
-[bash]: https://en.wikipedia.org/wiki/Bash_%28Unix_shell%29
-[gitbash]: https://git-for-windows.github.io/
-[cygwin]: https://www.cygwin.com/
-
-
 ## Requirements
 
 The Android application requires at least API 21 (Android 5.0).
@@ -79,6 +67,7 @@ A "key" logo appears in the status bar whenever _Gnirehtet_ is active:
 
 ![key](assets/key.png)
 
+
 ## Run
 
 You can execute the actions separately (it may be useful if you want to reverse
@@ -106,7 +95,21 @@ device.
 For advanced options, call `./gnirehtet` without arguments to get more details.
 
 
-## Manually
+### On Windows
+
+Since the `gnirehtet` script is written in [Bash], it's a bit more complicated
+on _Windows_. If you are using _Windows_, then you have several choices:
+
+ - execute some commands [manually](#run-manually);
+ - run _bash_ (using [cygwin] or [gitbash]);
+ - contribute a new script `gnirehtet.bat` for _Windows_.
+
+[bash]: https://en.wikipedia.org/wiki/Bash_%28Unix_shell%29
+[gitbash]: https://git-for-windows.github.io/
+[cygwin]: https://www.cygwin.com/
+
+
+## Run manually
 
 The `gnirehtet` script just exposes an interface for calling simple commands.
 You can call them manually (especially if you use _Windows_, in that case,
