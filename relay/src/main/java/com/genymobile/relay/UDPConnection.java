@@ -88,7 +88,7 @@ public class UDPConnection extends AbstractConnection {
     }
 
     private DatagramChannel createChannel() throws IOException {
-        logd(TAG, "Open");
+        logi(TAG, "Open");
         DatagramChannel datagramChannel = DatagramChannel.open();
         datagramChannel.configureBlocking(false);
         datagramChannel.connect(getRewrittenDestination());
