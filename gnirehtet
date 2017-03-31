@@ -119,7 +119,7 @@ apk_uninstall() {
 start() {
     echo 'Starting gnirehtet...'
     local dns=
-    eval set -- $(getopt -o d: -- "$@")
+    eval set -- $(getopt d: "$@")
     while true;
     do
         case "$1" in
