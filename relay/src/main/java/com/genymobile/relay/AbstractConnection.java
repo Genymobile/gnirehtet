@@ -32,7 +32,7 @@ public abstract class AbstractConnection implements Connection {
     }
 
     protected void destroy() {
-        Log.i(TAG, route.getKey() + " Close");
+        logi(TAG, "Close");
 
         // remove the route from the router
         route.discard();
