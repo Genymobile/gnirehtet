@@ -85,12 +85,13 @@ public class GnirehtetService extends VpnService {
     }
 
     private void startVpn(VpnConfiguration config) {
-        setupVpn(config);
-        startForwarding();
+        if (setupVpn(config)) {
+            startForwarding();
+        }
     }
 
     @SuppressWarnings("checkstyle:MagicNumber")
-    private void setupVpn(VpnConfiguration config) {
+    private boolean setupVpn(VpnConfiguration config) {
         Builder builder = new Builder();
         builder.addAddress(VPN_ADDRESS, 32);
         builder.addRoute(VPN_ROUTE, 0);
@@ -111,8 +112,13 @@ public class GnirehtetService extends VpnService {
         builder.setBlocking(true);
 
         vpnInterface = builder.establish();
+        if (vpnInterface == null) {
+            // establish() may return null if the application is not prepared or is revoked
+            return false;
+        }
 
         setAsUndernlyingNetwork();
+        return true;
     }
 
     @SuppressWarnings("checkstyle:MagicNumber")
