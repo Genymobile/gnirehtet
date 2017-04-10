@@ -152,6 +152,10 @@ parse_start_args() {
     serial="$1"
 }
 
+# go to the directory of the real gnirehtet script
+# install coreutils if realpath or readlink don't work
+cd $(dirname $(realpath "$0" || readlink -f "$0"))
+
 case "$1" in
 install)
     shift
