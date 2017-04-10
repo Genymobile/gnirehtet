@@ -173,7 +173,7 @@ rt)
     shift
     parse_start_args "$@"
     apk_require_installed "$serial"
-    trap stop INT
+    trap "stop '$serial'" INT
     start "$serial" "$dns"
     relay;;
 *)
