@@ -88,11 +88,14 @@ public class Relay {
         SocketChannel socketChannel = serverSocketChannel.accept();
         socketChannel.configureBlocking(false);
         // will register the socket on the selector
-        clients.add(new Client(selector, socketChannel, this::removeClient));
+        Client client = new Client(selector, socketChannel, this::removeClient);
+        clients.add(client);
+        Log.i(TAG, "Client #" + client.getId() + " connected");
     }
 
     private void removeClient(Client client) {
         clients.remove(client);
+        Log.i(TAG, "Client #" + client.getId() + " disconnected");
     }
 
     private void cleanUp() {

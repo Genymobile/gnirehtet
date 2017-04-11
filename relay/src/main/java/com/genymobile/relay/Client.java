@@ -29,6 +29,9 @@ public class Client {
 
     private static final String TAG = Client.class.getSimpleName();
 
+    private static int nextId = 0;
+
+    private final int id;
     private final SocketChannel clientChannel;
     private final SelectionKey selectionKey;
     private final RemoveHandler<Client> removeHandler;
@@ -40,6 +43,7 @@ public class Client {
     private final List<PacketSource> pendingPacketSources = new ArrayList<>();
 
     public Client(Selector selector, SocketChannel clientChannel, RemoveHandler<Client> removeHandler) throws ClosedChannelException {
+        id = nextId++;
         this.clientChannel = clientChannel;
         router = new Router(this, selector);
 
@@ -58,6 +62,10 @@ public class Client {
         selectionKey = clientChannel.register(selector, SelectionKey.OP_READ, selectionHandler);
 
         this.removeHandler = removeHandler;
+    }
+
+    public int getId() {
+        return id;
     }
 
     private void processReceive() {
