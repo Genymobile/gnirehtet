@@ -38,7 +38,7 @@ public class VpnConfiguration implements Parcelable {
                 dnsServers[i] = InetAddress.getByAddress(source.createByteArray());
             }
         } catch (UnknownHostException e) {
-            throw new AssertionError("Invalid address", e);
+            throw new RuntimeException("Invalid address", e);
         }
     }
 

@@ -16,7 +16,7 @@ support [IPv6] (yet?).
 
 ## Requirements
 
-The Android application requires at least API 21 (Android 5.0).
+The Android application requires at least API 14 (Android 4.0).
 
 _Java 8_ is required on your computer. On Debian-based distros, install the
 package `openjdk-8-jre`.

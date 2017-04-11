@@ -16,6 +16,7 @@
 
 package com.genymobile.gnirehtet;
 
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
@@ -109,12 +110,32 @@ public class GnirehtetService extends VpnService {
 
         // non-blocking by default, but FileChannel is not selectable, that's stupid!
         // so switch to synchronous I/O to avoid polling
-        builder.setBlocking(true);
+        if (Build.VERSION.SDK_INT >= 21) {
+            builder.setBlocking(true);
+        }
 
         vpnInterface = builder.establish();
         if (vpnInterface == null) {
             // establish() may return null if the application is not prepared or is revoked
+            Log.w(TAG, "VPN starting failed, please retry");
             return false;
+        }
+
+        if (Build.VERSION.SDK_INT < 21) {
+            // VpnService.Builder.setBlocking() is not available before API 21
+            // instead, set the vpnInterface in blocking mode afterwards
+            try {
+                IoUtils.setBlocking(vpnInterface.getFileDescriptor(), true);
+            } catch (IOException | UnsupportedOperationException e) {
+                Log.e(TAG, "Cannot set the VPN interface blocking", e);
+                try {
+                    vpnInterface.close();
+                } catch (IOException ioe) {
+                    Log.w(TAG, "Cannot close VPN file descriptor", ioe);
+                }
+                vpnInterface = null;
+                return false;
+            }
         }
 
         setAsUndernlyingNetwork();
@@ -134,6 +155,7 @@ public class GnirehtetService extends VpnService {
         }
     }
 
+    @TargetApi(22)
     private Network findVpnNetwork() {
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         Network[] networks = cm.getAllNetworks();
