@@ -101,6 +101,8 @@ public class Forwarder {
             if (r > 0) {
                 // blocking send
                 tunnel.send(buffer, r);
+            } else {
+                Log.d(TAG, "Empty read");
             }
         }
         Log.d(TAG, "Device to tunnel forwarding stopped");
@@ -125,6 +127,8 @@ public class Forwarder {
                 }
                 // blocking write
                 packetOutputStream.write(buffer, 0, w);
+            } else {
+                Log.d(TAG, "Empty write");
             }
         }
         Log.d(TAG, "Tunnel to device forwarding stopped");
