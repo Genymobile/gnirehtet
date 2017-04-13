@@ -27,8 +27,8 @@ public class IPv4Packet {
     public static final int MAX_PACKET_LENGTH = 1 << 16; // packet length is stored on 16 bits
 
     private final ByteBuffer raw;
-    private IPv4Header ipv4Header;
-    private TransportHeader transportHeader;
+    private final IPv4Header ipv4Header;
+    private final TransportHeader transportHeader;
 
     public IPv4Packet(ByteBuffer raw) {
         this.raw = raw;
@@ -37,6 +37,7 @@ public class IPv4Packet {
         ipv4Header = new IPv4Header(raw.duplicate());
         if (!ipv4Header.isSupported()) {
             Log.d(TAG, "Unsupported IPv4 headers");
+            transportHeader = null;
             return;
         }
         transportHeader = createTransportHeader();

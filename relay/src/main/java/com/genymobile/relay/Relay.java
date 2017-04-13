@@ -33,7 +33,7 @@ public class Relay {
 
     private static final int DEFAULT_PORT = 31416;
 
-    private int port;
+    private final int port;
     private final List<Client> clients = new ArrayList<>();
 
     public Relay() {

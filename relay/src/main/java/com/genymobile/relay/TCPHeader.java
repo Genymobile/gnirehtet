@@ -28,7 +28,7 @@ public class TCPHeader implements TransportHeader {
     public static final int FLAG_ACK = 1 << 4;
     public static final int FLAG_URG = 1 << 5;
 
-    private ByteBuffer raw;
+    private final ByteBuffer raw;
     private int sourcePort;
     private int destinationPort;
     private int headerLength;

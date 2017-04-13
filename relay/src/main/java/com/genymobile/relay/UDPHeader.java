@@ -23,7 +23,7 @@ public class UDPHeader implements TransportHeader {
 
     private static final int UDP_HEADER_LENGTH = 8;
 
-    private ByteBuffer raw;
+    private final ByteBuffer raw;
     private int sourcePort;
     private int destinationPort;
 

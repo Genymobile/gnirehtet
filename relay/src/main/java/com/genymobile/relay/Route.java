@@ -75,11 +75,11 @@ public class Route {
     }
 
     public static class Key {
-        private IPv4Header.Protocol protocol;
-        private int sourceIp;
-        private short sourcePort;
-        private int destIp;
-        private short destPort;
+        private final IPv4Header.Protocol protocol;
+        private final int sourceIp;
+        private final short sourcePort;
+        private final int destIp;
+        private final short destPort;
 
         public Key(IPv4Header.Protocol protocol, int sourceIp, short sourcePort, int destIp, short destPort) {
             this.protocol = protocol;

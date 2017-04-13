@@ -24,7 +24,7 @@ import java.net.UnknownHostException;
 
 public class VpnConfiguration implements Parcelable {
 
-    private InetAddress[] dnsServers;
+    private final InetAddress[] dnsServers;
 
     public VpnConfiguration(InetAddress... dnsServers) {
         this.dnsServers = dnsServers;
