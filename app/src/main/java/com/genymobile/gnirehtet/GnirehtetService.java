@@ -113,6 +113,7 @@ public class GnirehtetService extends VpnService {
 
         vpnInterface = builder.establish();
         if (vpnInterface == null) {
+            Log.w(TAG, "VPN starting failed, please retry");
             // establish() may return null if the application is not prepared or is revoked
             return false;
         }
