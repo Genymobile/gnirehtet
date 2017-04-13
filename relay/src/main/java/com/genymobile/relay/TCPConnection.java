@@ -118,7 +118,6 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         try {
             if (clientToNetwork.writeTo(channel) == -1) {
                 destroy();
-                return;
             }
         } catch (IOException e) {
             loge(TAG, "Cannot write", e);

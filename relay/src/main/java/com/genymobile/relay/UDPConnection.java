@@ -110,7 +110,6 @@ public class UDPConnection extends AbstractConnection {
     private void processSend() {
         if (!write()) {
             destroy();
-            return;
         }
     }
 

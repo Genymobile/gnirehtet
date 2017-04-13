@@ -49,7 +49,6 @@ public class Router {
             route.sendToNetwork(packet);
         } catch (IOException e) {
             Log.e(TAG, "Cannot create route, dropping packet", e);
-            return;
         }
     }
 
