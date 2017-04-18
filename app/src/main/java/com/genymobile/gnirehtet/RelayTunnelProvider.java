@@ -30,27 +30,57 @@ public class RelayTunnelProvider {
     private final VpnService vpnService;
     private RelayTunnel tunnel;
     private boolean first = true;
+    private long lastFailureTimestamp;
 
     public RelayTunnelProvider(VpnService vpnService) {
         this.vpnService = vpnService;
     }
 
     public synchronized RelayTunnel getCurrentTunnel() throws IOException, InterruptedException {
+        if (tunnel != null) {
+            return tunnel;
+        }
+
+        waitUntilNextAttemptSlot();
+
+        // the tunnel variable may have changed during the waiting
         if (tunnel == null) {
-            if (!first) {
-                Thread.sleep(DELAY_BETWEEN_ATTEMPTS_MS);
-            } else {
-                first = false;
-            }
-            tunnel = RelayTunnel.open(vpnService);
+            openTunnel();
         }
         return tunnel;
     }
 
+    private void openTunnel() throws IOException {
+        first = false;
+        try {
+            tunnel = RelayTunnel.open(vpnService);
+        } catch (IOException e) {
+            touchFailure();
+            throw e;
+        }
+    }
+
     public synchronized void invalidateTunnel() {
         if (tunnel != null) {
+            touchFailure();
             tunnel.close();
             tunnel = null;
+        }
+    }
+
+    private void touchFailure() {
+        lastFailureTimestamp = System.currentTimeMillis();
+    }
+
+    private void waitUntilNextAttemptSlot() throws InterruptedException {
+        if (first) {
+            // do not wait on first attempt
+            return;
+        }
+        long delay = lastFailureTimestamp + DELAY_BETWEEN_ATTEMPTS_MS - System.currentTimeMillis();
+        while (delay > 0) {
+            wait(delay);
+            delay = lastFailureTimestamp + DELAY_BETWEEN_ATTEMPTS_MS - System.currentTimeMillis();
         }
     }
 }
