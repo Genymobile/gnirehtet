@@ -22,6 +22,8 @@ import android.util.Log;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
@@ -42,7 +44,43 @@ public final class RelayTunnel implements Tunnel {
         SocketChannel channel = SocketChannel.open();
         vpnService.protect(channel.socket());
         channel.connect(new InetSocketAddress(Inet4Address.getLocalHost(), DEFAULT_PORT));
+        fakeRead(channel.socket());
         return new RelayTunnel(channel);
+    }
+
+    /**
+     * The relay server is accessible through an "adb reverse" port redirection.
+     * <p>
+     * If the port redirection is enabled but the relay server is not started, then the call to
+     * channel.connect() will succeed, but the first read() will return -1.
+     * <p>
+     * As a consequence, the connection state of the relay server would be invalid temporarily (we
+     * would switch to CONNECTED state then switch back to DISCONNECTED).
+     * <p>
+     * To avoid this problem, we must actually try to read from the server, so that an error occurs
+     * immediately if the relay server is not accessible.
+     * <p>
+     * To do so, we set the lowest timeout possible (1) that is not "infinity" (0), try to read,
+     * then reset the timeout option. Since the client is always the first peer to send data, there
+     * is never anything to read.
+     *
+     * @param socket the socket to read
+     * @throws IOException if an I/O error occurs
+     */
+    private static void fakeRead(Socket socket) throws IOException {
+        int timeout = socket.getSoTimeout();
+        socket.setSoTimeout(1);
+        boolean eof = false;
+        try {
+            eof = socket.getInputStream().read() == -1;
+        } catch (SocketTimeoutException e) {
+            // ignore, expected timeout
+        } finally {
+            socket.setSoTimeout(timeout);
+        }
+        if (eof) {
+            throw new IOException("Cannot connect to the relay server");
+        }
     }
 
     @Override
