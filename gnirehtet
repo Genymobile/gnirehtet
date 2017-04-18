@@ -32,6 +32,9 @@ syntax() {
     echo "      If several devices are connected via adb, then serial must be"
     echo "      specified."
     echo
+    echo "  $0 reinstall [serial]"
+    echo "      Uninstall then install."
+    echo
     echo "  $0 rt [serial] [-d DNS[,DNS2,...]]"
     echo "      Enable reverse tethering for exactly one device:"
     echo "        - install the client if necessary;"
@@ -117,6 +120,11 @@ apk_uninstall() {
     evalv $(adbs "$serial") uninstall com.genymobile.gnirehtet
 }
 
+apk_reinstall() {
+    apk_uninstall "$@"
+    apk_install "$@"
+}
+
 start() {
     echo 'Starting gnirehtet...'
     local serial="$1"
@@ -159,6 +167,9 @@ install)
 uninstall)
     shift
     apk_uninstall "$@";;
+reinstall)
+    shift
+    apk_reinstall "$@";;
 start)
     shift
     parse_start_args "$@"
