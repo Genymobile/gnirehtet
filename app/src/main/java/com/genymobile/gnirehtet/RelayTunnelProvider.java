@@ -68,6 +68,18 @@ public class RelayTunnelProvider {
         }
     }
 
+    /**
+     * Call {@link #invalidateTunnel()} only if {@code tunnelToInvalidate} is the current tunnel (or
+     * is {@code null}).
+     *
+     * @param tunnelToInvalidate the tunnel to invalidate
+     */
+    public synchronized void invalidateTunnel(Tunnel tunnelToInvalidate) {
+        if (tunnel == tunnelToInvalidate || tunnelToInvalidate == null) {
+            invalidateTunnel();
+        }
+    }
+
     private void touchFailure() {
         lastFailureTimestamp = System.currentTimeMillis();
     }

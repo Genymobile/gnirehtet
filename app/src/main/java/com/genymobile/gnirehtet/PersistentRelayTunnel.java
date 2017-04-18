@@ -39,13 +39,16 @@ public class PersistentRelayTunnel implements Tunnel {
     @Override
     public void send(byte[] packet, int len) throws IOException {
         while (!stopped) {
+            Tunnel tunnel = null;
             try {
-                Tunnel tunnel = provider.getCurrentTunnel();
+                tunnel = provider.getCurrentTunnel();
                 tunnel.send(packet, len);
                 return;
             } catch (IOException | InterruptedException e) {
                 Log.e(TAG, "Cannot send to tunnel", e);
-                provider.invalidateTunnel();
+                if (tunnel != null) {
+                    provider.invalidateTunnel(tunnel);
+                }
             }
         }
         throw new InterruptedIOException("Persistent tunnel stopped");
@@ -54,18 +57,21 @@ public class PersistentRelayTunnel implements Tunnel {
     @Override
     public int receive(byte[] packet) throws IOException {
         while (!stopped) {
+            Tunnel tunnel = null;
             try {
-                Tunnel tunnel = provider.getCurrentTunnel();
+                tunnel = provider.getCurrentTunnel();
                 int r = tunnel.receive(packet);
                 if (r == -1) {
                     Log.d(TAG, "Tunnel read EOF");
-                    provider.invalidateTunnel();
+                    provider.invalidateTunnel(tunnel);
                     continue;
                 }
                 return r;
             } catch (IOException | InterruptedException e) {
-                Log.e(TAG, "Cannot send to tunnel", e);
-                provider.invalidateTunnel();
+                Log.e(TAG, "Cannot receive from tunnel", e);
+                if (tunnel != null) {
+                    provider.invalidateTunnel(tunnel);
+                }
             }
         }
         throw new InterruptedIOException("Persistent tunnel stopped");
