@@ -24,6 +24,8 @@ import android.net.LinkProperties;
 import android.net.Network;
 import android.net.VpnService;
 import android.os.Build;
+import android.os.Handler;
+import android.os.Message;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
@@ -44,6 +46,9 @@ public class GnirehtetService extends VpnService {
     private static final InetAddress VPN_ADDRESS = Net.toInetAddress(new byte[] {10, 0, 0, 2});
     private static final InetAddress VPN_ROUTE = Net.toInetAddress(new byte[] {0, 0, 0, 0}); // intercept everything
 
+    private final DisconnectionNotifier disconnectionNotifier = new DisconnectionNotifier(this);
+    private final Handler handler = new RelayTunnelConnectionStateHandler(disconnectionNotifier);
+
     private ParcelFileDescriptor vpnInterface = null;
     private Forwarder forwarder;
 
@@ -55,9 +60,13 @@ public class GnirehtetService extends VpnService {
     }
 
     public static void stop(Context context) {
+        context.startService(createStopIntent(context));
+    }
+
+    static Intent createStopIntent(Context context) {
         Intent intent = new Intent(context, GnirehtetService.class);
         intent.setAction(ACTION_CLOSE_VPN);
-        context.startService(intent);
+        return intent;
     }
 
     @Override
@@ -152,6 +161,7 @@ public class GnirehtetService extends VpnService {
 
     private void startForwarding() {
         forwarder = new Forwarder(this, vpnInterface.getFileDescriptor());
+        forwarder.setRelayTunnelListener(new RelayTunnelListener(handler));
         forwarder.forward();
     }
 
@@ -160,6 +170,9 @@ public class GnirehtetService extends VpnService {
             // already closed
             return;
         }
+
+        disconnectionNotifier.cancelNotification();
+
         try {
             forwarder.stop();
             forwarder = null;
@@ -167,6 +180,31 @@ public class GnirehtetService extends VpnService {
             vpnInterface = null;
         } catch (IOException e) {
             Log.w(TAG, "Cannot close VPN file descriptor", e);
+        }
+    }
+
+
+    private static final class RelayTunnelConnectionStateHandler extends Handler {
+
+        private final DisconnectionNotifier disconnectionNotifier;
+
+        private RelayTunnelConnectionStateHandler(DisconnectionNotifier disconnectionNotifier) {
+            this.disconnectionNotifier = disconnectionNotifier;
+        }
+
+        @Override
+        public void handleMessage(Message message) {
+            switch (message.what) {
+                case RelayTunnelListener.MSG_RELAY_TUNNEL_CONNECTED:
+                    Log.d(TAG, "Relay tunnel connected");
+                    disconnectionNotifier.cancelNotification();
+                    break;
+                case RelayTunnelListener.MSG_RELAY_TUNNEL_DISCONNECTED:
+                    Log.d(TAG, "Relay tunnel disconnected");
+                    disconnectionNotifier.showNotification();
+                    break;
+                default:
+            }
         }
     }
 }

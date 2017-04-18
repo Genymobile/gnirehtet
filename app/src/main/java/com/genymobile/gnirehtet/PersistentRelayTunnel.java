@@ -82,4 +82,8 @@ public class PersistentRelayTunnel implements Tunnel {
         stopped = true;
         provider.invalidateTunnel();
     }
+
+    public void setRelayTunnelListener(RelayTunnelListener listener) {
+        provider.setListener(listener);
+    }
 }

@@ -1,3 +1,5 @@
 <resources>
-    <string name="app_name">Gnirehtet</string>
+    <string name="app_name" translatable="false">Gnirehtet</string>
+    <string name="relay_disconnected">Disconnected from the relay server</string>
+    <string name="stop_vpn">Stop Gnirehtet</string>
 </resources>

@@ -43,7 +43,7 @@ public class Forwarder {
     private static final int DUMMY_PORT = 4242;
 
     private final FileDescriptor vpnFileDescriptor;
-    private final Tunnel tunnel;
+    private final PersistentRelayTunnel tunnel;
 
     private Future<?> deviceToTunnelFuture;
     private Future<?> tunnelToDeviceFuture;
@@ -158,5 +158,9 @@ public class Forwarder {
                 }
             }
         });
+    }
+
+    public void setRelayTunnelListener(RelayTunnelListener listener) {
+        tunnel.setRelayTunnelListener(listener);
     }
 }

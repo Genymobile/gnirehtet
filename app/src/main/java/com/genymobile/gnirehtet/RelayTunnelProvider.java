@@ -31,6 +31,7 @@ public class RelayTunnelProvider {
     private RelayTunnel tunnel;
     private boolean first = true;
     private long lastFailureTimestamp;
+    private RelayTunnelListener listener;
 
     public RelayTunnelProvider(VpnService vpnService) {
         this.vpnService = vpnService;
@@ -51,11 +52,21 @@ public class RelayTunnelProvider {
     }
 
     private void openTunnel() throws IOException {
+        // the first connection must either notify "connected" or "disconnected"
+        boolean notifyDisconnectedOnError = first;
         first = false;
+        openTunnel(notifyDisconnectedOnError);
+    }
+
+    private void openTunnel(boolean notifyDisconnectedOnError) throws IOException {
         try {
             tunnel = RelayTunnel.open(vpnService);
+            notifyConnected();
         } catch (IOException e) {
             touchFailure();
+            if (notifyDisconnectedOnError) {
+                notifyDisconnected();
+            }
             throw e;
         }
     }
@@ -65,6 +76,7 @@ public class RelayTunnelProvider {
             touchFailure();
             tunnel.close();
             tunnel = null;
+            notifyDisconnected();
         }
     }
 
@@ -93,6 +105,22 @@ public class RelayTunnelProvider {
         while (delay > 0) {
             wait(delay);
             delay = lastFailureTimestamp + DELAY_BETWEEN_ATTEMPTS_MS - System.currentTimeMillis();
+        }
+    }
+
+    public void setListener(RelayTunnelListener listener) {
+        this.listener = listener;
+    }
+
+    private void notifyConnected() {
+        if (listener != null) {
+            listener.notifyRelayTunnelConnected();
+        }
+    }
+
+    private void notifyDisconnected() {
+        if (listener != null) {
+            listener.notifyRelayTunnelDisconnected();
         }
     }
 }
