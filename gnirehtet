@@ -174,7 +174,8 @@ rt)
     parse_start_args "$@"
     apk_require_installed "$serial"
     trap "stop '$serial'" INT
-    start "$serial" "$dns"
+    # start in parallel so that the relay server is ready when the client connects
+    start "$serial" "$dns" &
     relay;;
 *)
     syntax;;
