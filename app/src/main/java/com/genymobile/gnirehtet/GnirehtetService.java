@@ -47,7 +47,7 @@ public class GnirehtetService extends VpnService {
     private static final InetAddress VPN_ROUTE = Net.toInetAddress(new byte[] {0, 0, 0, 0}); // intercept everything
 
     private final DisconnectionNotifier disconnectionNotifier = new DisconnectionNotifier(this);
-    private final Handler handler = new RelayTunnelConnectionStateHandler(disconnectionNotifier);
+    private final Handler handler = new RelayTunnelConnectionStateHandler(this);
 
     private ParcelFileDescriptor vpnInterface = null;
     private Forwarder forwarder;
@@ -186,22 +186,26 @@ public class GnirehtetService extends VpnService {
 
     private static final class RelayTunnelConnectionStateHandler extends Handler {
 
-        private final DisconnectionNotifier disconnectionNotifier;
+        private final GnirehtetService vpnService;
 
-        private RelayTunnelConnectionStateHandler(DisconnectionNotifier disconnectionNotifier) {
-            this.disconnectionNotifier = disconnectionNotifier;
+        private RelayTunnelConnectionStateHandler(GnirehtetService vpnService) {
+            this.vpnService = vpnService;
         }
 
         @Override
         public void handleMessage(Message message) {
+            if (!vpnService.isRunning()) {
+                // if the VPN is not running anymore, ignore obsolete events
+                return;
+            }
             switch (message.what) {
                 case RelayTunnelListener.MSG_RELAY_TUNNEL_CONNECTED:
                     Log.d(TAG, "Relay tunnel connected");
-                    disconnectionNotifier.cancelNotification();
+                    vpnService.disconnectionNotifier.cancelNotification();
                     break;
                 case RelayTunnelListener.MSG_RELAY_TUNNEL_DISCONNECTED:
                     Log.d(TAG, "Relay tunnel disconnected");
-                    disconnectionNotifier.showNotification();
+                    vpnService.disconnectionNotifier.showNotification();
                     break;
                 default:
             }
