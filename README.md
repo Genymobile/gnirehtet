@@ -67,6 +67,11 @@ A "key" logo appears in the status bar whenever _Gnirehtet_ is active:
 
 ![key](assets/key.png)
 
+If an older version of _gnirehtet_ was already installed on your device, you
+have to install the new one first:
+
+    ./gnirehtet install
+
 
 ## Run
 
