@@ -5,8 +5,18 @@ CALL :locate_file APK %~dp0gnirehtet.apk %~dp0app\build\outputs\apk\gnirehtet-re
 CALL :locate_file RELAY %~dp0relay.jar %~dp0relay\build\libs\relay.jar
 
 ::main
-IF NOT "%2"=="" SET serial="-s %2"
-CALL :do_%1 %serial% 2>NUL || CALL :do_help 
+IF NOT "%2"=="" (
+    FOR /f " tokens=2*" %%a IN ("%*") DO (
+        IF "%%a"=="-d" ( SET serial= ) ELSE ( SET serial=-s %%a )
+        SET dns=%%b
+    )
+)
+IF NOT "%3"=="" (
+    FOR /f " tokens=1*" %%a IN ("%dns%") DO (
+        IF "%%a"=="-d" ( SET dns=%%b) 
+    )
+)
+CALL :do_%1 %serial% %dns% || CALL :do_help 
 GOTO :eof
 
 :do_help
@@ -27,10 +37,10 @@ GOTO :eof
     ECHO.
     ECHO  %~nx0 rt [serial] [DNS[,DNS2,...]]
     ECHO      Enable reverse tethering for exactly one device:
-    ECHO        - install the client if necessary;"
-    ECHO        - start the client;
-    ECHO        - start the relay server;
-    ECHO        - You'll have to stop the client and the server manually
+    ECHO        - install the client if necessary.
+    ECHO        - start the client.
+    ECHO        - start the relay server.
+    ECHO      You'll have to stop the client and the server manually.
     ECHO.         
     ECHO  %~nx0 start [serial] [DNS[,DNS2,...]]
     ECHO      Start a client on the Android device and exit.
@@ -58,7 +68,7 @@ GOTO :eof
     ECHO      If several devices are connected via adb, then serial must be
     ECHO      specified.
     ENDLOCAL
-    EXIT /B
+    EXIT /B 0
 
 
 :locate_file
@@ -67,83 +77,79 @@ GOTO :eof
         SET VAR_NAME=%%a
         SET ALL_BUT_FIRST=%%b
     )
-    FOR %%G IN (%ALL_BUT_FIRST%) DO (
-    IF EXIST %%G (
-        SET FNAME=%%G
+    CALL where /q %VAR_NAME%
+    IF ERRORLEVEL 1 (
+        FOR %%G IN (%ALL_BUT_FIRST%) DO (
+            IF EXIST %%G (
+                SET FNAME=%%G
+            )
         )
+        IF "!FNAME!"=="" (
+            SET FNAME=%2 & ECHO cannot find file, using default diretory %2
+        )
+    ) ELSE (
+        SET FNAME=%VAR_NAME%
     )
-    IF "!FNAME!"=="" (
-        SET FNAME=%2 & ECHO cannot find file, using default name %2
-        )
-    endlocal&set %VAR_NAME%=%FNAME%
-    EXIT /B
+    ENDLOCAL&SET %VAR_NAME%=%FNAME%
+    EXIT /B 0
 
 :do_install
-    ECHO 'Installing gnirehtet...'
-    @ECHO ON
+    ECHO Installing gnirehtet...
     CALL %ADB% %~1 install %APK%
-    @ECHO OFF
-    EXIT /B
+    EXIT /B 0
 
 :do_uninstall 
-    ECHO 'Uninstall gnirehtet...'
-    @ECHO ON
+    ECHO Uninstall gnirehtet...
     CALL %ADB% %~1 uninstall com.genymobile.gnirehtet
-    @ECHO OFF
-    EXIT /B
+    EXIT /B 0
 
 :do_reinstall
     SETLOCAL
-    call :do_uninstall %1
-    call :do_install %1
+    CALL :do_uninstall %1
+    CALL :do_install %1
     ENDLOCAL
-    EXIT /B
+    EXIT /B 0
 
 :do_stop
-    ECHO 'Stopping gnirehtet...'
+    ECHO Stopping gnirehtet...
     CALL %ADB% %~1 shell am startservice -a com.genymobile.gnirehtet.STOP
-    EXIT /B
+    EXIT /B 0 0
 
 :do_relay
-    ECHO 'Starting relay server...'
-    @ECHO ON
+    ECHO Starting relay server...
     START /I "gnirehtet_relay_server" %JAVA% -jar %RELAY%
-    @ECHO OFF
-    EXIT /B
+    EXIT /B 0
 
 :do_start
     SETLOCAL
     FOR /f " tokens=1*" %%a IN ("%*") DO (
+
         set ALL_BUT_FIRST=%%b
     )
     IF NOT "%ALL_BUT_FIRST%"=="" (
         set dparam="--esa dnsServers %ALL_BUT_FIRST%"
     )
-    ECHO 'Starting gnirehtet...'
-    @ECHO ON
+    ECHO Starting gnirehtet...
     CALL %ADB% %~1 reverse tcp:31416 tcp:31416
     CALL %ADB% %~1 shell am startservice -a com.genymobile.gnirehtet.START %dparam%
-    @ECHO OFF
     ENDLOCAL
-    EXIT /B
+    EXIT /B 0
 
 :do_killserver
     SETLOCAL EnableDelayedExpansion
-    set filter="WINDOWTITLE EQ gnirehtet_relay_server"
-    @ECHO ON
+    SET filter="WINDOWTITLE EQ gnirehtet_relay_server"
     FOR /F "tokens=2" %%I in ('"TASKLIST /NH /FI %filter%"') DO SET PID=%%I 2>1
     TASKKILL /PID !PID!
-    @ECHO OFF
     ENDLOCAL
-    EXIT /B
+    EXIT /B 0
 
 :do_rt
     CALL :do_install %1
     CALL :do_relay
-    CALL :do_start %1
-    EXIT /B
+    CALL :do_start %*
+    EXIT /B 0
 
 :do_kill
     CALL :do_stop %1
     CALL :do_killserver
-    EXIT /B
+    EXIT /B 0
