@@ -21,6 +21,7 @@ import android.util.Log;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Expose a {@link Tunnel} that automatically handles {@link RelayTunnel} reconnections.
@@ -30,7 +31,7 @@ public class PersistentRelayTunnel implements Tunnel {
     private static final String TAG = PersistentRelayTunnel.class.getSimpleName();
 
     private final RelayTunnelProvider provider;
-    private boolean stopped;
+    private final AtomicBoolean stopped = new AtomicBoolean();
 
     public PersistentRelayTunnel(VpnService vpnService) {
         provider = new RelayTunnelProvider(vpnService);
@@ -38,7 +39,7 @@ public class PersistentRelayTunnel implements Tunnel {
 
     @Override
     public void send(byte[] packet, int len) throws IOException {
-        while (!stopped) {
+        while (!stopped.get()) {
             Tunnel tunnel = null;
             try {
                 tunnel = provider.getCurrentTunnel();
@@ -56,7 +57,7 @@ public class PersistentRelayTunnel implements Tunnel {
 
     @Override
     public int receive(byte[] packet) throws IOException {
-        while (!stopped) {
+        while (!stopped.get()) {
             Tunnel tunnel = null;
             try {
                 tunnel = provider.getCurrentTunnel();
@@ -78,8 +79,8 @@ public class PersistentRelayTunnel implements Tunnel {
     }
 
     @Override
-    public synchronized void close() {
-        stopped = true;
+    public void close() {
+        stopped.set(true);
         provider.invalidateTunnel();
     }
 
