@@ -19,46 +19,48 @@ set -e # fail on error
 ADB=adb
 JAVA=java
 
-syntax() {
-    echo "Syntax: $0 (install|uninstall|rt|start|stop|relay) ..." >&2
-    echo
-    echo "  $0 install [serial]"
-    echo "      Install the client on the Android device and exit."
-    echo "      If several devices are connected via adb, then serial must be"
-    echo "      specified."
-    echo
-    echo "  $0 uninstall [serial]"
-    echo "      Uninstall the client from the Android device and exit."
-    echo "      If several devices are connected via adb, then serial must be"
-    echo "      specified."
-    echo
-    echo "  $0 reinstall [serial]"
-    echo "      Uninstall then install."
-    echo
-    echo "  $0 rt [serial] [-d DNS[,DNS2,...]]"
-    echo "      Enable reverse tethering for exactly one device:"
-    echo "        - install the client if necessary;"
-    echo "        - start the client;"
-    echo "        - start the relay server;"
-    echo "        - on Ctrl+C, stop both the relay server and the client."
-    echo
-    echo "  $0 start [serial] [-d DNS[,DNS2,...]]"
-    echo "      Start a client on the Android device and exit."
-    echo "      If several devices are connected via adb, then serial must be"
-    echo "      specified."
-    echo "      If -d is given, then make the Android device use the specified"
-    echo "      DNS server(s). Otherwise, use 8.8.8.8 (Google public DNS)."
-    echo "      If the client is already started, then do nothing, and ignore"
-    echo "      DNS servers parameter."
-    echo "      To use the host 'localhost' as DNS, use 10.0.2.2."
-    echo
-    echo "  $0 stop [serial]"
-    echo "      Stop the client on the Android device and exit."
-    echo "      If several devices are connected via adb, then serial must be"
-    echo "      specified."
-    echo
-    echo "  $0 relay"
-    echo "      Start the relay server in the current terminal."
+usage() {
+    cat >&2 << EOF
+Syntax: $0 (install|uninstall|rt|start|stop|relay) ...
+
+  $0 install [serial]
+      Install the client on the Android device and exit.
+      If several devices are connected via adb, then serial must be
+      specified.
+
+  $0 uninstall [serial]
+      Uninstall the client from the Android device and exit.
+      If several devices are connected via adb, then serial must be
+      specified.
+
+  $0 reinstall [serial]
+      Uninstall then install.
+
+  $0 rt [serial] [-d DNS[,DNS2,...]]
+      Enable reverse tethering for exactly one device:
+        - install the client if necessary;
+        - start the client;
+        - start the relay server;
+        - on Ctrl+C, stop both the relay server and the client.
+
+  $0 start [serial] [-d DNS[,DNS2,...]]
+      Start a client on the Android device and exit.
+      If several devices are connected via adb, then serial must be
+      specified.
+      If -d is given, then make the Android device use the specified
+      DNS server(s). Otherwise, use 8.8.8.8 (Google public DNS).
+      If the client is already started, then do nothing, and ignore
+      DNS servers parameter.
+      To use the host 'localhost' as DNS, use 10.0.2.2.
+
+  $0 stop [serial]
+      Stop the client on the Android device and exit.
+      If several devices are connected via adb, then serial must be
+      specified.
+
+  $0 relay
+      Start the relay server in the current terminal.
+EOF
     exit 1
 }
 
@@ -189,5 +191,5 @@ rt)
     start "$serial" "$dns" &
     relay;;
 *)
-    syntax;;
+    usage;;
 esac
