@@ -160,8 +160,7 @@ public class GnirehtetService extends VpnService {
     }
 
     private void startForwarding() {
-        forwarder = new Forwarder(this, vpnInterface.getFileDescriptor());
-        forwarder.setRelayTunnelListener(new RelayTunnelListener(handler));
+        forwarder = new Forwarder(this, vpnInterface.getFileDescriptor(), new RelayTunnelListener(handler));
         forwarder.forward();
     }
 

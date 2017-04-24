@@ -28,13 +28,14 @@ public class RelayTunnelProvider {
     private static final int DELAY_BETWEEN_ATTEMPTS_MS = 5000;
 
     private final VpnService vpnService;
+    private final RelayTunnelListener listener;
     private RelayTunnel tunnel;
     private boolean first = true;
     private long lastFailureTimestamp;
-    private RelayTunnelListener listener;
 
-    public RelayTunnelProvider(VpnService vpnService) {
+    public RelayTunnelProvider(VpnService vpnService, RelayTunnelListener listener) {
         this.vpnService = vpnService;
+        this.listener = listener;
     }
 
     public synchronized RelayTunnel getCurrentTunnel() throws IOException, InterruptedException {
@@ -106,10 +107,6 @@ public class RelayTunnelProvider {
             wait(delay);
             delay = lastFailureTimestamp + DELAY_BETWEEN_ATTEMPTS_MS - System.currentTimeMillis();
         }
-    }
-
-    public void setListener(RelayTunnelListener listener) {
-        this.listener = listener;
     }
 
     private void notifyConnected() {

@@ -33,8 +33,8 @@ public class PersistentRelayTunnel implements Tunnel {
     private final RelayTunnelProvider provider;
     private final AtomicBoolean stopped = new AtomicBoolean();
 
-    public PersistentRelayTunnel(VpnService vpnService) {
-        provider = new RelayTunnelProvider(vpnService);
+    public PersistentRelayTunnel(VpnService vpnService, RelayTunnelListener listener) {
+        provider = new RelayTunnelProvider(vpnService, listener);
     }
 
     @Override
@@ -82,9 +82,5 @@ public class PersistentRelayTunnel implements Tunnel {
     public void close() {
         stopped.set(true);
         provider.invalidateTunnel();
-    }
-
-    public void setRelayTunnelListener(RelayTunnelListener listener) {
-        provider.setListener(listener);
     }
 }
