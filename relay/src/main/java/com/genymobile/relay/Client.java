@@ -17,6 +17,7 @@
 package com.genymobile.relay;
 
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
@@ -42,10 +43,14 @@ public class Client {
 
     private final List<PacketSource> pendingPacketSources = new ArrayList<>();
 
+    // store the remaining bytes of "id" to send to the client before relaying any data
+    private ByteBuffer pendingIdBuffer;
+
     public Client(Selector selector, SocketChannel clientChannel, RemoveHandler<Client> removeHandler) throws ClosedChannelException {
         id = nextId++;
         this.clientChannel = clientChannel;
         router = new Router(this, selector);
+        pendingIdBuffer = createIntBuffer(id);
 
         SelectionHandler selectionHandler = (selectionKey) -> {
             if (selectionKey.isValid() && selectionKey.isWritable()) {
@@ -58,10 +63,18 @@ public class Client {
                 updateInterests();
             }
         };
-        // on start, we are interested only in reading (there is nothing to write)
-        selectionKey = clientChannel.register(selector, SelectionKey.OP_READ, selectionHandler);
+        // on start, we are interested only in writing (we must first send the client id)
+        selectionKey = clientChannel.register(selector, SelectionKey.OP_WRITE, selectionHandler);
 
         this.removeHandler = removeHandler;
+    }
+
+    private static ByteBuffer createIntBuffer(int value) {
+        final int intSize = 4;
+        ByteBuffer buffer = ByteBuffer.allocate(intSize);
+        buffer.putInt(value);
+        buffer.flip();
+        return buffer;
     }
 
     public int getId() {
@@ -77,6 +90,12 @@ public class Client {
     }
 
     private void processSend() {
+        if (mustSendId()) {
+            if (!sendId()) {
+                destroy();
+            }
+            return;
+        }
         if (!write()) {
             destroy();
             return;
@@ -98,6 +117,29 @@ public class Client {
             return networkToClient.writeTo(clientChannel) != -1;
         } catch (IOException e) {
             Log.e(TAG, "Cannot write", e);
+            return false;
+        }
+    }
+
+    private boolean mustSendId() {
+        return pendingIdBuffer != null && pendingIdBuffer.hasRemaining();
+    }
+
+    private boolean sendId() {
+        assert mustSendId();
+        try {
+            if (clientChannel.write(pendingIdBuffer) == -1) {
+                Log.w(TAG, "Cannot write client id #" + id + " (EOF)");
+                return false;
+            }
+            if (!pendingIdBuffer.hasRemaining()) {
+                // we don't need this buffer anymore, release it
+                Log.d(TAG, "Client id #" + id + " sent to client");
+                pendingIdBuffer = null;
+            }
+            return true;
+        } catch (IOException e) {
+            Log.e(TAG, "Cannot write client id #" + id, e);
             return false;
         }
     }

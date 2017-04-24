@@ -22,9 +22,8 @@ import android.util.Log;
 import java.io.IOException;
 import java.net.Inet4Address;
 import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
 
 public final class RelayTunnel implements Tunnel {
@@ -48,7 +47,7 @@ public final class RelayTunnel implements Tunnel {
 
     public void connect() throws IOException {
         channel.connect(new InetSocketAddress(Inet4Address.getLocalHost(), DEFAULT_PORT));
-        fakeRead(channel.socket());
+        readClientId(channel);
     }
 
     /**
@@ -60,30 +59,30 @@ public final class RelayTunnel implements Tunnel {
      * As a consequence, the connection state of the relay server would be invalid temporarily (we
      * would switch to CONNECTED state then switch back to DISCONNECTED).
      * <p>
-     * To avoid this problem, we must actually try to read from the server, so that an error occurs
+     * To avoid this problem, we must actually read from the server, so that an error occurs
      * immediately if the relay server is not accessible.
      * <p>
-     * To do so, we set the lowest timeout possible (1) that is not "infinity" (0), try to read,
-     * then reset the timeout option. Since the client is always the first peer to send data, there
-     * is never anything to read.
+     * Therefore, the relay server immediately sends the client id: consume it and log it.
      *
-     * @param socket the socket to read
+     * @param channel the channel to communicate with the relay server
      * @throws IOException if an I/O error occurs
      */
-    private static void fakeRead(Socket socket) throws IOException {
-        int timeout = socket.getSoTimeout();
-        socket.setSoTimeout(1);
-        boolean eof = false;
-        try {
-            eof = socket.getInputStream().read() == -1;
-        } catch (SocketTimeoutException e) {
-            // ignore, expected timeout
-        } finally {
-            socket.setSoTimeout(timeout);
-        }
-        if (eof) {
-            throw new IOException("Cannot connect to the relay server");
-        }
+    private static void readClientId(ReadableByteChannel channel) throws IOException {
+        Log.d(TAG, "Requesting client id");
+        int clientId = readInt(channel);
+        Log.d(TAG, "Connected to the relay server as #" + Binary.unsigned(clientId));
+    }
+
+    private static int readInt(ReadableByteChannel channel) throws IOException {
+        final int intSize = 4;
+        ByteBuffer buffer = ByteBuffer.allocate(intSize);
+        do {
+            if (channel.read(buffer) == -1) {
+                throw new IOException("Cannot read from channel");
+            }
+        } while (buffer.hasRemaining());
+        buffer.flip();
+        return buffer.getInt();
     }
 
     @Override

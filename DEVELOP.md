@@ -137,6 +137,14 @@ Each [`Client`] manages a TCP socket, used to transmit raw IP packets from and
 to the _Gnirehtet_ Android client. Thus, these IP packets are encapsulated into
 TCP (they are transmitted as the TCP payload).
 
+When a client connects, the relay server assigns an integer id to it, which it
+writes to the TCP socket. The client considers itself connected to the relay
+server only once it has received this number. This allows to detect any
+end-to-end connection issue immediately. For instance, a TCP _connect_ initiated
+by a client succeeds whenever a port redirection is enabled (typically through
+`adb reverse`), even if the relay server is not listening. In that case, the
+first _read_ will fail.
+
 The [`IPv4Packet`] class provides a structured view to read and write packet
 data, which is physically stored in the buffers (the little squares on the
 schema). Since we handle one packet at a time with asynchronous I/O, there is no
