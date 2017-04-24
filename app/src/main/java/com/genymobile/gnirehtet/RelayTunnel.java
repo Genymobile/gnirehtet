@@ -43,9 +43,12 @@ public final class RelayTunnel implements Tunnel {
         Log.d(TAG, "Opening a new relay tunnel...");
         SocketChannel channel = SocketChannel.open();
         vpnService.protect(channel.socket());
+        return new RelayTunnel(channel);
+    }
+
+    public void connect() throws IOException {
         channel.connect(new InetSocketAddress(Inet4Address.getLocalHost(), DEFAULT_PORT));
         fakeRead(channel.socket());
-        return new RelayTunnel(channel);
     }
 
     /**

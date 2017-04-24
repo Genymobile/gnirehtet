@@ -27,41 +27,54 @@ public class RelayTunnelProvider {
 
     private static final int DELAY_BETWEEN_ATTEMPTS_MS = 5000;
 
+    private final Object getCurrentTunnelLock = new Object(); // protects getCurrentTunnel()
+
     private final VpnService vpnService;
     private final RelayTunnelListener listener;
-    private RelayTunnel tunnel;
-    private boolean first = true;
-    private long lastFailureTimestamp;
+    private RelayTunnel tunnel; // protected both by "this" and "getCurrentTunnelLock"
+    private boolean first = true; // protected by "getCurrentTunnelLock"
+    private long lastFailureTimestamp; // protected by "this"
 
     public RelayTunnelProvider(VpnService vpnService, RelayTunnelListener listener) {
         this.vpnService = vpnService;
         this.listener = listener;
     }
 
-    public synchronized RelayTunnel getCurrentTunnel() throws IOException, InterruptedException {
-        if (tunnel != null) {
-            return tunnel;
-        }
+    public RelayTunnel getCurrentTunnel() throws IOException, InterruptedException {
+        /*
+         * To make sure that both the sending and receiving threads use the same tunnel, we must
+         * guarantee that this method may not be called several times concurrently.
+         *
+         * However, since it executes potentially long-running blocking calls, we still want to be
+         * able to call invalidateTunnel() concurrently, which requires to protect some fields.
+         *
+         * Therefore, use one mutex ("getCurrentTunnelLock") to avoid concurrent calls to
+         * getCurrentTunnel(), and another one ("this") to protect fields shared with
+         * invalidateTunnel().
+         */
+        synchronized (getCurrentTunnelLock) {
+            synchronized (this) {
+                if (tunnel != null) {
+                    return tunnel;
+                }
 
-        waitUntilNextAttemptSlot();
+                waitUntilNextAttemptSlot();
 
-        // the tunnel variable may have changed during the waiting
-        if (tunnel == null) {
-            openTunnel();
+                // "tunnel" has not changed during waiting (only getCurrentTunnel() may write it)
+                tunnel = RelayTunnel.open(vpnService);
+            }
+
+            // the first connection must either notify "connected" or "disconnected"
+            boolean notifyDisconnectedOnError = first;
+            first = false;
+            connectTunnel(notifyDisconnectedOnError);
         }
         return tunnel;
     }
 
-    private void openTunnel() throws IOException {
-        // the first connection must either notify "connected" or "disconnected"
-        boolean notifyDisconnectedOnError = first;
-        first = false;
-        openTunnel(notifyDisconnectedOnError);
-    }
-
-    private void openTunnel(boolean notifyDisconnectedOnError) throws IOException {
+    private void connectTunnel(boolean notifyDisconnectedOnError) throws IOException {
         try {
-            tunnel = RelayTunnel.open(vpnService);
+            tunnel.connect();
             notifyConnected();
         } catch (IOException e) {
             touchFailure();
@@ -93,7 +106,7 @@ public class RelayTunnelProvider {
         }
     }
 
-    private void touchFailure() {
+    private synchronized void touchFailure() {
         lastFailureTimestamp = System.currentTimeMillis();
     }
 
