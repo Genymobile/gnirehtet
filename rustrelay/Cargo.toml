@@ -1,0 +1,12 @@
+[package]
+name = "rustrelay"
+version = "0.1.0"
+authors = ["Romain Vimont <rvimont@genymobile.com>"]
+
+[lib]
+name = "relaylib"
+path = "src/lib.rs"
+
+[dependencies]
+mio = "0.6"  # for async I/O
+
