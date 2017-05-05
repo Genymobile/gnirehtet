@@ -16,7 +16,7 @@ IF NOT "%3"=="" (
         IF "%%a"=="-d" ( SET dns=%%b) 
     )
 )
-CALL :do_%1 %serial% %dns% || CALL :do_help 
+CALL :do_%1 || CALL :do_help 
 GOTO :eof
 
 :do_help
@@ -95,24 +95,24 @@ GOTO :eof
 
 :do_install
     ECHO Installing gnirehtet...
-    CALL %ADB% %~1 install %APK%
+    CALL %ADB% %serial% install %APK%
     EXIT /B 0
 
 :do_uninstall 
     ECHO Uninstall gnirehtet...
-    CALL %ADB% %~1 uninstall com.genymobile.gnirehtet
+    CALL %ADB% %serial% uninstall com.genymobile.gnirehtet
     EXIT /B 0
 
 :do_reinstall
     SETLOCAL
-    CALL :do_uninstall %1
-    CALL :do_install %1
+    CALL :do_uninstall
+    CALL :do_install
     ENDLOCAL
     EXIT /B 0
 
 :do_stop
     ECHO Stopping gnirehtet...
-    CALL %ADB% %~1 shell am startservice -a com.genymobile.gnirehtet.STOP
+    CALL %ADB% %serial% shell am startservice -a com.genymobile.gnirehtet.STOP
     EXIT /B 0 0
 
 :do_relay
@@ -122,16 +122,12 @@ GOTO :eof
 
 :do_start
     SETLOCAL
-    FOR /f " tokens=1*" %%a IN ("%*") DO (
-
-        set ALL_BUT_FIRST=%%b
-    )
-    IF NOT "%ALL_BUT_FIRST%"=="" (
-        set dparam="--esa dnsServers %ALL_BUT_FIRST%"
+    IF NOT "%dns%"=="" (
+        set dparam=--esa dnsServers %dns%
     )
     ECHO Starting gnirehtet...
-    CALL %ADB% %~1 reverse tcp:31416 tcp:31416
-    CALL %ADB% %~1 shell am startservice -a com.genymobile.gnirehtet.START %dparam%
+    CALL %ADB% %serial% reverse tcp:31416 tcp:31416
+    CALL %ADB% %serial% shell am startservice -a com.genymobile.gnirehtet.START %dparam%
     ENDLOCAL
     EXIT /B 0
 
@@ -144,12 +140,20 @@ GOTO :eof
     EXIT /B 0
 
 :do_rt
-    CALL :do_install %1
+    CALL :do_install
     CALL :do_relay
-    CALL :do_start %*
+    CALL :do_start
     EXIT /B 0
 
 :do_kill
-    CALL :do_stop %1
+    CALL :do_stop
     CALL :do_killserver
     EXIT /B 0
+
+:eof
+    SET dns=
+    SET serial=
+    SET ADB=
+    SET JAVA=
+    SET RELAY=
+    SET APK=
