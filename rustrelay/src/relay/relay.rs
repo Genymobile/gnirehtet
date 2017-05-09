@@ -16,9 +16,9 @@ impl Relay {
     pub fn start(&self) {
         println!("Starting on port {}", self.port);
 
-        // Setup some tokens to allow us to identify which event is
-        // for which socket.
-        const SERVER: Token = Token(0);
+        let mut token_provider = (0..).map(|x| Token(x));
+        let poll = Poll::new().unwrap();
+        let mut events = Events::with_capacity(1024);
 
         let localhost = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
         let addr = SocketAddr::new(localhost, self.port);
@@ -27,21 +27,22 @@ impl Relay {
         let server = TcpListener::bind(&addr).unwrap();
 
         // Create a poll instance
-        let poll = Poll::new().unwrap();
 
         // Start listening for incoming connections
-        poll.register(&server, SERVER, Ready::readable(),
+        let server_token = token_provider.next();
+        poll.register(&server, server_token.unwrap(), Ready::readable(),
                       PollOpt::edge()).unwrap();
 
         // Create storage for events
-        let mut events = Events::with_capacity(1024);
+
 
         loop {
             poll.poll(&mut events, None).unwrap();
 
-            for event in events.iter() {
+            for event in &events {
+                println!("event={:?}", event);
                 match event.token() {
-                    SERVER => {
+                    server_token => {
                         // Accept and drop the socket immediately, this will close
                         // the socket and notify the client of the EOF.
                         let _ = server.accept();
