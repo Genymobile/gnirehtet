@@ -2,20 +2,31 @@ use mio::*;
 use std::io;
 use std::collections::HashMap;
 
-struct HandlerTokenManager {
+pub struct HandlerTokenManager {
     token_provider: Box<Iterator<Item=Token>>,
     handlers: HashMap<Token, Box<EventHandler>>,
 }
 
 impl HandlerTokenManager {
-    fn new() -> HandlerTokenManager {
+    pub fn new() -> HandlerTokenManager {
         HandlerTokenManager {
             token_provider: Box::new((0..).map(|x| Token(x))),
             handlers: HashMap::new(),
         }
     }
-    fn create(handler: &EventHandler) -> Token {
-        Token(0)
+
+    pub fn register(&mut self, handler: Box<EventHandler>) -> Token {
+        let token = self.token_provider.next().unwrap();
+        self.handlers.insert(token, handler);
+        token
+    }
+
+    pub fn get(&self, token: &Token) -> Option<&Box<EventHandler>> {
+        self.handlers.get(token)
+    }
+
+    pub fn unregister(&mut self, token: &Token) -> bool {
+        self.handlers.remove(token).is_some()
     }
 }
 
