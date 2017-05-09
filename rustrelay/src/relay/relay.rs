@@ -2,6 +2,8 @@ use mio::*;
 use mio::tcp::TcpListener;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 
+use super::eventhandler::*;
+
 pub struct Relay {
     port: u16,
 }
@@ -16,7 +18,7 @@ impl Relay {
     pub fn start(&self) {
         println!("Starting on port {}", self.port);
 
-        let mut token_provider = (0..).map(|x| Token(x));
+        let mut manager = HandlerTokenManager::new();
         let poll = Poll::new().unwrap();
         let mut events = Events::with_capacity(1024);
 
@@ -29,8 +31,10 @@ impl Relay {
         // Create a poll instance
 
         // Start listening for incoming connections
-        let server_token = token_provider.next();
-        poll.register(&server, server_token.unwrap(), Ready::readable(),
+        let token = manager.register(Box::new(|ready| {
+            println!("Ready! {:?}", ready);
+        }));
+        poll.register(&server, token, Ready::readable(),
                       PollOpt::edge()).unwrap();
 
         // Create storage for events
@@ -41,15 +45,8 @@ impl Relay {
 
             for event in &events {
                 println!("event={:?}", event);
-                match event.token() {
-                    server_token => {
-                        // Accept and drop the socket immediately, this will close
-                        // the socket and notify the client of the EOF.
-                        let _ = server.accept();
-                        println!("client accepted");
-                    }
-                    _ => unreachable!(),
-                }
+                let handler = manager.get(&event.token()).unwrap();
+                handler.on_ready(event.readiness());
             }
         }
     }
