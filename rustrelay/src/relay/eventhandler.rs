@@ -1,5 +1,4 @@
 use mio::*;
-use std::io;
 use std::collections::HashMap;
 
 pub struct HandlerTokenManager {
@@ -27,30 +26,6 @@ impl HandlerTokenManager {
 
     pub fn unregister(&mut self, token: &Token) -> bool {
         self.handlers.remove(token).is_some()
-    }
-}
-
-struct CallbackPoll {
-    poll: Poll,
-    events: Events,
-    token_provider: Box<Iterator<Item=Token>>,
-    handlers: HashMap<Token, Box<EventHandler>>
-}
-
-impl CallbackPoll {
-    fn new() -> io::Result<CallbackPoll> {
-        Ok(CallbackPoll {
-            poll: try!(Poll::new()),
-            events: Events::with_capacity(1024),
-            token_provider: Box::new((0..).map(|x| Token(x))),
-            handlers: HashMap::new(),
-        })
-    }
-
-    fn register<E>(&self, handle: &E, handler: &EventHandler, interest: Ready, opts: PollOpt) -> io::Result<()>
-            where E: Evented + ?Sized {
-        //let token = self.token_provider.next();
-        self.poll.register(handle, Token(0), interest, opts)
     }
 }
 
