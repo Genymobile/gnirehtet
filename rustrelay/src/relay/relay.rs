@@ -18,9 +18,7 @@ impl Relay {
     pub fn start(&self) {
         println!("Starting on port {}", self.port);
 
-        let mut manager = HandlerTokenManager::new();
-        let poll = Poll::new().unwrap();
-        let mut events = Events::with_capacity(1024);
+        let mut selector = Selector::new().unwrap();
 
         let localhost = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
         let addr = SocketAddr::new(localhost, self.port);
@@ -28,24 +26,18 @@ impl Relay {
         // Setup the server socket
         let server = TcpListener::bind(&addr).expect("Cannot bind socket");
 
-        // Create a poll instance
-
         // Start listening for incoming connections
-        let token = manager.register(Box::new(|ready| {
+        let handler = Box::new(|ready| {
             println!("Ready! {:?}", ready);
-        }));
-        poll.register(&server, token, Ready::readable(),
-                      PollOpt::edge()).unwrap();
-
-        // Create storage for events
-
+        });
+        selector.register(&server, handler, Ready::readable(), PollOpt::edge()).unwrap();
 
         loop {
-            poll.poll(&mut events, None).unwrap();
+            selector.select(None).unwrap();
 
-            for event in &events {
+            for event in &selector.events {
                 println!("event={:?}", event);
-                let handler = manager.get(&event.token()).unwrap();
+                let handler = selector.get_handler(event.token()).unwrap();
                 handler.on_ready(event.readiness());
             }
         }
