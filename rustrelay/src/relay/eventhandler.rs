@@ -16,7 +16,6 @@ impl<F> EventHandler for F where F: Fn(Ready) {
     }
 }
 
-
 // Selector
 
 pub struct Selector {
