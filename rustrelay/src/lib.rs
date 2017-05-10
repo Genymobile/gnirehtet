@@ -1,4 +1,5 @@
 extern crate mio;
+extern crate slab;
 
 mod relay;
 use relay::*;

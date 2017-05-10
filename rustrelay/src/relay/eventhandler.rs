@@ -2,6 +2,7 @@ use mio::*;
 use std::io;
 use std::collections::HashMap;
 use std::time::Duration;
+use slab::Slab;
 
 // EventHandler
 
@@ -36,7 +37,7 @@ impl Selector {
     pub fn register<E>(&mut self, handle: &E, handler: Box<EventHandler>,
                    interest: Ready, opts: PollOpt) -> io::Result<Token>
             where E: Evented + ?Sized {
-        let token = self.handler_token_manager.register(handler);
+        let token = self.handler_token_manager.register(handler)?;
         self.poll.register(handle, token, interest, opts)?;
         Ok(token)
     }
@@ -66,28 +67,26 @@ impl Selector {
 
 struct HandlerTokenManager {
     token_provider: Box<Iterator<Item=Token>>,
-    handlers: HashMap<Token, Box<EventHandler>>,
+    handlers: Slab<Box<EventHandler>, Token>,
 }
 
 impl HandlerTokenManager {
     fn new() -> HandlerTokenManager {
         HandlerTokenManager {
             token_provider: Box::new((0..).map(|x| Token(x))),
-            handlers: HashMap::new(),
+            handlers: Slab::with_capacity(1024),
         }
     }
 
-    fn register(&mut self, handler: Box<EventHandler>) -> Token {
-        let token = self.token_provider.next().unwrap();
-        self.handlers.insert(token, handler);
-        token
+    fn register(&mut self, handler: Box<EventHandler>) -> io::Result<Token> {
+        self.handlers.insert(handler).map_err(|_| io::Error::new(io::ErrorKind::Other, "Cannot allocate slab slot"))
     }
 
     fn get(&self, token: Token) -> Option<&Box<EventHandler>> {
-        self.handlers.get(&token)
+        self.handlers.get(token)
     }
 
     fn remove(&mut self, token: Token) -> bool {
-        self.handlers.remove(&token).is_some()
+        self.handlers.remove(token).is_some()
     }
 }
