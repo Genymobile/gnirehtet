@@ -26,7 +26,7 @@ impl Relay {
         let addr = SocketAddr::new(localhost, self.port);
 
         // Setup the server socket
-        let server = TcpListener::bind(&addr).unwrap();
+        let server = TcpListener::bind(&addr).expect("Cannot bind socket");
 
         // Create a poll instance
 
