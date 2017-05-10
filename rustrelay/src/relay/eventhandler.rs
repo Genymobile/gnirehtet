@@ -1,6 +1,16 @@
 use mio::*;
 use std::collections::HashMap;
 
+pub trait EventHandler {
+    fn on_ready(&self, ready: Ready);
+}
+
+impl<F> EventHandler for F where F: Fn(Ready) {
+    fn on_ready(&self, ready: Ready) {
+        self(ready);
+    }
+}
+
 pub struct HandlerTokenManager {
     token_provider: Box<Iterator<Item=Token>>,
     handlers: HashMap<Token, Box<EventHandler>>,
@@ -26,15 +36,5 @@ impl HandlerTokenManager {
 
     pub fn unregister(&mut self, token: &Token) -> bool {
         self.handlers.remove(token).is_some()
-    }
-}
-
-pub trait EventHandler {
-    fn on_ready(&self, ready: Ready);
-}
-
-impl<F> EventHandler for F where F: Fn(Ready) {
-    fn on_ready(&self, ready: Ready) {
-        self(ready);
     }
 }
