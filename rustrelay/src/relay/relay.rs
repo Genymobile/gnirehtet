@@ -17,8 +17,6 @@ impl Relay {
     }
 
     pub fn start(&self) {
-        println!("Starting on port {}", self.port);
-
         let mut selector = Selector::new().unwrap();
         let _server = self.start_socket(&mut selector).expect("Cannot start server");
         self.poll_loop(&mut selector);
