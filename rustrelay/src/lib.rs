@@ -8,6 +8,6 @@ use relay::*;
 
 pub fn relay() {
     const PORT: u16 = 31416;
-    info!("Starting server...");
+    info!(target: "Relay", "Starting server...");
     Relay::new(PORT).start();
 }

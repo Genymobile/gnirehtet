@@ -1,4 +1,5 @@
 use log::*;
+use chrono::prelude::Local;
 
 const THRESHOLD: LogLevelFilter = LogLevelFilter::Info;
 
@@ -11,7 +12,9 @@ impl Log for SimpleLogger {
 
     fn log(&self, record: &LogRecord) {
         if self.enabled(record.metadata()) {
-            println!("{} - {}", record.level(), record.args());
+            let date = Local::now();
+            let formatted_date = date.format("%Y-%m-%d %H:%M:%S%.3f");
+            println!("{} {} {}: {}", formatted_date, record.level(), record.target(), record.args());
         }
     }
 }
