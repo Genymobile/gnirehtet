@@ -3,7 +3,7 @@ use mio::tcp::TcpListener;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::io;
 
-use super::eventhandler::*;
+use super::selector::Selector;
 
 pub struct Relay {
     port: u16,

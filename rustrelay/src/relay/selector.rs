@@ -1,10 +1,7 @@
 use mio::*;
 use std::io;
-use std::collections::HashMap;
 use std::time::Duration;
 use slab::Slab;
-
-// EventHandler
 
 pub trait EventHandler {
     fn on_ready(&self, ready: Ready);
@@ -15,8 +12,6 @@ impl<F> EventHandler for F where F: Fn(Ready) {
         self(ready);
     }
 }
-
-// Selector
 
 pub struct Selector {
     poll: Poll,
