@@ -27,7 +27,7 @@ impl Relay {
         let addr = SocketAddr::new(localhost, self.port);
         let server = TcpListener::bind(&addr)?;
         let handler = Box::new(|ready| {
-            println!("Ready! {:?}", ready);
+            Relay::accept_client();
         });
         selector.register(&server, handler, Ready::readable(), PollOpt::edge())?;
         Ok(server)
@@ -39,10 +39,12 @@ impl Relay {
 
             for event in &selector.events {
                 println!("event={:?}", event);
-                let handler = selector.get_handler(event.token()).unwrap();
+                let mut handler = selector.handlers.get_mut(event.token()).unwrap();
                 handler.on_ready(event.readiness());
             }
         }
     }
+
+    fn accept_client() {}
 }
 

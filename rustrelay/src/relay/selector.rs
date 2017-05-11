@@ -4,11 +4,11 @@ use std::time::Duration;
 use slab::Slab;
 
 pub trait EventHandler {
-    fn on_ready(&self, ready: Ready);
+    fn on_ready(&mut self, ready: Ready);
 }
 
-impl<F> EventHandler for F where F: Fn(Ready) {
-    fn on_ready(&self, ready: Ready) {
+impl<F> EventHandler for F where F: FnMut(Ready) {
+    fn on_ready(&mut self, ready: Ready) {
         self(ready);
     }
 }
@@ -16,7 +16,7 @@ impl<F> EventHandler for F where F: Fn(Ready) {
 pub struct Selector {
     poll: Poll,
     pub events: Events,
-    handlers: Slab<Box<EventHandler>, Token>,
+    pub handlers: Slab<Box<EventHandler>, Token>,
 }
 
 impl Selector {
@@ -55,7 +55,7 @@ impl Selector {
         self.poll.poll(&mut self.events, timeout)
     }
 
-    pub fn get_handler(&self, token: Token) -> Option<&Box<EventHandler>> {
-        self.handlers.get(token)
+    pub fn get_handler(&mut self, token: Token) -> Option<&mut Box<EventHandler>> {
+        self.handlers.get_mut(token)
     }
 }
