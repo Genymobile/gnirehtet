@@ -1,3 +1,5 @@
+#[macro_use]
+extern crate log;
 extern crate mio;
 extern crate slab;
 
@@ -6,5 +8,6 @@ use relay::*;
 
 pub fn relay() {
     const PORT: u16 = 31416;
+    info!("Starting server...");
     Relay::new(PORT).start();
 }
