@@ -12,3 +12,6 @@ mio = "0.6"    # for async I/O
 slab = "0.3"   # helper for mio Tokens
 log = "0.3"    # for logs
 chrono = "0.3" # for formatting timestamp in logs
+
+[profile.release]
+lto = true     # link-time optimization
