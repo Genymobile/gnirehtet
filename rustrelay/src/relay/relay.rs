@@ -3,7 +3,9 @@ use mio::tcp::TcpListener;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::io;
 
+use super::client::Client;
 use super::selector::Selector;
+use super::tunnelconnection::TunnelConnection;
 
 pub struct Relay {
     port: u16,
@@ -12,25 +14,14 @@ pub struct Relay {
 impl Relay {
     pub fn new(port: u16) -> Relay {
         Relay {
-            port: port
+            port: port,
         }
     }
 
     pub fn start(&self) {
         let mut selector = Selector::new().unwrap();
-        let _server = self.start_socket(&mut selector).expect("Cannot start server");
+        let _tunnel_connection = TunnelConnection::new(self.port, &mut selector);
         self.poll_loop(&mut selector);
-    }
-
-    fn start_socket(&self, selector: &mut Selector) -> io::Result<TcpListener> {
-        let localhost = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-        let addr = SocketAddr::new(localhost, self.port);
-        let server = TcpListener::bind(&addr)?;
-        let handler = Box::new(|ready| {
-            Relay::accept_client();
-        });
-        selector.register(&server, handler, Ready::readable(), PollOpt::edge())?;
-        Ok(server)
     }
 
     fn poll_loop(&self, selector: &mut Selector) {
@@ -44,7 +35,5 @@ impl Relay {
             }
         }
     }
-
-    fn accept_client() {}
 }
 
