@@ -17,14 +17,8 @@
 package com.genymobile.relay;
 
 import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Set;
 
 public class Relay {
@@ -34,7 +28,6 @@ public class Relay {
     private static final int DEFAULT_PORT = 31416;
 
     private final int port;
-    private final List<Client> clients = new ArrayList<>();
 
     public Relay() {
         this(DEFAULT_PORT);
@@ -47,20 +40,8 @@ public class Relay {
     public void start() throws IOException {
         Selector selector = Selector.open();
 
-        ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
-        serverSocketChannel.configureBlocking(false);
-        // ServerSocketChannel.bind() requires API 24
-        serverSocketChannel.socket().bind(new InetSocketAddress(Inet4Address.getLoopbackAddress(), port));
-
-        SelectionHandler socketChannelHandler = (selectionKey) -> {
-            try {
-                ServerSocketChannel channel = (ServerSocketChannel) selectionKey.channel();
-                acceptClient(selector, channel);
-            } catch (IOException e) {
-                Log.e(TAG, "Cannot accept client", e);
-            }
-        };
-        serverSocketChannel.register(selector, SelectionKey.OP_ACCEPT, socketChannelHandler);
+        // will register the socket on the selector
+        TunnelConnection tunnelConnection = new TunnelConnection(port, selector);
 
         SelectorAlarm selectorAlarm = new SelectorAlarm(selector);
         selectorAlarm.start();
@@ -70,7 +51,7 @@ public class Relay {
             Set<SelectionKey> selectedKeys = selector.selectedKeys();
 
             if (selectorAlarm.accept()) {
-                cleanUp();
+                tunnelConnection.cleanUp();
             } else if (selectedKeys.isEmpty()) {
                 throw new AssertionError("selector.select() returned without any event, an invalid SelectionKey was probably been registered");
             }
@@ -81,26 +62,6 @@ public class Relay {
             }
             // by design, we handled everything
             selectedKeys.clear();
-        }
-    }
-
-    private void acceptClient(Selector selector, ServerSocketChannel serverSocketChannel) throws IOException {
-        SocketChannel socketChannel = serverSocketChannel.accept();
-        socketChannel.configureBlocking(false);
-        // will register the socket on the selector
-        Client client = new Client(selector, socketChannel, this::removeClient);
-        clients.add(client);
-        Log.i(TAG, "Client #" + client.getId() + " connected");
-    }
-
-    private void removeClient(Client client) {
-        clients.remove(client);
-        Log.i(TAG, "Client #" + client.getId() + " disconnected");
-    }
-
-    private void cleanUp() {
-        for (Client client : clients) {
-            client.cleanExpiredConnections();
         }
     }
 }
