@@ -54,8 +54,4 @@ impl Selector {
     pub fn select(&mut self, timeout: Option<Duration>) -> io::Result<usize> {
         self.poll.poll(&mut self.events, timeout)
     }
-
-    pub fn get_handler(&mut self, token: Token) -> Option<&mut Box<EventHandler>> {
-        self.handlers.get_mut(token)
-    }
 }
