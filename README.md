@@ -50,6 +50,9 @@ Then extract it. You get three files:
 
 ## Run (simple)
 
+_Note: On Windows, replace `./gnirehtet` by `gnirehtet` in the following
+commands._
+
 The application has no UI, and is intended to be controlled from the computer
 only.
 
@@ -94,22 +97,24 @@ To stop a client:
 
     ./gnirehtet stop [serial]
 
+On Windows, the server is started in a separate window. To stop it, either close
+the window or kill the server from anywhere:
+
+    gnirehtet killserver     # stop the relay server only
+    gnirehtet kill [serial]  # also stop the client
+
 The _serial_ parameter is required only if `adb devices` outputs more than one
 device.
 
 For advanced options, call `./gnirehtet` without arguments to get more details.
 
 
-### On Windows
-
-Make sure you have installed Java and adb (included with android studio) on your system.
-Run 'gnirehtet.cmd rt' to start and 'gnirehtet.cmd kill' to stop. 
-
 ## Run manually
 
 The `gnirehtet` script just exposes an interface for calling simple commands.
-You can call them manually (especially if you use _Windows_, in that case,
-replace `adb` by `adb.exe`).
+You can call them manually.
+
+_Note: On Windows, replace `adb` by `adb.exe`._
 
 To start the relay server:
 
