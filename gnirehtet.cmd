@@ -95,7 +95,7 @@ GOTO :eof
 
 :do_install
     ECHO Installing gnirehtet...
-    CALL %ADB% %serial% install %APK%
+    CALL %ADB% %serial% install -r %APK%
     EXIT /B 0
 
 :do_uninstall
