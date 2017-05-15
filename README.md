@@ -102,17 +102,8 @@ For advanced options, call `./gnirehtet` without arguments to get more details.
 
 ### On Windows
 
-Since the `gnirehtet` script is written in [Bash], it's a bit more complicated
-on _Windows_. If you are using _Windows_, then you have several choices:
-
- - execute some commands [manually](#run-manually);
- - run _bash_ (using [cygwin] or [gitbash]);
- - contribute a new script `gnirehtet.bat` for _Windows_.
-
-[bash]: https://en.wikipedia.org/wiki/Bash_%28Unix_shell%29
-[gitbash]: https://git-for-windows.github.io/
-[cygwin]: https://www.cygwin.com/
-
+Make sure you have installed Java and adb (included with android studio) on your system.
+Run 'gnirehtet.cmd rt' to start and 'gnirehtet.cmd kill' to stop. 
 
 ## Run manually
 
