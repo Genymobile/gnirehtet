@@ -13,10 +13,10 @@ IF NOT "%2"=="" (
 )
 IF NOT "%3"=="" (
     FOR /f " tokens=1*" %%a IN ("%dns%") DO (
-        IF "%%a"=="-d" ( SET dns=%%b) 
+        IF "%%a"=="-d" ( SET dns=%%b )
     )
 )
-CALL :do_%1 || CALL :do_help 
+CALL :do_%1 || CALL :do_help
 GOTO :eof
 
 :do_help
@@ -31,7 +31,7 @@ GOTO :eof
     ECHO      Uninstall the client from the Android device and exit.
     ECHO      If several devices are connected via adb, then serial must be
     ECHO      specified.
-    ECHO.         
+    ECHO.
     ECHO  %~nx0 reinstall [serial]
     ECHO      Uninstall then install.
     ECHO.
@@ -41,7 +41,7 @@ GOTO :eof
     ECHO        - start the client.
     ECHO        - start the relay server.
     ECHO      You'll have to stop the client and the server manually.
-    ECHO.         
+    ECHO.
     ECHO  %~nx0 start [serial] [DNS[,DNS2,...]]
     ECHO      Start a client on the Android device and exit.
     ECHO      If several devices are connected via adb, then serial must be
@@ -56,13 +56,13 @@ GOTO :eof
     ECHO      Stop the client on the Android device and exit.
     ECHO      If several devices are connected via adb, then serial must be
     ECHO      specified.
-    ECHO.     
+    ECHO.
     ECHO  %~nx0 relay
     ECHO      Start the relay server in the current terminal.
-    ECHO.     
+    ECHO.
     ECHO  %~nx0 killserver
     ECHO      Kills the relay server which opened from this utility.
-    ECHO.   
+    ECHO.
     ECHO  %~nx0 kill [serial]
     ECHO      Kills the relay server and the Android client.
     ECHO      If several devices are connected via adb, then serial must be
@@ -98,7 +98,7 @@ GOTO :eof
     CALL %ADB% %serial% install %APK%
     EXIT /B 0
 
-:do_uninstall 
+:do_uninstall
     ECHO Uninstall gnirehtet...
     CALL %ADB% %serial% uninstall com.genymobile.gnirehtet
     EXIT /B 0
