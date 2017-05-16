@@ -4,18 +4,17 @@ use std::time::Duration;
 use slab::Slab;
 
 pub trait EventHandler {
-    fn on_ready(&mut self, ready: Ready);
+    fn on_ready(&mut self, selector: &mut Selector, ready: Ready);
 }
 
-impl<F> EventHandler for F where F: FnMut(Ready) {
-    fn on_ready(&mut self, ready: Ready) {
-        self(ready);
+impl<F> EventHandler for F where F: FnMut(&mut Selector, Ready) {
+    fn on_ready(&mut self, selector: &mut Selector, ready: Ready) {
+        self(selector, ready);
     }
 }
 
 pub struct Selector {
-    poll: Poll,
-    pub events: Events,
+    pub poll: Poll,
     pub handlers: Slab<Box<EventHandler>, Token>,
 }
 
@@ -23,7 +22,6 @@ impl Selector {
     pub fn new() -> io::Result<Selector> {
         Ok(Selector {
             poll: Poll::new()?,
-            events: Events::with_capacity(1024),
             handlers: Slab::with_capacity(1024),
         })
     }
@@ -37,7 +35,7 @@ impl Selector {
         Ok(token)
     }
 
-    pub fn reregister<E>(&mut self, handle: &E, token: Token,
+    pub fn reregister<E>(&self, handle: &E, token: Token,
                    interest: Ready, opts: PollOpt) -> io::Result<()>
             where E: Evented + ?Sized {
         self.poll.reregister(handle, token, interest, opts)
@@ -49,9 +47,5 @@ impl Selector {
             panic!("Unknown token removed");
         }
         self.poll.deregister(handle)
-    }
-
-    pub fn select(&mut self, timeout: Option<Duration>) -> io::Result<usize> {
-        self.poll.poll(&mut self.events, timeout)
     }
 }

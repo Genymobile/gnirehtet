@@ -26,12 +26,14 @@ impl Relay {
 
     fn poll_loop(&self, selector: &mut Selector) {
         loop {
-            selector.select(None).expect("Cannot poll");
+            let mut events = Events::with_capacity(1024);
+            selector.poll.poll(&mut events, None).expect("Cannot poll");
 
-            for event in &selector.events {
+            for event in &events {
                 println!("event={:?}", event);
                 let mut handler = selector.handlers.get_mut(event.token()).unwrap();
-                handler.on_ready(event.readiness());
+                let mut fake_selector = Selector::new().unwrap(); // FIXME
+                handler.on_ready(&mut fake_selector, event.readiness());
             }
         }
     }
