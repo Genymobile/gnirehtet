@@ -20,13 +20,13 @@ impl TunnelConnection {
             clients: Vec::new(),
             _tcp_listener: tcp_listener,
         }));
-        let rc_clone = rc.clone();
+/*        let rc_clone = rc.clone();
         let handler = Box::new(move |selector: &mut Selector, ready| {
             let mut self_ref = rc_clone.borrow_mut();
             println!("{:?}", ready);
             // TODO
-        });
-        selector.register(&rc.borrow()._tcp_listener, handler, Ready::readable(), PollOpt::edge())?;
+        });*/
+        selector.register(&rc.borrow()._tcp_listener, rc.clone(), Ready::readable(), PollOpt::edge())?;
         Ok(rc)
     }
 
@@ -35,5 +35,11 @@ impl TunnelConnection {
         let addr = SocketAddr::new(localhost, port);
         let server = TcpListener::bind(&addr)?;
         Ok(server)
+    }
+}
+
+impl EventHandler for TunnelConnection {
+    fn on_ready(&mut self, selector: &mut Selector, ready: Ready) {
+        println!("{:?}", ready);
     }
 }

@@ -1,5 +1,7 @@
 use mio::*;
+use std::cell::RefCell;
 use std::io;
+use std::rc::Rc;
 use std::time::Duration;
 use slab::Slab;
 
@@ -13,9 +15,17 @@ impl<F> EventHandler for F where F: FnMut(&mut Selector, Ready) {
     }
 }
 
+// for convenience
+impl EventHandler for Rc<RefCell<EventHandler>> {
+    fn on_ready(&mut self, selector: &mut Selector, ready: Ready) {
+        let mut self_raw = self.borrow_mut();
+        self_raw.on_ready(selector, ready);
+    }
+}
+
 pub struct Selector {
     pub poll: Poll,
-    pub handlers: Slab<Box<EventHandler>, Token>,
+    pub handlers: Slab<Rc<RefCell<EventHandler>>, Token>,
 }
 
 impl Selector {
@@ -26,7 +36,7 @@ impl Selector {
         })
     }
 
-    pub fn register<E>(&mut self, handle: &E, handler: Box<EventHandler>,
+    pub fn register<E>(&mut self, handle: &E, handler: Rc<RefCell<EventHandler>>,
                    interest: Ready, opts: PollOpt) -> io::Result<Token>
             where E: Evented + ?Sized {
         let token = self.handlers.insert(handler)
