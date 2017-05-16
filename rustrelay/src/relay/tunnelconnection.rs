@@ -21,8 +21,8 @@ impl TunnelConnection {
             _tcp_listener: tcp_listener,
         }));
         let rc_clone = rc.clone();
-        let handler = Box::new(move |ready| {
-            let mut self_cell = rc_clone.borrow_mut();
+        let handler = Box::new(move |selector: &mut Selector, ready| {
+            let mut self_ref = rc_clone.borrow_mut();
             println!("{:?}", ready);
             // TODO
         });
