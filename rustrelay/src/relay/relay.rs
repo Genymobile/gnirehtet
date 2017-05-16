@@ -4,7 +4,7 @@ use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::io;
 
 use super::client::Client;
-use super::selector::Selector;
+use super::selector::{EventHandler,Selector};
 use super::tunnelconnection::TunnelConnection;
 
 pub struct Relay {
