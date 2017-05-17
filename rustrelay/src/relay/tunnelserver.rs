@@ -8,15 +8,15 @@ use mio::tcp::TcpListener;
 use super::client::Client;
 use super::selector::{EventHandler, Selector};
 
-pub struct TunnelConnection {
+pub struct TunnelServer {
     clients: Vec<Client>,
     tcp_listener: TcpListener,
 }
 
-impl TunnelConnection {
-    pub fn new(port: u16, selector: &mut Selector) -> io::Result<Rc<RefCell<TunnelConnection>>> {
-        let tcp_listener = TunnelConnection::start_socket(port)?;
-        let rc = Rc::new(RefCell::new(TunnelConnection {
+impl TunnelServer {
+    pub fn new(port: u16, selector: &mut Selector) -> io::Result<Rc<RefCell<TunnelServer>>> {
+        let tcp_listener = TunnelServer::start_socket(port)?;
+        let rc = Rc::new(RefCell::new(TunnelServer {
             clients: Vec::new(),
             tcp_listener: tcp_listener,
         }));
@@ -47,7 +47,7 @@ impl TunnelConnection {
     }
 }
 
-impl EventHandler for TunnelConnection {
+impl EventHandler for TunnelServer {
     fn on_ready(&mut self, selector: &mut Selector, _: Ready) {
         self.accept_client(selector);
     }

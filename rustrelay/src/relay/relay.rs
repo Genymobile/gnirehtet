@@ -5,7 +5,7 @@ use std::io;
 
 use super::client::Client;
 use super::selector::{EventHandler,Selector};
-use super::tunnelconnection::TunnelConnection;
+use super::tunnelserver::TunnelServer;
 
 pub struct Relay {
     port: u16,
@@ -20,7 +20,7 @@ impl Relay {
 
     pub fn start(&self) {
         let mut selector = Selector::new().unwrap();
-        let _tunnel_connection = TunnelConnection::new(self.port, &mut selector);
+        let _tunnel_server = TunnelServer::new(self.port, &mut selector);
         self.poll_loop(&mut selector);
     }
 
