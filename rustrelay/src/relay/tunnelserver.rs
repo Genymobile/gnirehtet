@@ -8,6 +8,8 @@ use mio::tcp::TcpListener;
 use super::client::Client;
 use super::selector::{EventHandler, Selector};
 
+static TAG: &'static str = "TunnelServer";
+
 pub struct TunnelServer {
     clients: Vec<Rc<RefCell<Client>>>,
     tcp_listener: TcpListener,
@@ -43,10 +45,10 @@ impl TunnelServer {
                 let client = Client::new(selector, stream);
                 match client {
                     Ok(client) => self.clients.push(client),
-                    Err(err) => println!("Cannot create client: {}", err)
+                    Err(err) => error!(target: TAG, "Cannot create client: {}", err)
                 }
             },
-            Err(err) => println!("Cannot accept client: {}", err)
+            Err(err) => error!(target: TAG, "Cannot accept client: {}", err)
         }
     }
 }
