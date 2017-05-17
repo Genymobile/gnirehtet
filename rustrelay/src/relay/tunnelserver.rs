@@ -13,6 +13,7 @@ static TAG: &'static str = "TunnelServer";
 pub struct TunnelServer {
     clients: Vec<Rc<RefCell<Client>>>,
     tcp_listener: TcpListener,
+    next_client_id: u32,
 }
 
 impl TunnelServer {
@@ -21,6 +22,7 @@ impl TunnelServer {
         let rc = Rc::new(RefCell::new(TunnelServer {
             clients: Vec::new(),
             tcp_listener: tcp_listener,
+            next_client_id: 0,
         }));
 /*        let rc_clone = rc.clone();
         let handler = Box::new(move |selector: &mut Selector, ready| {
@@ -40,9 +42,12 @@ impl TunnelServer {
     }
 
     fn accept_client(&mut self, selector: &mut Selector) -> io::Result<()> {
-        let (stream, addr) = self.tcp_listener.accept()?;
-        let client = Client::new(selector, stream)?;
+        let (stream, _) = self.tcp_listener.accept()?;
+        let client_id = self.next_client_id;
+        self.next_client_id += 1;
+        let client = Client::new(client_id, selector, stream)?;
         self.clients.push(client);
+        info!(target: TAG, "Client #{} connected", client_id);
         Ok(())
     }
 }

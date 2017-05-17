@@ -7,12 +7,14 @@ use mio::{Ready, PollOpt};
 use super::selector::{EventHandler, Selector};
 
 pub struct Client {
+    id: u32,
     stream: TcpStream,
 }
 
 impl Client {
-    pub fn new(selector: &mut Selector, stream: TcpStream) -> io::Result<Rc<RefCell<Client>>> {
+    pub fn new(id: u32, selector: &mut Selector, stream: TcpStream) -> io::Result<Rc<RefCell<Client>>> {
         let rc = Rc::new(RefCell::new(Client {
+            id: id,
             stream: stream,
         }));
         // on start, we are interested only in writing (we must first send the client id)
