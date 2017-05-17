@@ -1,9 +1,5 @@
 use mio::*;
-use mio::tcp::TcpListener;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use std::io;
 
-use super::client::Client;
 use super::selector::{EventHandler,Selector};
 use super::tunnelserver::TunnelServer;
 
