@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::io;
 use std::rc::Rc;
 use mio::net::TcpStream;
 use mio::{Ready, PollOpt};
@@ -10,10 +11,13 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(selector: &mut Selector, stream: TcpStream) -> Rc<RefCell<Client>> {
-        Rc::new(RefCell::new(Client {
+    pub fn new(selector: &mut Selector, stream: TcpStream) -> io::Result<Rc<RefCell<Client>>> {
+        let rc = Rc::new(RefCell::new(Client {
             stream: stream,
-        }))
+        }));
+        // on start, we are interested only in writing (we must first send the client id)
+        selector.register(&rc.borrow().stream, rc.clone(), Ready::writable(), PollOpt::level())?;
+        Ok(rc)
     }
 }
 
