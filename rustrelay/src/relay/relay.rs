@@ -31,9 +31,10 @@ impl Relay {
 
             for event in &events {
                 println!("event={:?}", event);
-                let mut handler = selector.handlers.get_mut(event.token()).unwrap();
-                let mut fake_selector = Selector::new().unwrap(); // FIXME
-                handler.on_ready(&mut fake_selector, event.readiness());
+                // the handler is stored in the selector, so we need to clone
+                // the Rc to pass a &mut Selector to on_ready()
+                let mut handler = selector.handlers.get_mut(event.token()).unwrap().clone();
+                handler.on_ready(selector, event.readiness());
             }
         }
     }
