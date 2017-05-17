@@ -2,7 +2,6 @@ use mio::*;
 use std::cell::RefCell;
 use std::io;
 use std::rc::Rc;
-use std::time::Duration;
 use slab::Slab;
 
 pub trait EventHandler {
