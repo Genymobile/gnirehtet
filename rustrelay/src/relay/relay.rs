@@ -7,6 +7,8 @@ use super::client::Client;
 use super::selector::{EventHandler,Selector};
 use super::tunnelserver::TunnelServer;
 
+static TAG: &'static str = "Relay";
+
 pub struct Relay {
     port: u16,
 }
@@ -19,6 +21,7 @@ impl Relay {
     }
 
     pub fn start(&self) {
+        error!(target: TAG, "Starting server...");
         let mut selector = Selector::new().unwrap();
         let _tunnel_server = TunnelServer::new(self.port, &mut selector);
         self.poll_loop(&mut selector);
