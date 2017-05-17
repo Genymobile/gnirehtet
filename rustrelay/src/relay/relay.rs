@@ -17,7 +17,7 @@ impl Relay {
     }
 
     pub fn start(&self) {
-        error!(target: TAG, "Starting server...");
+        info!(target: TAG, "Starting server...");
         let mut selector = Selector::new().unwrap();
         let _tunnel_server = TunnelServer::new(self.port, &mut selector);
         self.poll_loop(&mut selector);
