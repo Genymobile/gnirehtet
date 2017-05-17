@@ -37,16 +37,18 @@ impl TunnelConnection {
         Ok(server)
     }
 
-    fn accept_client(&mut self) {
+    fn accept_client(&mut self, selector: &mut Selector) {
         match self.tcp_listener.accept() {
-            Ok((stream, addr)) => println!("ok"),
+            Ok((stream, addr)) => {
+                let client = Client::new(selector, stream);
+            },
             Err(err) => println!("Cannot accept client: {}", err)
         }
     }
 }
 
 impl EventHandler for TunnelConnection {
-    fn on_ready(&mut self, selector: &mut Selector, ready: Ready) {
-        self.accept_client();
+    fn on_ready(&mut self, selector: &mut Selector, _: Ready) {
+        self.accept_client(selector);
     }
 }
