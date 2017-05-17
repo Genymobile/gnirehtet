@@ -10,7 +10,7 @@ use super::selector::{EventHandler, Selector};
 
 pub struct TunnelConnection {
     clients: Vec<Client>,
-    _tcp_listener: TcpListener, // keep for RAII
+    tcp_listener: TcpListener,
 }
 
 impl TunnelConnection {
@@ -18,7 +18,7 @@ impl TunnelConnection {
         let tcp_listener = TunnelConnection::start_socket(port)?;
         let rc = Rc::new(RefCell::new(TunnelConnection {
             clients: Vec::new(),
-            _tcp_listener: tcp_listener,
+            tcp_listener: tcp_listener,
         }));
 /*        let rc_clone = rc.clone();
         let handler = Box::new(move |selector: &mut Selector, ready| {
@@ -26,7 +26,7 @@ impl TunnelConnection {
             println!("{:?}", ready);
             // TODO
         });*/
-        selector.register(&rc.borrow()._tcp_listener, rc.clone(), Ready::readable(), PollOpt::edge())?;
+        selector.register(&rc.borrow().tcp_listener, rc.clone(), Ready::readable(), PollOpt::edge())?;
         Ok(rc)
     }
 
@@ -36,10 +36,17 @@ impl TunnelConnection {
         let server = TcpListener::bind(&addr)?;
         Ok(server)
     }
+
+    fn accept_client(&mut self) {
+        match self.tcp_listener.accept() {
+            Ok((stream, addr)) => println!("ok"),
+            Err(err) => println!("Cannot accept client: {}", err)
+        }
+    }
 }
 
 impl EventHandler for TunnelConnection {
     fn on_ready(&mut self, selector: &mut Selector, ready: Ready) {
-        println!("{:?}", ready);
+        self.accept_client();
     }
 }
