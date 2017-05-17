@@ -13,13 +13,13 @@ import java.util.List;
 /**
  * Handle the connections from the clients.
  */
-public class TunnelConnection {
+public class TunnelServer {
 
-    private static final String TAG = TunnelConnection.class.getSimpleName();
+    private static final String TAG = TunnelServer.class.getSimpleName();
 
     private final List<Client> clients = new ArrayList<>();
 
-    public TunnelConnection(int port, Selector selector) throws IOException {
+    public TunnelServer(int port, Selector selector) throws IOException {
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
         serverSocketChannel.configureBlocking(false);
         // ServerSocketChannel.bind() requires API 24

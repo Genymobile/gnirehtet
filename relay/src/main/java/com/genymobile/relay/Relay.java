@@ -41,7 +41,7 @@ public class Relay {
         Selector selector = Selector.open();
 
         // will register the socket on the selector
-        TunnelConnection tunnelConnection = new TunnelConnection(port, selector);
+        TunnelServer tunnelServer = new TunnelServer(port, selector);
 
         SelectorAlarm selectorAlarm = new SelectorAlarm(selector);
         selectorAlarm.start();
@@ -51,7 +51,7 @@ public class Relay {
             Set<SelectionKey> selectedKeys = selector.selectedKeys();
 
             if (selectorAlarm.accept()) {
-                tunnelConnection.cleanUp();
+                tunnelServer.cleanUp();
             } else if (selectedKeys.isEmpty()) {
                 throw new AssertionError("selector.select() returned without any event, an invalid SelectionKey was probably been registered");
             }
