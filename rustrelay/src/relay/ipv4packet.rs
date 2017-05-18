@@ -44,6 +44,32 @@ impl<'a> IPv4Header<'a> {
             destination: BigEndian::read_u32(&raw[16..20]),
         }
     }
+
+    fn set_total_length(&mut self, total_length: u16) {
+        self.data.total_length = total_length;
+        BigEndian::write_u16(&mut self.raw[2..4], total_length);
+    }
+
+    fn set_source(&mut self, source: u32) {
+        self.data.source = source;
+        BigEndian::write_u32(&mut self.raw[12..16], source);
+    }
+
+    fn set_destination(&mut self, destination: u32) {
+        self.data.destination = destination;
+        BigEndian::write_u32(&mut self.raw[16..20], destination);
+    }
+
+    fn switch_source_and_destination(&mut self) {
+        let source = self.data.source;
+        let destination = self.data.destination;
+        self.set_source(destination);
+        self.set_destination(source);
+    }
+
+    fn set_checksum(&mut self, checksum: u16) {
+        BigEndian::write_u16(&mut self.raw[10..12], checksum);
+    }
 }
 
 #[cfg(test)]
@@ -77,5 +103,10 @@ mod tests {
         raw.write_u32::<BigEndian>(0x12345678).unwrap(); // source address
         raw.write_u32::<BigEndian>(0x42424242).unwrap(); // destination address
         raw
+    }
+
+    #[test]
+    fn edit_packet_header() {
+
     }
 }
