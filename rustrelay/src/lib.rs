@@ -1,3 +1,4 @@
+extern crate byteorder;
 #[macro_use]
 extern crate log;
 extern crate mio;
