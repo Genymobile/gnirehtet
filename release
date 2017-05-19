@@ -15,8 +15,8 @@ mkdir -p "$DIST"
 cd "$DIST"
 cp ../app/build/outputs/apk/gnirehtet-release.apk gnirehtet.apk
 cp ../relay/build/libs/relay.jar .
-cp ../gnirehtet .
+cp ../gnirehtet ../gnirehtet.cmd .
 target=gnirehtet-"$version".zip
 rm -f "$target"
-zip "$target" gnirehtet.apk relay.jar gnirehtet
+zip "$target" gnirehtet.apk relay.jar gnirehtet gnirehtet.cmd
 sha256sum "$target" > SHA256SUM.txt
