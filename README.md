@@ -35,11 +35,11 @@ Make sure you [enabled adb debugging][enable-adb] on your device(s).
 
 Download the [latest release][latest]:
 
-[`gnirehtet-v1.1.zip`][direct]
-(SHA-256: _fd0c1b9f8c54731d09426de3afe7e92a83ff516dd2e89a0298d1dd6a6d623d35_)
+[`gnirehtet-v1.1.1.zip`][direct]
+(SHA-256: _5bff4dbd11abd5b87211d25c36d715166b341f230f1f7614bbd1b570660980e1_)
 
 [latest]: https://github.com/Genymobile/gnirehtet/releases/latest
-[direct]: https://github.com/Genymobile/gnirehtet/releases/download/v1.1/gnirehtet-v1.1.zip
+[direct]: https://github.com/Genymobile/gnirehtet/releases/download/v1.1.1/gnirehtet-v1.1.1.zip
 
 
 Then extract it. You get three files:
