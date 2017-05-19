@@ -1,4 +1,5 @@
 use byteorder::{BigEndian, ByteOrder};
+use std::io::Cursor;
 
 pub struct IPv4Header<'a> {
     raw: &'a mut [u8],
@@ -65,6 +66,26 @@ impl<'a> IPv4Header<'a> {
         let destination = self.data.destination;
         self.set_source(destination);
         self.set_destination(source);
+    }
+
+    fn compute_checksum(&mut self) {
+        // reset checksum field
+        self.set_checksum(0);
+
+        let j = self.data.header_length as usize / 2;
+        let mut sum = (0..j).map(|i| {
+            let range = 2*i..2*(i+1);
+            BigEndian::read_u16(&self.raw[range]) as u32
+        }).sum::<u32>();
+        while (sum & !0xffff) != 0 {
+            sum = (sum & 0xffff) + (sum >> 16);
+        }
+
+        self.set_checksum(!sum as u16);
+    }
+
+    fn get_checksum(&mut self) -> u16 {
+        BigEndian::read_u16(&self.raw[10..12])
     }
 
     fn set_checksum(&mut self, checksum: u16) {
@@ -134,5 +155,24 @@ mod tests {
         let raw_destination = BigEndian::read_u32(&header.raw[16..20]);
         assert_eq!(0x24242424, raw_source);
         assert_eq!(0x87654321, raw_destination);
+    }
+
+    #[test]
+    fn compute_checksum() {
+        let mut raw = create_header();
+        let mut header = IPv4Header::new(&mut raw[..]);
+
+        // set a fake checksum value to assert that it is correctly computed
+        header.set_checksum(0x79);
+
+        header.compute_checksum();
+
+        let mut sum = 0x4500u32 + 0x001Cu32 + 0x0000u32 + 0x0000u32 + 0x0011u32
+                    + 0x0000u32 + 0x1234u32 + 0x5678u32 + 0x4242u32 + 0x4242u32;
+        while (sum & !0xffff) != 0 {
+            sum = (sum & 0xffff) + (sum >> 16);
+        }
+        let sum = !sum as u16;
+        assert_eq!(sum, header.get_checksum());
     }
 }
