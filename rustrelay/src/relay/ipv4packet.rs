@@ -1,12 +1,17 @@
 use byteorder::{BigEndian, ByteOrder};
 use std::io::Cursor;
 
-pub struct IPv4Header<'a> {
+pub struct IPv4Packet<'a> {
     raw: &'a mut [u8],
-    data: Data,
+    header: IPv4Header<'a>,
 }
 
-struct Data {
+pub struct IPv4Header<'a> {
+    raw: &'a mut [u8],
+    data: IPv4HeaderData,
+}
+
+struct IPv4HeaderData {
     version: u8,
     header_length: u8,
     total_length: u16,
@@ -22,6 +27,16 @@ enum Protocol {
     OTHER,
 }
 
+impl<'a> IPv4Packet<'a> {
+    fn new(raw: &'a mut [u8]) -> IPv4Packet<'a> {
+        let header = IPv4Header::new(raw);
+        IPv4Packet {
+            raw: raw,
+            header: header,
+        }
+    }
+}
+
 impl<'a> IPv4Header<'a> {
     fn new(raw: &'a mut [u8]) -> IPv4Header<'a> {
         let data = IPv4Header::parse(raw);
@@ -31,8 +46,8 @@ impl<'a> IPv4Header<'a> {
         }
     }
 
-    fn parse(raw: &[u8]) -> Data {
-        Data {
+    fn parse(raw: &[u8]) -> IPv4HeaderData {
+        IPv4HeaderData {
             version: raw[0] >> 4,
             header_length: (raw[0] & 0xf) << 2,
             total_length: BigEndian::read_u16(&raw[2..4]),
