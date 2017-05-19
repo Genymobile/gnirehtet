@@ -78,18 +78,6 @@ mod tests {
     use std::io::Cursor;
     use byteorder::{BigEndian, WriteBytesExt};
 
-    #[test]
-    fn parse_packet_header() {
-        let raw = create_header();
-        let data = IPv4Header::parse(&raw[..]);
-        assert_eq!(4, data.version);
-        assert_eq!(20, data.header_length);
-        assert_eq!(28, data.total_length);
-        assert_eq!(Protocol::UDP, data.protocol);
-        assert_eq!(0x12345678, data.source);
-        assert_eq!(0x42424242, data.destination);
-    }
-
     fn create_header() -> Vec<u8> {
         let mut raw: Vec<u8> = vec![];
         raw.reserve(20);
@@ -106,7 +94,45 @@ mod tests {
     }
 
     #[test]
-    fn edit_packet_header() {
+    fn parse_packet_header() {
+        let raw = create_header();
+        let data = IPv4Header::parse(&raw[..]);
+        assert_eq!(4, data.version);
+        assert_eq!(20, data.header_length);
+        assert_eq!(28, data.total_length);
+        assert_eq!(Protocol::UDP, data.protocol);
+        assert_eq!(0x12345678, data.source);
+        assert_eq!(0x42424242, data.destination);
+    }
 
+    #[test]
+    fn edit_packet_header() {
+        let mut raw = create_header();
+        let mut header = IPv4Header::new(&mut raw[..]);
+
+        header.set_source(0x87654321);
+        header.set_destination(0x24242424);
+        header.set_total_length(42);
+        assert_eq!(0x87654321, header.data.source);
+        assert_eq!(0x24242424, header.data.destination);
+        assert_eq!(42, header.data.total_length);
+
+        // assert that the buffer has been modified
+        let raw_source = BigEndian::read_u32(&header.raw[12..16]);
+        let raw_destination = BigEndian::read_u32(&header.raw[16..20]);
+        let raw_total_length = BigEndian::read_u16(&header.raw[2..4]);
+        assert_eq!(0x87654321, raw_source);
+        assert_eq!(0x24242424, raw_destination);
+        assert_eq!(42, raw_total_length);
+
+        header.switch_source_and_destination();
+
+        assert_eq!(0x24242424, header.data.source);
+        assert_eq!(0x87654321, header.data.destination);
+
+        let raw_source = BigEndian::read_u32(&header.raw[12..16]);
+        let raw_destination = BigEndian::read_u32(&header.raw[16..20]);
+        assert_eq!(0x24242424, raw_source);
+        assert_eq!(0x87654321, raw_destination);
     }
 }
