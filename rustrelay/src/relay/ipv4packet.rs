@@ -3,15 +3,10 @@ use std::io::Cursor;
 
 pub struct IPv4Packet<'a> {
     raw: &'a mut [u8],
-    header: IPv4Header<'a>,
+    header: IPv4Header,
 }
 
-pub struct IPv4Header<'a> {
-    raw: &'a mut [u8],
-    data: IPv4HeaderData,
-}
-
-struct IPv4HeaderData {
+struct IPv4Header {
     version: u8,
     header_length: u8,
     total_length: u16,
@@ -29,7 +24,7 @@ enum Protocol {
 
 impl<'a> IPv4Packet<'a> {
     fn new(raw: &'a mut [u8]) -> IPv4Packet<'a> {
-        let header = IPv4Header::new(raw);
+        let header = IPv4Header::parse(raw);
         IPv4Packet {
             raw: raw,
             header: header,
@@ -37,17 +32,9 @@ impl<'a> IPv4Packet<'a> {
     }
 }
 
-impl<'a> IPv4Header<'a> {
-    fn new(raw: &'a mut [u8]) -> IPv4Header<'a> {
-        let data = IPv4Header::parse(raw);
+impl IPv4Header {
+    fn parse(raw: &[u8]) -> IPv4Header {
         IPv4Header {
-            raw: raw,
-            data: data,
-        }
-    }
-
-    fn parse(raw: &[u8]) -> IPv4HeaderData {
-        IPv4HeaderData {
             version: raw[0] >> 4,
             header_length: (raw[0] & 0xf) << 2,
             total_length: BigEndian::read_u16(&raw[2..4]),
@@ -61,50 +48,50 @@ impl<'a> IPv4Header<'a> {
         }
     }
 
-    fn set_total_length(&mut self, total_length: u16) {
-        self.data.total_length = total_length;
-        BigEndian::write_u16(&mut self.raw[2..4], total_length);
+    fn set_total_length(&mut self, raw: &mut [u8], total_length: u16) {
+        self.total_length = total_length;
+        BigEndian::write_u16(&mut raw[2..4], total_length);
     }
 
-    fn set_source(&mut self, source: u32) {
-        self.data.source = source;
-        BigEndian::write_u32(&mut self.raw[12..16], source);
+    fn set_source(&mut self, raw: &mut [u8], source: u32) {
+        self.source = source;
+        BigEndian::write_u32(&mut raw[12..16], source);
     }
 
-    fn set_destination(&mut self, destination: u32) {
-        self.data.destination = destination;
-        BigEndian::write_u32(&mut self.raw[16..20], destination);
+    fn set_destination(&mut self, raw: &mut [u8], destination: u32) {
+        self.destination = destination;
+        BigEndian::write_u32(&mut raw[16..20], destination);
     }
 
-    fn switch_source_and_destination(&mut self) {
-        let source = self.data.source;
-        let destination = self.data.destination;
-        self.set_source(destination);
-        self.set_destination(source);
+    fn switch_source_and_destination(&mut self, raw: &mut [u8]) {
+        let source = self.source;
+        let destination = self.destination;
+        self.set_source(raw, destination);
+        self.set_destination(raw, source);
     }
 
-    fn compute_checksum(&mut self) {
+    fn compute_checksum(&mut self, raw: &mut [u8]) {
         // reset checksum field
-        self.set_checksum(0);
+        self.set_checksum(raw, 0);
 
-        let j = self.data.header_length as usize / 2;
+        let j = self.header_length as usize / 2;
         let mut sum = (0..j).map(|i| {
             let range = 2*i..2*(i+1);
-            BigEndian::read_u16(&self.raw[range]) as u32
+            BigEndian::read_u16(&raw[range]) as u32
         }).sum::<u32>();
         while (sum & !0xffff) != 0 {
             sum = (sum & 0xffff) + (sum >> 16);
         }
 
-        self.set_checksum(!sum as u16);
+        self.set_checksum(raw, !sum as u16);
     }
 
-    fn get_checksum(&mut self) -> u16 {
-        BigEndian::read_u16(&self.raw[10..12])
+    fn get_checksum(&mut self, raw: &mut [u8]) -> u16 {
+        BigEndian::read_u16(&raw[10..12])
     }
 
-    fn set_checksum(&mut self, checksum: u16) {
-        BigEndian::write_u16(&mut self.raw[10..12], checksum);
+    fn set_checksum(&mut self, raw: &mut [u8], checksum: u16) {
+        BigEndian::write_u16(&mut raw[10..12], checksum);
     }
 }
 
@@ -143,44 +130,44 @@ mod tests {
 
     #[test]
     fn edit_packet_header() {
-        let mut raw = create_header();
-        let mut header = IPv4Header::new(&mut raw[..]);
+        let raw = &mut create_header()[..];
+        let mut header = IPv4Header::parse(raw);
 
-        header.set_source(0x87654321);
-        header.set_destination(0x24242424);
-        header.set_total_length(42);
-        assert_eq!(0x87654321, header.data.source);
-        assert_eq!(0x24242424, header.data.destination);
-        assert_eq!(42, header.data.total_length);
+        header.set_source(raw, 0x87654321);
+        header.set_destination(raw, 0x24242424);
+        header.set_total_length(raw, 42);
+        assert_eq!(0x87654321, header.source);
+        assert_eq!(0x24242424, header.destination);
+        assert_eq!(42, header.total_length);
 
         // assert that the buffer has been modified
-        let raw_source = BigEndian::read_u32(&header.raw[12..16]);
-        let raw_destination = BigEndian::read_u32(&header.raw[16..20]);
-        let raw_total_length = BigEndian::read_u16(&header.raw[2..4]);
+        let raw_source = BigEndian::read_u32(&raw[12..16]);
+        let raw_destination = BigEndian::read_u32(&raw[16..20]);
+        let raw_total_length = BigEndian::read_u16(&raw[2..4]);
         assert_eq!(0x87654321, raw_source);
         assert_eq!(0x24242424, raw_destination);
         assert_eq!(42, raw_total_length);
 
-        header.switch_source_and_destination();
+        header.switch_source_and_destination(raw);
 
-        assert_eq!(0x24242424, header.data.source);
-        assert_eq!(0x87654321, header.data.destination);
+        assert_eq!(0x24242424, header.source);
+        assert_eq!(0x87654321, header.destination);
 
-        let raw_source = BigEndian::read_u32(&header.raw[12..16]);
-        let raw_destination = BigEndian::read_u32(&header.raw[16..20]);
+        let raw_source = BigEndian::read_u32(&raw[12..16]);
+        let raw_destination = BigEndian::read_u32(&raw[16..20]);
         assert_eq!(0x24242424, raw_source);
         assert_eq!(0x87654321, raw_destination);
     }
 
     #[test]
     fn compute_checksum() {
-        let mut raw = create_header();
-        let mut header = IPv4Header::new(&mut raw[..]);
+        let mut raw = &mut create_header()[..];
+        let mut header = IPv4Header::parse(raw);
 
         // set a fake checksum value to assert that it is correctly computed
-        header.set_checksum(0x79);
+        header.set_checksum(raw, 0x79);
 
-        header.compute_checksum();
+        header.compute_checksum(raw);
 
         let mut sum = 0x4500u32 + 0x001Cu32 + 0x0000u32 + 0x0000u32 + 0x0011u32
                     + 0x0000u32 + 0x1234u32 + 0x5678u32 + 0x4242u32 + 0x4242u32;
@@ -188,6 +175,6 @@ mod tests {
             sum = (sum & 0xffff) + (sum >> 16);
         }
         let sum = !sum as u16;
-        assert_eq!(sum, header.get_checksum());
+        assert_eq!(sum, header.get_checksum(raw));
     }
 }
