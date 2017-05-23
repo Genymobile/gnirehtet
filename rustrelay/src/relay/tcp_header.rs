@@ -1,5 +1,6 @@
 use byteorder::{BigEndian, ByteOrder};
 use super::ipv4_header::IPv4Header;
+use super::source_destination::SourceDestination;
 
 pub struct TCPHeader {
     source_port: u16,
@@ -68,5 +69,23 @@ impl TCPHeader {
 
     pub fn set_checksum(&mut self, raw: &mut [u8], checksum: u16) {
         BigEndian::write_u16(&mut raw[16..18], checksum);
+    }
+}
+
+impl SourceDestination<u16> for TCPHeader {
+    fn get_source(&self, _: &[u8]) -> u16 {
+        self.source_port
+    }
+
+    fn get_destination(&self, _: &[u8]) -> u16 {
+        self.destination_port
+    }
+
+    fn set_source(&mut self, raw: &mut [u8], source: u16) {
+        self.set_source_port(raw, source);
+    }
+
+    fn set_destination(&mut self, raw: &mut [u8], destination: u16) {
+        self.set_destination_port(raw, destination);
     }
 }
