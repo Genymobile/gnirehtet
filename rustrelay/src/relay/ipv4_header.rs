@@ -2,16 +2,16 @@ use byteorder::{BigEndian, ByteOrder};
 use std::io::Cursor;
 
 pub struct IPv4Header {
-    version: u8,
-    header_length: u8,
-    total_length: u16,
-    protocol: Protocol,
-    source: u32,
-    destination: u32,
+    pub version: u8,
+    pub header_length: u8,
+    pub total_length: u16,
+    pub protocol: Protocol,
+    pub source: u32,
+    pub destination: u32,
 }
 
 #[derive(Debug, PartialEq)]
-enum Protocol {
+pub enum Protocol {
     TCP,
     UDP,
     OTHER,
