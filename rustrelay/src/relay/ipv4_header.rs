@@ -1,5 +1,6 @@
 use byteorder::{BigEndian, ByteOrder};
 use std::io::Cursor;
+use super::source_destination::SourceDestination;
 
 pub struct IPv4Header {
     pub version: u8,
@@ -48,13 +49,6 @@ impl IPv4Header {
         BigEndian::write_u32(&mut raw[16..20], destination);
     }
 
-    pub fn switch_source_and_destination(&mut self, raw: &mut [u8]) {
-        let source = self.source;
-        let destination = self.destination;
-        self.set_source(raw, destination);
-        self.set_destination(raw, source);
-    }
-
     pub fn compute_checksum(&mut self, raw: &mut [u8]) {
         // reset checksum field
         self.set_checksum(raw, 0);
@@ -77,6 +71,24 @@ impl IPv4Header {
 
     fn set_checksum(&mut self, raw: &mut [u8], checksum: u16) {
         BigEndian::write_u16(&mut raw[10..12], checksum);
+    }
+}
+
+impl SourceDestination<u32> for IPv4Header {
+    fn get_source(&self, _: &[u8]) -> u32 {
+        self.source
+    }
+
+    fn get_destination(&self, _: &[u8]) -> u32 {
+        self.destination
+    }
+
+    fn set_source(&mut self, raw: &mut [u8], source: u32) {
+        (self as &mut IPv4Header).set_source(raw, source);
+    }
+
+    fn set_destination(&mut self, raw: &mut [u8], destination: u32) {
+        (self as &mut IPv4Header).set_destination(raw, destination);
     }
 }
 
