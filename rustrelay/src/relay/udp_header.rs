@@ -1,4 +1,5 @@
 use byteorder::{BigEndian, ByteOrder};
+use super::source_destination::SourceDestination;
 
 const UDP_HEADER_LENGTH: u16 = 8;
 
@@ -33,6 +34,24 @@ impl UDPHeader {
     pub fn compute_checksum(&mut self, raw: &mut [u8]) {
         // disable checksum validation
         BigEndian::write_u16(&mut raw[6..8], 0);
+    }
+}
+
+impl SourceDestination<u16> for UDPHeader {
+    fn get_source(&self, _: &[u8]) -> u16 {
+        self.source_port
+    }
+
+    fn get_destination(&self, _: &[u8]) -> u16 {
+        self.destination_port
+    }
+
+    fn set_source(&mut self, raw: &mut [u8], source: u16) {
+        self.set_source_port(raw, source);
+    }
+
+    fn set_destination(&mut self, raw: &mut [u8], destination: u16) {
+        self.set_destination_port(raw, destination);
     }
 }
 
@@ -78,6 +97,14 @@ mod tests {
         assert_eq!(2222, raw_destination_port);
         assert_eq!(34 + 8, raw_total_length);
 
-        // TODO
+        header.switch_source_and_destination(raw);
+
+        assert_eq!(2222, header.source_port);
+        assert_eq!(1111, header.destination_port);
+
+        let raw_source_port = BigEndian::read_u16(&raw[0..2]);
+        let raw_destination_port = BigEndian::read_u16(&raw[2..4]);
+        assert_eq!(2222, raw_source_port);
+        assert_eq!(1111, raw_destination_port);
     }
 }
