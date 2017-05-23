@@ -102,7 +102,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_packet_header() {
+    fn parse_header() {
         let raw = &create_header()[..];
         let data = IPv4Header::parse(raw);
         assert_eq!(4, data.version);
@@ -114,7 +114,7 @@ mod tests {
     }
 
     #[test]
-    fn edit_packet_header() {
+    fn edit_header() {
         let raw = &mut create_header()[..];
         let mut header = IPv4Header::parse(raw);
 

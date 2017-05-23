@@ -35,3 +35,49 @@ impl UDPHeader {
         BigEndian::write_u16(&mut raw[6..8], 0);
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use byteorder::{BigEndian, WriteBytesExt};
+
+    fn create_header() -> Vec<u8> {
+        let mut raw: Vec<u8> = vec![];
+        raw.reserve(8);
+        raw.write_u16::<BigEndian>(1234).unwrap(); // source port
+        raw.write_u16::<BigEndian>(5678).unwrap(); // destination port
+        raw.write_u16::<BigEndian>(42).unwrap(); // length
+        raw.write_u16::<BigEndian>(0).unwrap(); // checksum
+        raw
+    }
+
+    #[test]
+    fn parse_header() {
+        let raw = &create_header()[..];
+        let data = UDPHeader::parse(raw);
+        assert_eq!(1234, data.source_port);
+        assert_eq!(5678, data.destination_port);
+    }
+
+    #[test]
+    fn edit_header() {
+        let raw = &mut create_header()[..];
+        let mut header = UDPHeader::parse(raw);
+
+        header.set_source_port(raw, 1111);
+        header.set_destination_port(raw, 2222);
+        header.set_payload_length(raw, 34);
+        assert_eq!(1111, header.source_port);
+        assert_eq!(2222, header.destination_port);
+
+        // assert that the buffer has been modified
+        let raw_source_port = BigEndian::read_u16(&raw[0..2]);
+        let raw_destination_port = BigEndian::read_u16(&raw[2..4]);
+        let raw_total_length = BigEndian::read_u16(&raw[4..6]);
+        assert_eq!(1111, raw_source_port);
+        assert_eq!(2222, raw_destination_port);
+        assert_eq!(34 + 8, raw_total_length);
+
+        // TODO
+    }
+}
