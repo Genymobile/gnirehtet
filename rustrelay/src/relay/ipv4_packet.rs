@@ -26,5 +26,11 @@ impl<'a> IPv4Packet<'a> {
             transport_header: transport_header,
         }
     }
+
+    fn compute_checksum(&mut self) {
+        if let Some(TransportHeader::TCP(ref tcp_header)) = self.transport_header {
+            tcp_header.compute_checksum(self.raw, &self.ipv4_header);
+        }
+    }
 }
 
