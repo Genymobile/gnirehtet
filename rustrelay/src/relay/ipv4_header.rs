@@ -103,8 +103,8 @@ mod tests {
 
     #[test]
     fn parse_packet_header() {
-        let raw = create_header();
-        let data = IPv4Header::parse(&raw[..]);
+        let raw = &create_header()[..];
+        let data = IPv4Header::parse(raw);
         assert_eq!(4, data.version);
         assert_eq!(20, data.header_length);
         assert_eq!(28, data.total_length);
