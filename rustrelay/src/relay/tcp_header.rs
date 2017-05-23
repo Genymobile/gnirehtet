@@ -1,4 +1,5 @@
 use byteorder::{BigEndian, ByteOrder};
+use super::ipv4_header::IPv4Header;
 
 pub struct TCPHeader {
     source_port: u16,
@@ -60,5 +61,12 @@ impl TCPHeader {
         data_offset_and_flags = data_offset_and_flags & 0x0FFF | ((data_offset as u16) << 12);
         BigEndian::write_u16(&mut raw[12..14], data_offset_and_flags);
         self.header_length = data_offset << 2;
+    }
+
+    pub fn compute_checksum(&self, raw: &mut [u8], ipv4_header: &IPv4Header) {
+    }
+
+    pub fn set_checksum(&mut self, raw: &mut [u8], checksum: u16) {
+        BigEndian::write_u16(&mut raw[16..18], checksum);
     }
 }
