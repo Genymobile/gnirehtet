@@ -71,7 +71,7 @@ impl IPv4Header {
         self.set_checksum(raw, !sum as u16);
     }
 
-    fn get_checksum(&mut self, raw: &mut [u8]) -> u16 {
+    fn get_checksum(&mut self, raw: &[u8]) -> u16 {
         BigEndian::read_u16(&raw[10..12])
     }
 
