@@ -1,5 +1,5 @@
-use super::tcpheader::TCPHeader;
-use super::udpheader::UDPHeader;
+use super::tcp_header::TCPHeader;
+use super::udp_header::UDPHeader;
 
 pub enum TransportHeader {
     TCP(TCPHeader),
