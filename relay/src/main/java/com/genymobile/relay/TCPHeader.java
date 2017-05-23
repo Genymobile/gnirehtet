@@ -169,7 +169,6 @@ public class TCPHeader implements TransportHeader {
         return new TCPHeader(slice);
     }
 
-    @Override
     public TCPHeader copy() {
         return new TCPHeader(Binary.copy(raw));
     }

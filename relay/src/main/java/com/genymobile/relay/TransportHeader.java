@@ -36,8 +36,6 @@ public interface TransportHeader {
 
     TransportHeader copyTo(ByteBuffer buffer);
 
-    TransportHeader copy();
-
     void computeChecksum(IPv4Header ipv4Header, ByteBuffer payload);
 
     default void switchSourceAndDestination() {

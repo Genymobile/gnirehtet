@@ -82,11 +82,6 @@ public class UDPHeader implements TransportHeader {
     }
 
     @Override
-    public UDPHeader copy() {
-        return new UDPHeader(Binary.copy(raw));
-    }
-
-    @Override
     public void computeChecksum(IPv4Header ipv4Header, ByteBuffer payload) {
         // disable checksum validation
         raw.putShort(6, (short) 0);
