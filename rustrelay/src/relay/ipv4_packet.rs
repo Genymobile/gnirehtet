@@ -3,6 +3,8 @@ use super::tcp_header::TCPHeader;
 use super::transport_header::TransportHeader;
 use super::udp_header::UDPHeader;
 
+pub const MAX_PACKET_LENGTH: usize = 1 << 16;
+
 pub struct IPv4Packet<'a> {
     raw: &'a mut [u8],
     ipv4_header: IPv4Header,
