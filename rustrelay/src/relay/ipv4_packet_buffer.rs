@@ -88,18 +88,6 @@ mod tests {
         raw
     }
 
-    #[test]
-    fn parse_ipv4_packet_buffer() {
-        let raw = &create_packet()[..];
-        let mut packet_buffer = IPv4PacketBuffer::new();
-        let mut cursor = io::Cursor::new(raw);
-
-        packet_buffer.read_from(&mut cursor).unwrap();
-
-        let packet = packet_buffer.as_ipv4_packet().unwrap();
-        check_packet_headers(&packet);
-    }
-
     fn check_packet_headers(ipv4_packet: &IPv4Packet) {
         let ipv4_header = &ipv4_packet.ipv4_header;
         assert_eq!(20, ipv4_header.header_length);
@@ -114,5 +102,17 @@ mod tests {
         } else {
             panic!("No UDP transport header");
         }
+    }
+
+    #[test]
+    fn parse_ipv4_packet_buffer() {
+        let raw = &create_packet()[..];
+        let mut packet_buffer = IPv4PacketBuffer::new();
+        let mut cursor = io::Cursor::new(raw);
+
+        packet_buffer.read_from(&mut cursor).unwrap();
+
+        let packet = packet_buffer.as_ipv4_packet().unwrap();
+        check_packet_headers(&packet);
     }
 }
