@@ -67,7 +67,11 @@ mod tests {
 
     fn create_packet() -> Vec<u8> {
         let mut raw: Vec<u8> = vec![];
-        raw.reserve(32);
+        write_packet_to(&mut raw);
+        raw
+    }
+
+    fn write_packet_to(raw: &mut Vec<u8>) {
         raw.write_u8(4u8 << 4 | 5).unwrap();
         raw.write_u8(0).unwrap(); // ToS
         raw.write_u16::<BigEndian>(32); // total length 20 + 8 + 4
@@ -84,8 +88,6 @@ mod tests {
         raw.write_u16::<BigEndian>(0).unwrap(); // checksum
 
         raw.write_u32::<BigEndian>(0x11223344).unwrap(); // payload
-
-        raw
     }
 
     fn check_packet_headers(ipv4_packet: &IPv4Packet) {
@@ -108,8 +110,8 @@ mod tests {
     fn parse_ipv4_packet_buffer() {
         let raw = create_packet();
         let mut packet_buffer = IPv4PacketBuffer::new();
-        let mut cursor = io::Cursor::new(raw);
 
+        let mut cursor = io::Cursor::new(raw);
         packet_buffer.read_from(&mut cursor).unwrap();
 
         let packet = packet_buffer.as_ipv4_packet().unwrap();
@@ -131,5 +133,32 @@ mod tests {
 
         let packet = packet_buffer.as_ipv4_packet().unwrap();
         check_packet_headers(&packet);
+    }
+
+    fn create_multi_packets() -> Vec<u8> {
+        let mut raw: Vec<u8> = vec![];
+        for i in 0..3 {
+            write_packet_to(&mut raw);
+        }
+        raw
+    }
+
+    #[test]
+    fn parse_multi_packets() {
+        let raw = create_multi_packets();
+        let mut packet_buffer = IPv4PacketBuffer::new();
+
+        let mut cursor = io::Cursor::new(raw);
+        packet_buffer.read_from(&mut cursor).unwrap();
+
+        for i in 0..3 {
+            {
+                let packet = packet_buffer.as_ipv4_packet().unwrap();
+                check_packet_headers(&packet);
+            }
+            packet_buffer.next();
+        }
+
+        assert!(packet_buffer.as_ipv4_packet().is_none());
     }
 }
