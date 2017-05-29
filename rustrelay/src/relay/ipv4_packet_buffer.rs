@@ -106,10 +106,27 @@ mod tests {
 
     #[test]
     fn parse_ipv4_packet_buffer() {
-        let raw = &create_packet()[..];
+        let raw = create_packet();
         let mut packet_buffer = IPv4PacketBuffer::new();
         let mut cursor = io::Cursor::new(raw);
 
+        packet_buffer.read_from(&mut cursor).unwrap();
+
+        let packet = packet_buffer.as_ipv4_packet().unwrap();
+        check_packet_headers(&packet);
+    }
+
+    #[test]
+    fn parse_fragmented_ipv4_packet_buffer() {
+        let raw = create_packet();
+        let mut packet_buffer = IPv4PacketBuffer::new();
+
+        let mut cursor = io::Cursor::new(&raw[..14]);
+        packet_buffer.read_from(&mut cursor).unwrap();
+
+        assert!(packet_buffer.as_ipv4_packet().is_none());
+
+        let mut cursor = io::Cursor::new(&raw[14..]);
         packet_buffer.read_from(&mut cursor).unwrap();
 
         let packet = packet_buffer.as_ipv4_packet().unwrap();
