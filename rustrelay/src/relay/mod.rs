@@ -1,6 +1,7 @@
 pub use self::relay::*;
 
 mod client;
+mod datagram_buffer;
 mod ipv4_header;
 mod ipv4_packet;
 mod ipv4_packet_buffer;
