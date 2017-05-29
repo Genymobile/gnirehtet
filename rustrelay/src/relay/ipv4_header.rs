@@ -185,8 +185,8 @@ mod tests {
 
         header.compute_checksum(raw);
 
-        let mut sum = 0x4500u32 + 0x001Cu32 + 0x0000u32 + 0x0000u32 + 0x0011u32
-                    + 0x0000u32 + 0x1234u32 + 0x5678u32 + 0x4242u32 + 0x4242u32;
+        let mut sum: u32 = 0x4500 + 0x001C + 0x0000 + 0x0000 + 0x0011
+                         + 0x0000 + 0x1234 + 0x5678 + 0x4242 + 0x4242;
         while (sum & !0xffff) != 0 {
             sum = (sum & 0xffff) + (sum >> 16);
         }
