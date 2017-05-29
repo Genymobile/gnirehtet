@@ -7,8 +7,8 @@ pub const MAX_PACKET_LENGTH: usize = 1 << 16;
 
 pub struct IPv4Packet<'a> {
     raw: &'a mut [u8],
-    ipv4_header: IPv4Header,
-    transport_header: Option<TransportHeader>,
+    pub ipv4_header: IPv4Header,
+    pub transport_header: Option<TransportHeader>,
 }
 
 impl<'a> IPv4Packet<'a> {
