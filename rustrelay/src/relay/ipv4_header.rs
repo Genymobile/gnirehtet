@@ -114,7 +114,6 @@ impl SourceDestination<u32> for IPv4Header {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io::Cursor;
     use byteorder::{BigEndian, WriteBytesExt};
 
     fn create_header() -> Vec<u8> {
@@ -207,5 +206,19 @@ mod tests {
         let raw = [ version_and_ihl, 0, 0, 0, 0, 0, 0, 0 ];
         let version = IPv4Header::read_version(&raw);
         assert_eq!(4, version.unwrap());
+    }
+
+    #[test]
+    fn read_ip_length_unavailable() {
+        let empty_slice = &[][0..0];
+        let length = IPv4Header::read_length(empty_slice);
+        assert!(length.is_none());
+    }
+
+    #[test]
+    fn read_ip_length_available() {
+        let raw = [ 0u8, 0, 0x01, 0x23 ];
+        let length = IPv4Header::read_length(&raw);
+        assert_eq!(0x123, length.unwrap());
     }
 }
