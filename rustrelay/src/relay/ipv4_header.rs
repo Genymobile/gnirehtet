@@ -73,7 +73,7 @@ impl IPv4Header {
         BigEndian::write_u16(&mut raw[10..12], checksum);
     }
 
-    fn read_version(raw: &[u8]) -> Option<u8> {
+    pub fn read_version(raw: &[u8]) -> Option<u8> {
         if raw.is_empty() {
             None
         } else {
@@ -82,7 +82,7 @@ impl IPv4Header {
         }
     }
 
-    fn read_length(raw: &[u8]) -> Option<u16> {
+    pub fn read_length(raw: &[u8]) -> Option<u16> {
         if raw.len() < 4 {
             None
         } else {
