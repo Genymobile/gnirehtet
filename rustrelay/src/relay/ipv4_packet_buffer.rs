@@ -48,11 +48,15 @@ impl IPv4PacketBuffer {
         // remove the packet in front of the buffer
         let length = self.get_available_packet_length()
                 .expect("next() called while there was no packet") as usize;
+        assert!(self.head >= length);
         self.head -= length;
-        unsafe {
-            let buf_ptr = self.buf.as_mut_ptr();
-            // semantically equivalent to memmove()
-            ptr::copy(buf_ptr.offset(length as isize), buf_ptr, length);
+        if self.head > 0 {
+            // some data remaining, move them to the front of the buffer
+            unsafe {
+                let buf_ptr = self.buf.as_mut_ptr();
+                // semantically equivalent to memmove()
+                ptr::copy(buf_ptr.offset(length as isize), buf_ptr, length);
+            }
         }
     }
 }
