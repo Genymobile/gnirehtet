@@ -56,3 +56,63 @@ impl IPv4PacketBuffer {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io;
+    use byteorder::{BigEndian, WriteBytesExt};
+    use ::relay::ipv4_header::Protocol;
+    use ::relay::transport_header::TransportHeader;
+
+    fn create_packet() -> Vec<u8> {
+        let mut raw: Vec<u8> = vec![];
+        raw.reserve(32);
+        raw.write_u8(4u8 << 4 | 5).unwrap();
+        raw.write_u8(0).unwrap(); // ToS
+        raw.write_u16::<BigEndian>(32); // total length 20 + 8 + 4
+        raw.write_u32::<BigEndian>(0); // id_flags_fragment_offset
+        raw.write_u8(0).unwrap(); // TTL
+        raw.write_u8(17).unwrap(); // protocol (UDP)
+        raw.write_u16::<BigEndian>(0).unwrap(); // checksum
+        raw.write_u32::<BigEndian>(0x12345678).unwrap(); // source address
+        raw.write_u32::<BigEndian>(0x42424242).unwrap(); // destination address
+
+        raw.write_u16::<BigEndian>(1234).unwrap(); // source port
+        raw.write_u16::<BigEndian>(5678).unwrap(); // destination port
+        raw.write_u16::<BigEndian>(12).unwrap(); // length
+        raw.write_u16::<BigEndian>(0).unwrap(); // checksum
+
+        raw.write_u32::<BigEndian>(0x11223344).unwrap(); // payload
+
+        raw
+    }
+
+    #[test]
+    fn parse_ipv4_packet_buffer() {
+        let raw = &create_packet()[..];
+        let mut packet_buffer = IPv4PacketBuffer::new();
+        let mut cursor = io::Cursor::new(raw);
+
+        packet_buffer.read_from(&mut cursor).unwrap();
+
+        let packet = packet_buffer.as_ipv4_packet().unwrap();
+        check_packet_headers(&packet);
+    }
+
+    fn check_packet_headers(ipv4_packet: &IPv4Packet) {
+        let ipv4_header = &ipv4_packet.ipv4_header;
+        assert_eq!(20, ipv4_header.header_length);
+        assert_eq!(32, ipv4_header.total_length);
+        assert_eq!(Protocol::UDP, ipv4_header.protocol);
+        assert_eq!(0x12345678, ipv4_header.source);
+        assert_eq!(0x42424242, ipv4_header.destination);
+
+        if let Some(TransportHeader::UDP(ref udp_header)) = ipv4_packet.transport_header {
+            assert_eq!(1234, udp_header.source_port);
+            assert_eq!(5678, udp_header.destination_port);
+        } else {
+            panic!("No UDP transport header");
+        }
+    }
+}

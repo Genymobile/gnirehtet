@@ -4,8 +4,8 @@ use super::source_destination::SourceDestination;
 const UDP_HEADER_LENGTH: u16 = 8;
 
 pub struct UDPHeader {
-    source_port: u16,
-    destination_port: u16,
+    pub source_port: u16,
+    pub destination_port: u16,
 }
 
 impl UDPHeader {
