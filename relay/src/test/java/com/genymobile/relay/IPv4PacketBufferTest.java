@@ -117,6 +117,9 @@ public class IPv4PacketBufferTest {
             checkPacketHeaders(packet);
             packetBuffer.next();
         }
+
+        // after the 3 packets have been consumed, there is nothing left
+        Assert.assertNull(packetBuffer.asIPv4Packet());
     }
 
     private static void checkPacketHeaders(IPv4Packet packet) {
