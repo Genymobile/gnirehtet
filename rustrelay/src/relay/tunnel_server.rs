@@ -8,7 +8,7 @@ use mio::tcp::TcpListener;
 use super::client::Client;
 use super::selector::{EventHandler, Selector};
 
-static TAG: &'static str = "TunnelServer";
+const TAG: &'static str = "TunnelServer";
 
 pub struct TunnelServer {
     clients: Vec<Rc<RefCell<Client>>>,
