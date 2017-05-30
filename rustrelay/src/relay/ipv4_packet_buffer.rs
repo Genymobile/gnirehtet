@@ -3,20 +3,20 @@ use std::ptr;
 use super::ipv4_header::IPv4Header;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
 
-struct IPv4PacketBuffer {
+pub struct IPv4PacketBuffer {
     buf: [u8; MAX_PACKET_LENGTH],
     head: usize,
 }
 
 impl IPv4PacketBuffer {
-    fn new() -> IPv4PacketBuffer {
+    pub fn new() -> IPv4PacketBuffer {
         IPv4PacketBuffer {
             buf: [0; MAX_PACKET_LENGTH],
             head: 0,
         }
     }
 
-    fn read_from<R: io::Read>(&mut self, source: &mut R) -> io::Result<()> {
+    pub fn read_from<R: io::Read>(&mut self, source: &mut R) -> io::Result<()> {
         let target_slice = &mut self.buf[self.head..];
         let r = source.read(target_slice)?;
         self.head += r;
