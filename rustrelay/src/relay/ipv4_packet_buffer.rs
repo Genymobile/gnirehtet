@@ -18,7 +18,8 @@ impl IPv4PacketBuffer {
     }
 
     fn read_from<R: io::Read>(&mut self, source: &mut R) -> io::Result<()> {
-        let r = source.read(&mut self.buf[self.head..])?;
+        let target_slice = &mut self.buf[self.head..];
+        let r = source.read(target_slice)?;
         self.head += r;
         Ok(())
     }
