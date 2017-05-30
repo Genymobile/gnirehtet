@@ -3,7 +3,7 @@ use mio::*;
 use super::selector::{EventHandler,Selector};
 use super::tunnel_server::TunnelServer;
 
-static TAG: &'static str = "Relay";
+const TAG: &'static str = "Relay";
 
 pub struct Relay {
     port: u16,
