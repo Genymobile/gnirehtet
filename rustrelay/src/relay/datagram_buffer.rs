@@ -29,7 +29,7 @@ pub struct DatagramBuffer {
 impl DatagramBuffer {
     pub fn new(capacity: usize) -> DatagramBuffer {
         DatagramBuffer {
-            buf: Vec::with_capacity(capacity + MAX_BLOCK_LENGTH).into_boxed_slice(),
+            buf: vec![0; capacity + MAX_BLOCK_LENGTH].into_boxed_slice(),
             head: 0,
             tail: 0,
             circular_buffer_length: capacity + 1,
@@ -41,7 +41,7 @@ impl DatagramBuffer {
     }
 
     pub fn has_enough_space_for(&self, datagram_length: usize) -> bool {
-        if self.head >= self. tail {
+        if self.head >= self.tail {
             // there is at least the extra space for storing 1 packet
             return true;
         }
@@ -51,11 +51,11 @@ impl DatagramBuffer {
 
     pub fn write_to<W: io::Write>(&mut self, destination: &mut W) -> io::Result<()> {
         let length = self.read_length() as usize;
+        let source_slice = &self.buf[self.tail..self.tail + length];
         self.tail += length;
         if self.tail >= self.circular_buffer_length {
             self.tail = 0;
         }
-        let source_slice = &self.buf[self.tail..self.tail + length];
         let w = destination.write(source_slice)?;
         if w != length {
             error!(target: TAG, "Cannot write the whole datagram to the buffer (only {}/{})", w, length);
@@ -64,7 +64,7 @@ impl DatagramBuffer {
         Ok(())
     }
 
-    pub fn read_from(&mut self, source: &mut [u8]) -> io::Result<()> {
+    pub fn read_from(&mut self, source: &[u8]) -> io::Result<()> {
         let length = source.len();
         assert!(length <= MAX_DATAGRAM_LENGTH, "Datagram length may not be greater than {} bytes", MAX_DATAGRAM_LENGTH);
         if !self.has_enough_space_for(length) {
