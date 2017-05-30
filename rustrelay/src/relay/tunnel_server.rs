@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use std::io;
 use std::rc::Rc;
-use mio::{Ready, PollOpt};
+use mio::{Event, PollOpt, Ready};
 use mio::tcp::TcpListener;
 
 use super::client::Client;
@@ -47,7 +47,7 @@ impl TunnelServer {
 }
 
 impl EventHandler for TunnelServer {
-    fn on_ready(&mut self, selector: &mut Selector, _: Ready) {
+    fn on_ready(&mut self, selector: &mut Selector, _: Event) {
         if let Err(err) = self.accept_client(selector) {
             error!(target: TAG, "Cannot accept client: {}", err);
         }

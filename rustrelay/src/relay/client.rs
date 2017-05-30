@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::io;
 use std::rc::Rc;
 use mio::net::TcpStream;
-use mio::{Ready, PollOpt};
+use mio::{Event, PollOpt, Ready};
 
 use super::selector::{EventHandler, Selector};
 use super::ipv4_packet_buffer::IPv4PacketBuffer;
@@ -27,7 +27,7 @@ impl Client {
 }
 
 impl EventHandler for Client {
-    fn on_ready(&mut self, selector: &mut Selector, _: Ready) {
+    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
 
     }
 }
