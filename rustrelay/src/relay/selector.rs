@@ -5,20 +5,20 @@ use std::rc::Rc;
 use slab::Slab;
 
 pub trait EventHandler {
-    fn on_ready(&mut self, selector: &mut Selector, ready: Ready);
+    fn on_ready(&mut self, selector: &mut Selector, event: Event);
 }
 
-impl<F> EventHandler for F where F: FnMut(&mut Selector, Ready) {
-    fn on_ready(&mut self, selector: &mut Selector, ready: Ready) {
-        self(selector, ready);
+impl<F> EventHandler for F where F: FnMut(&mut Selector, Event) {
+    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
+        self(selector, event);
     }
 }
 
 // for convenience
 impl EventHandler for Rc<RefCell<EventHandler>> {
-    fn on_ready(&mut self, selector: &mut Selector, ready: Ready) {
+    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
         let mut self_raw = self.borrow_mut();
-        self_raw.on_ready(selector, ready);
+        self_raw.on_ready(selector, event);
     }
 }
 
