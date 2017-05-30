@@ -1,5 +1,4 @@
 use byteorder::{BigEndian, ByteOrder};
-use std::io::Cursor;
 use super::source_destination::SourceDestination;
 
 pub struct IPv4Header {
