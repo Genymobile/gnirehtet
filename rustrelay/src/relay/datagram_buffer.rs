@@ -90,3 +90,83 @@ impl DatagramBuffer {
         self.head += 2;
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_datagram(length: u8) -> Vec<u8> {
+        (0..length).collect()
+    }
+
+    #[test]
+    fn bufferize_datagram() {
+        let datagram = create_datagram(5);
+        let mut datagram_buffer = DatagramBuffer::new(9);
+
+        let mut cursor = io::Cursor::new(vec![]);
+        datagram_buffer.read_from(&datagram);
+        datagram_buffer.write_to(&mut cursor).unwrap();
+
+        assert_eq!(cursor.get_ref(), &datagram);
+    }
+
+    #[test]
+    fn split_datagrams_at_boundaries() {
+        let mut datagram_buffer = DatagramBuffer::new(32);
+
+        let datagram5 = create_datagram(5);
+        let datagram0 = create_datagram(0);
+        let datagram3 = create_datagram(3);
+        let datagram4 = create_datagram(4);
+
+        datagram_buffer.read_from(&datagram5);
+        datagram_buffer.read_from(&datagram0);
+        datagram_buffer.read_from(&datagram3);
+        datagram_buffer.read_from(&datagram4);
+
+        let mut cursor = io::Cursor::new(vec![]);
+        datagram_buffer.write_to(&mut cursor).unwrap();
+        assert_eq!(cursor.get_ref(), &datagram5);
+
+        let mut cursor = io::Cursor::new(vec![]);
+        datagram_buffer.write_to(&mut cursor).unwrap();
+        assert_eq!(cursor.get_ref(), &datagram0);
+
+        let mut cursor = io::Cursor::new(vec![]);
+        datagram_buffer.write_to(&mut cursor).unwrap();
+        assert_eq!(cursor.get_ref(), &datagram3);
+
+        let mut cursor = io::Cursor::new(vec![]);
+        datagram_buffer.write_to(&mut cursor).unwrap();
+        assert_eq!(cursor.get_ref(), &datagram4);
+    }
+
+    #[test]
+    fn circular() {
+        let datagram5 = create_datagram(5);
+        let datagram3 = create_datagram(3);
+
+        let mut datagram_buffer = DatagramBuffer::new(14);
+
+        // write and consume 10 bytes
+        datagram_buffer.read_from(&create_datagram(10));
+        {
+            // write and forget
+            let mut cursor = io::Cursor::new(vec![]);
+            datagram_buffer.write_to(&mut cursor);
+        }
+
+        // DatagramBuffer is expected to store the whole datagram (even if it exceeds its "capacity")
+        datagram_buffer.read_from(&datagram5).unwrap();
+        datagram_buffer.read_from(&datagram3).unwrap();
+
+        let mut cursor = io::Cursor::new(vec![]);
+        datagram_buffer.write_to(&mut cursor).unwrap();
+        assert_eq!(cursor.get_ref(), &datagram5);
+
+        let mut cursor = io::Cursor::new(vec![]);
+        datagram_buffer.write_to(&mut cursor).unwrap();
+        assert_eq!(cursor.get_ref(), &datagram3);
+    }
+}
