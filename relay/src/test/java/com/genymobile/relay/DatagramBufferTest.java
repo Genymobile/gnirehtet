@@ -103,10 +103,10 @@ public class DatagramBufferTest {
         datagramBuffer.readFrom(createDatagram(10));
         datagramBuffer.writeTo(Channels.newChannel(new ByteArrayOutputStream())); // forget
 
+        // DatagramBuffer is expected to store the whole datagram (even if it exceeds its "capacity")
         datagramBuffer.readFrom(datagram5);
         datagramBuffer.readFrom(datagram3);
 
-        // DatagramBuffer is expected to store the whole datagram (even if it exceeds its "capacity")
         datagramBuffer.writeTo(channel);
         byte[] result = bos.toByteArray();
         Assert.assertArrayEquals(datagram5.array(), result);
