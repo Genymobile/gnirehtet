@@ -24,12 +24,6 @@ impl TunnelServer {
             tcp_listener: tcp_listener,
             next_client_id: 0,
         }));
-/*        let rc_clone = rc.clone();
-        let handler = Box::new(move |selector: &mut Selector, ready| {
-            let mut self_ref = rc_clone.borrow_mut();
-            println!("{:?}", ready);
-            // TODO
-        });*/
         selector.register(&rc.borrow().tcp_listener, rc.clone(), Ready::readable(), PollOpt::edge())?;
         Ok(rc)
     }
