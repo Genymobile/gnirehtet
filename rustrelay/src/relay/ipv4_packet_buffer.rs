@@ -1,4 +1,3 @@
-use byteorder::{BigEndian, ByteOrder};
 use std::io;
 use std::ptr;
 use super::ipv4_header::IPv4Header;
@@ -79,8 +78,8 @@ mod tests {
     fn write_packet_to(raw: &mut Vec<u8>) {
         raw.write_u8(4u8 << 4 | 5).unwrap();
         raw.write_u8(0).unwrap(); // ToS
-        raw.write_u16::<BigEndian>(32); // total length 20 + 8 + 4
-        raw.write_u32::<BigEndian>(0); // id_flags_fragment_offset
+        raw.write_u16::<BigEndian>(32).unwrap(); // total length 20 + 8 + 4
+        raw.write_u32::<BigEndian>(0).unwrap(); // id_flags_fragment_offset
         raw.write_u8(0).unwrap(); // TTL
         raw.write_u8(17).unwrap(); // protocol (UDP)
         raw.write_u16::<BigEndian>(0).unwrap(); // checksum
@@ -142,7 +141,7 @@ mod tests {
 
     fn create_multi_packets() -> Vec<u8> {
         let mut raw: Vec<u8> = vec![];
-        for i in 0..3 {
+        for _ in 0..3 {
             write_packet_to(&mut raw);
         }
         raw
@@ -156,7 +155,7 @@ mod tests {
         let mut cursor = io::Cursor::new(raw);
         packet_buffer.read_from(&mut cursor).unwrap();
 
-        for i in 0..3 {
+        for _ in 0..3 {
             {
                 let packet = packet_buffer.as_ipv4_packet().unwrap();
                 check_packet_headers(&packet);
