@@ -5,6 +5,7 @@ mod datagram_buffer;
 mod ipv4_header;
 mod ipv4_packet;
 mod ipv4_packet_buffer;
+mod observer;
 mod relay;
 mod selector;
 mod source_destination;
