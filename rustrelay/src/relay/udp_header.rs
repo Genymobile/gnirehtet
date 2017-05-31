@@ -9,8 +9,8 @@ pub struct UDPHeader {
 }
 
 impl UDPHeader {
-    pub fn parse(raw: &[u8]) -> UDPHeader {
-        UDPHeader {
+    pub fn parse(raw: &[u8]) -> Self {
+        Self {
             source_port: BigEndian::read_u16(&raw[0..2]),
             destination_port: BigEndian::read_u16(&raw[2..4]),
         }

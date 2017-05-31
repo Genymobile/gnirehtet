@@ -17,9 +17,9 @@ pub struct TunnelServer {
 }
 
 impl TunnelServer {
-    pub fn new(port: u16, selector: &mut Selector) -> io::Result<Rc<RefCell<TunnelServer>>> {
+    pub fn new(port: u16, selector: &mut Selector) -> io::Result<Rc<RefCell<Self>>> {
         let tcp_listener = TunnelServer::start_socket(port)?;
-        let rc = Rc::new(RefCell::new(TunnelServer {
+        let rc = Rc::new(RefCell::new(Self {
             clients: Vec::new(),
             tcp_listener: tcp_listener,
             next_client_id: 0,

@@ -9,8 +9,8 @@ pub struct IPv4PacketBuffer {
 }
 
 impl IPv4PacketBuffer {
-    pub fn new() -> IPv4PacketBuffer {
-        IPv4PacketBuffer {
+    pub fn new() -> Self {
+        Self {
             buf: [0; MAX_PACKET_LENGTH],
             head: 0,
         }

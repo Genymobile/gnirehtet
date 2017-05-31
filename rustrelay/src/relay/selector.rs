@@ -29,8 +29,8 @@ pub struct Selector {
 }
 
 impl Selector {
-    pub fn new() -> io::Result<Selector> {
-        Ok(Selector {
+    pub fn new() -> io::Result<Self> {
+        Ok(Self {
             poll: Poll::new()?,
             handlers: Slab::with_capacity(1024),
         })
