@@ -24,8 +24,8 @@ impl Relay {
     }
 
     fn poll_loop(&self, selector: &mut Selector) {
+        let mut events = Events::with_capacity(1024);
         loop {
-            let mut events = Events::with_capacity(1024);
             selector.poll.poll(&mut events, None).expect("Cannot poll");
 
             for event in &events {
