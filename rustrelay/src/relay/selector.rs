@@ -24,7 +24,7 @@ impl EventHandler for Rc<RefCell<EventHandler>> {
 
 pub struct Selector {
     pub poll: Poll,
-    pub handlers: Slab<Rc<RefCell<EventHandler>>, Token>,
+    handlers: Slab<Rc<RefCell<EventHandler>>, Token>,
 }
 
 impl Selector {
@@ -56,5 +56,12 @@ impl Selector {
             panic!("Unknown token removed");
         }
         self.poll.deregister(handle)
+    }
+
+    pub fn run_handler(&mut self, event: Event) {
+        // the handler is stored in the selector, so we need to clone
+        // the Rc to pass a &mut Selector to on_ready()
+        let mut handler = self.handlers.get_mut(event.token()).unwrap().clone();
+        handler.on_ready(self, event);
     }
 }
