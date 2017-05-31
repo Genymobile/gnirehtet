@@ -7,6 +7,8 @@ use mio::{Event, PollOpt, Ready};
 use super::selector::{EventHandler, Selector};
 use super::ipv4_packet_buffer::IPv4PacketBuffer;
 
+const TAG: &'static str = "Client";
+
 pub struct Client {
     id: u32,
     stream: TcpStream,
@@ -27,16 +29,31 @@ impl Client {
         Ok(rc)
     }
 
-    fn process_send(&mut self) {
+    fn kill(&mut self) {
+        self.dead = true;
+        // TODO unregister from Selector
+    }
 
+    fn process_send(&mut self) {
+        
     }
 
     fn process_receive(&mut self) {
-
+        match self.read() {
+            Ok(_) => {}
+            Err(_) => {
+                error!(target: TAG, "Cannot read");
+                self.kill();
+            }
+        }
     }
 
     fn update_interests(&mut self, selector: &mut Selector) {
 
+    }
+
+    fn read(&mut self) -> io::Result<()> {
+        self.client_to_network.read_from(&mut self.stream)
     }
 }
 
