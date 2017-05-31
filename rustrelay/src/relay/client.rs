@@ -24,8 +24,13 @@ impl Client {
             client_to_network: IPv4PacketBuffer::new(),
             dead: true,
         }));
+        let rc_clone = rc.clone();
+        let handler = Box::new(move |selector: &mut Selector, ready| {
+            let mut self_ref = rc_clone.borrow_mut();
+            self_ref.on_ready(selector, ready);
+        });
         // on start, we are interested only in writing (we must first send the client id)
-        selector.register(&rc.borrow().stream, rc.clone(), Ready::writable(), PollOpt::level())?;
+        selector.register(&rc.borrow().stream, handler, Ready::writable(), PollOpt::level())?;
         Ok(rc)
     }
 
