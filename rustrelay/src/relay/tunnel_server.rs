@@ -25,10 +25,10 @@ impl TunnelServer {
             next_client_id: 0,
         }));
         let rc_clone = rc.clone();
-        let handler = Rc::new(move |selector: &mut Selector, ready| {
+        let handler = move |selector: &mut Selector, ready| {
             let mut self_ref = rc_clone.borrow_mut();
             self_ref.on_ready(selector, ready);
-        });
+        };
         selector.register(&rc.borrow().tcp_listener, handler, Ready::readable(), PollOpt::edge())?;
         Ok(rc)
     }

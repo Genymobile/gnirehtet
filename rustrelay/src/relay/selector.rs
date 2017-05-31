@@ -36,10 +36,11 @@ impl Selector {
         })
     }
 
-    pub fn register<E>(&mut self, handle: &E, handler: Rc<EventHandler>,
+    pub fn register<E, H>(&mut self, handle: &E, handler: H,
                    interest: Ready, opts: PollOpt) -> io::Result<Token>
-            where E: Evented + ?Sized {
-        let token = self.handlers.insert(handler)
+            where E: Evented + ?Sized,
+                  H: EventHandler + 'static {
+        let token = self.handlers.insert(Rc::new(handler))
                         .map_err(|_| io::Error::new(io::ErrorKind::Other, "Cannot allocate slab slot"))?;
         self.poll.register(handle, token, interest, opts)?;
         Ok(token)
