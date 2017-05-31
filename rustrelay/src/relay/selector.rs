@@ -2,6 +2,7 @@ use mio::*;
 use std::cell::RefCell;
 use std::io;
 use std::rc::Rc;
+use std::time::Duration;
 use slab::Slab;
 
 pub trait EventHandler {
@@ -23,7 +24,7 @@ impl EventHandler for Rc<RefCell<EventHandler>> {
 }
 
 pub struct Selector {
-    pub poll: Poll,
+    poll: Poll,
     handlers: Slab<Rc<RefCell<EventHandler>>, Token>,
 }
 
@@ -56,6 +57,10 @@ impl Selector {
             panic!("Unknown token removed");
         }
         self.poll.deregister(handle)
+    }
+
+    pub fn poll(&mut self, events: &mut Events, timeout: Option<Duration>) -> io::Result<usize> {
+        self.poll.poll(events, None)
     }
 
     pub fn run_handler(&mut self, event: Event) {
