@@ -4,7 +4,7 @@ use std::rc::Rc;
 use mio::net::TcpStream;
 use mio::{Event, PollOpt, Ready};
 
-use super::selector::{EventHandler, Selector};
+use super::selector::Selector;
 use super::ipv4_packet_buffer::IPv4PacketBuffer;
 
 const TAG: &'static str = "Client";
@@ -25,7 +25,7 @@ impl Client {
             dead: true,
         }));
         let rc_clone = rc.clone();
-        let handler = Box::new(move |selector: &mut Selector, ready| {
+        let handler = Rc::new(move |selector: &mut Selector, ready| {
             let mut self_ref = rc_clone.borrow_mut();
             self_ref.on_ready(selector, ready);
         });
@@ -60,9 +60,7 @@ impl Client {
     fn read(&mut self) -> io::Result<()> {
         self.client_to_network.read_from(&mut self.stream)
     }
-}
 
-impl EventHandler for Client {
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
         assert!(!self.dead);
         let ready = event.readiness();
