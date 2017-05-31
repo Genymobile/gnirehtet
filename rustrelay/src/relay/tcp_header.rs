@@ -13,9 +13,9 @@ pub struct TCPHeader {
 }
 
 impl TCPHeader {
-    pub fn parse(raw: &[u8]) -> TCPHeader {
+    pub fn parse(raw: &[u8]) -> Self {
         let data_offset_and_flags = BigEndian::read_u16(&raw[12..14]);
-        TCPHeader {
+        Self {
             source_port: BigEndian::read_u16(&raw[0..2]),
             destination_port: BigEndian::read_u16(&raw[2..4]),
             sequence_number: BigEndian::read_u32(&raw[4..8]),

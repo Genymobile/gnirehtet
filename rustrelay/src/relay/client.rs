@@ -17,8 +17,8 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new(id: u32, selector: &mut Selector, stream: TcpStream) -> io::Result<Rc<RefCell<Client>>> {
-        let rc = Rc::new(RefCell::new(Client {
+    pub fn new(id: u32, selector: &mut Selector, stream: TcpStream) -> io::Result<Rc<RefCell<Self>>> {
+        let rc = Rc::new(RefCell::new(Self {
             id: id,
             stream: stream,
             client_to_network: IPv4PacketBuffer::new(),

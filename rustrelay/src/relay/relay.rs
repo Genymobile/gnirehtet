@@ -10,8 +10,8 @@ pub struct Relay {
 }
 
 impl Relay {
-    pub fn new(port: u16) -> Relay {
-        Relay {
+    pub fn new(port: u16) -> Self {
+        Self {
             port: port,
         }
     }

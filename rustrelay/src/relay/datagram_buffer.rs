@@ -27,8 +27,8 @@ pub struct DatagramBuffer {
 }
 
 impl DatagramBuffer {
-    pub fn new(capacity: usize) -> DatagramBuffer {
-        DatagramBuffer {
+    pub fn new(capacity: usize) -> Self {
+        Self {
             buf: vec![0; capacity + MAX_BLOCK_LENGTH].into_boxed_slice(),
             head: 0,
             tail: 0,

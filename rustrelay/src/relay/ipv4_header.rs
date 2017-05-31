@@ -18,8 +18,8 @@ pub enum Protocol {
 }
 
 impl IPv4Header {
-    pub fn parse(raw: &[u8]) -> IPv4Header {
-        IPv4Header {
+    pub fn parse(raw: &[u8]) -> Self {
+        Self {
             version: raw[0] >> 4,
             header_length: (raw[0] & 0xf) << 2,
             total_length: BigEndian::read_u16(&raw[2..4]),
