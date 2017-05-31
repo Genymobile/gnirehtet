@@ -6,7 +6,7 @@ use mio::{Event, PollOpt, Ready};
 use mio::tcp::TcpListener;
 
 use super::client::Client;
-use super::selector::{EventHandler, Selector};
+use super::selector::Selector;
 
 const TAG: &'static str = "TunnelServer";
 
@@ -25,7 +25,7 @@ impl TunnelServer {
             next_client_id: 0,
         }));
         let rc_clone = rc.clone();
-        let handler = Box::new(move |selector: &mut Selector, ready| {
+        let handler = Rc::new(move |selector: &mut Selector, ready| {
             let mut self_ref = rc_clone.borrow_mut();
             self_ref.on_ready(selector, ready);
         });
@@ -49,9 +49,7 @@ impl TunnelServer {
         info!(target: TAG, "Client #{} connected", client_id);
         Ok(())
     }
-}
 
-impl EventHandler for TunnelServer {
     fn on_ready(&mut self, selector: &mut Selector, _: Event) {
         if let Err(err) = self.accept_client(selector) {
             error!(target: TAG, "Cannot accept client: {}", err);

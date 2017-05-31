@@ -6,18 +6,18 @@ use std::time::Duration;
 use slab::Slab;
 
 pub trait EventHandler {
-    fn on_ready(&mut self, selector: &mut Selector, event: Event);
+    fn on_ready(&self, selector: &mut Selector, event: Event);
 }
 
-impl<F> EventHandler for F where F: FnMut(&mut Selector, Event) {
-    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
+impl<F> EventHandler for F where F: Fn(&mut Selector, Event) {
+    fn on_ready(&self, selector: &mut Selector, event: Event) {
         self(selector, event);
     }
 }
 
 // for convenience
 impl EventHandler for Rc<RefCell<EventHandler>> {
-    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
+    fn on_ready(&self, selector: &mut Selector, event: Event) {
         let mut self_raw = self.borrow_mut();
         self_raw.on_ready(selector, event);
     }
@@ -25,7 +25,7 @@ impl EventHandler for Rc<RefCell<EventHandler>> {
 
 pub struct Selector {
     poll: Poll,
-    handlers: Slab<Box<EventHandler>, Token>,
+    handlers: Slab<Rc<EventHandler>, Token>,
 }
 
 impl Selector {
@@ -36,7 +36,7 @@ impl Selector {
         })
     }
 
-    pub fn register<E>(&mut self, handle: &E, handler: Box<EventHandler>,
+    pub fn register<E>(&mut self, handle: &E, handler: Rc<EventHandler>,
                    interest: Ready, opts: PollOpt) -> io::Result<Token>
             where E: Evented + ?Sized {
         let token = self.handlers.insert(handler)
@@ -64,7 +64,7 @@ impl Selector {
     }
 
     pub fn run_handler(&mut self, event: Event) {
-        let mut handler = self.handlers.get_mut(event.token()).unwrap();
+        let mut handler = self.handlers.get_mut(event.token()).unwrap().clone();
         handler.on_ready(self, event);
     }
 }
