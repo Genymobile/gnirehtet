@@ -25,7 +25,7 @@ impl EventHandler for Rc<RefCell<EventHandler>> {
 
 pub struct Selector {
     poll: Poll,
-    handlers: Slab<Rc<RefCell<EventHandler>>, Token>,
+    handlers: Slab<Box<EventHandler>, Token>,
 }
 
 impl Selector {
@@ -36,7 +36,7 @@ impl Selector {
         })
     }
 
-    pub fn register<E>(&mut self, handle: &E, handler: Rc<RefCell<EventHandler>>,
+    pub fn register<E>(&mut self, handle: &E, handler: Box<EventHandler>,
                    interest: Ready, opts: PollOpt) -> io::Result<Token>
             where E: Evented + ?Sized {
         let token = self.handlers.insert(handler)
@@ -64,9 +64,7 @@ impl Selector {
     }
 
     pub fn run_handler(&mut self, event: Event) {
-        // the handler is stored in the selector, so we need to clone
-        // the Rc to pass a &mut Selector to on_ready()
-        let mut handler = self.handlers.get_mut(event.token()).unwrap().clone();
+        let mut handler = self.handlers.get_mut(event.token()).unwrap();
         handler.on_ready(self, event);
     }
 }
