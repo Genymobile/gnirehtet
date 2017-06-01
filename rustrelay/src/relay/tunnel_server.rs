@@ -6,8 +6,8 @@ use mio::{Event, PollOpt, Ready};
 use mio::tcp::TcpListener;
 
 use super::client::Client;
+use super::close_listener::CloseListener;
 use super::selector::Selector;
-use super::observer::DeathListener;
 
 const TAG: &'static str = "TunnelServer";
 
@@ -46,13 +46,13 @@ impl TunnelServer {
         let client_id = self.next_client_id;
         self.next_client_id += 1;
         let weak = Rc::downgrade(self_rc);
-        let on_client_death = move |target: &Client| {
+        let on_client_closed = move |target: &Client| {
             if let Some(rc) = weak.upgrade() {
                 let tunnel_server = rc.borrow_mut();
                 // TODO remove client from the list
             }
         };
-        let client = Client::new(client_id, selector, stream, on_client_death)?;
+        let client = Client::new(client_id, selector, stream, on_client_closed)?;
         self.clients.push(client);
         info!(target: TAG, "Client #{} connected", client_id);
         Ok(())

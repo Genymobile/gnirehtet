@@ -4,8 +4,8 @@ use std::rc::Rc;
 use mio::net::TcpStream;
 use mio::{Event, PollOpt, Ready};
 
+use super::close_listener::CloseListener;
 use super::ipv4_packet_buffer::IPv4PacketBuffer;
-use super::observer::DeathListener;
 use super::selector::Selector;
 
 const TAG: &'static str = "Client";
@@ -15,18 +15,18 @@ pub struct Client {
     stream: TcpStream,
     client_to_network: IPv4PacketBuffer,
     dead: bool,
-    death_listener: Box<DeathListener<Client>>,
+    close_listener: Box<CloseListener<Client>>,
 }
 
 impl Client {
-    pub fn new<D>(id: u32, selector: &mut Selector, stream: TcpStream, death_listener: D) -> io::Result<Rc<RefCell<Self>>>
-            where D: DeathListener<Client> + 'static {
+    pub fn new<C>(id: u32, selector: &mut Selector, stream: TcpStream, close_listener: C) -> io::Result<Rc<RefCell<Self>>>
+            where C: CloseListener<Client> + 'static {
         let rc = Rc::new(RefCell::new(Self {
             id: id,
             stream: stream,
             client_to_network: IPv4PacketBuffer::new(),
             dead: false,
-            death_listener: Box::new(death_listener),
+            close_listener: Box::new(close_listener),
         }));
         let rc_clone = rc.clone();
         let handler = move |selector: &mut Selector, ready| {
