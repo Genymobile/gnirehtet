@@ -6,7 +6,6 @@ use mio::{Event, PollOpt, Ready};
 use mio::tcp::TcpListener;
 
 use super::client::Client;
-use super::close_listener::CloseListener;
 use super::selector::Selector;
 
 const TAG: &'static str = "TunnelServer";
@@ -46,10 +45,10 @@ impl TunnelServer {
         let client_id = self.next_client_id;
         self.next_client_id += 1;
         let weak = Rc::downgrade(self_rc);
-        let on_client_closed = move |target: &Client| {
+        let on_client_closed = move |client: &Client| {
             if let Some(rc) = weak.upgrade() {
-                let tunnel_server = rc.borrow_mut();
-                // TODO remove client from the list
+                let mut tunnel_server = rc.borrow_mut();
+                tunnel_server.remove_client(client);
             }
         };
         let client = Client::new(client_id, selector, stream, on_client_closed)?;
@@ -58,9 +57,24 @@ impl TunnelServer {
         Ok(())
     }
 
+    fn remove_client(&mut self, client: &Client) {
+        info!(target: TAG, "Client #{} disconnected", client.get_id());
+        let index = self.clients.iter().position(|item| {
+            // compare pointers to find the client to remove
+            ptr_eq(client, &*item.borrow())
+        }).expect("Trying to remove an unknown client");
+        self.clients.swap_remove(index);
+    }
+
     fn on_ready(&mut self, self_rc: &Rc<RefCell<Self>>, selector: &mut Selector, _: Event) {
         if let Err(err) = self.accept_client(self_rc, selector) {
             error!(target: TAG, "Cannot accept client: {}", err);
         }
     }
+}
+
+// std::ptr::eq is too recent:
+// <https://doc.rust-lang.org/std/ptr/fn.eq.html>
+fn ptr_eq<T: ?Sized>(lhs: *const T, rhs: *const T) -> bool {
+    lhs == rhs
 }
