@@ -84,7 +84,7 @@ public class Router {
         for (Route route : routes) {
             route.disconnect();
         }
-        // optimization of route.discard() for all routes
+        // optimization of route.close() for all routes
         routes.clear();
     }
 

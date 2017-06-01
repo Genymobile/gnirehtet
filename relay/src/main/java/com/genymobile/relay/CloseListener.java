@@ -16,6 +16,6 @@
 
 package com.genymobile.relay;
 
-public interface RemoveHandler<T> {
-    void remove(T object);
+public interface CloseListener<T> {
+    void onClosed(T object);
 }

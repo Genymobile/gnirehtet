@@ -117,7 +117,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     private void processSend() {
         try {
             if (clientToNetwork.writeTo(channel) == -1) {
-                destroy();
+                close();
             }
         } catch (IOException e) {
             loge(TAG, "Cannot write", e);
@@ -201,7 +201,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
         if (tcpHeader.isRst()) {
             logd(TAG, "Reset requested, closing");
-            destroy();
+            close();
             return;
         }
 
@@ -277,7 +277,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         }
         if (state == State.LAST_ACK) {
             logd(TAG, "LAST_ACK");
-            destroy();
+            close();
             return;
         }
 
@@ -308,7 +308,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     private void processConnect() {
         logd(TAG, "processConnect()");
         if (!finishConnect()) {
-            destroy();
+            close();
             return;
         }
         logd(TAG, "SYN_RECEIVED, acking " + numbers());
@@ -332,7 +332,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         state = null;
         IPv4Packet packet = createEmptyResponsePacket(TCPHeader.FLAG_RST);
         sendToClient(packet);
-        destroy();
+        close();
     }
 
     private IPv4Packet createEmptyResponsePacket(int flags) {

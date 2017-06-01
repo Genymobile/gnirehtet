@@ -101,7 +101,7 @@ public class UDPConnection extends AbstractConnection {
 
     private void processReceive() {
         if (!read()) {
-            destroy();
+            close();
             return;
         }
         pushToClient();
@@ -109,7 +109,7 @@ public class UDPConnection extends AbstractConnection {
 
     private void processSend() {
         if (!write()) {
-            destroy();
+            close();
         }
     }
 

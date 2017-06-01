@@ -25,14 +25,14 @@ public class Route {
     private final Client client;
     private final Key key;
     private final Connection connection;
-    private final RemoveHandler<Route.Key> removeHandler;
+    private final CloseListener<Key> closeListener;
 
     public Route(Client client, Selector selector, Key key, IPv4Header ipv4Header, TransportHeader transportHeader,
-                 RemoveHandler<Route.Key> removeHandler) throws IOException {
+                 CloseListener<Key> closeListener) throws IOException {
         this.client = client;
         this.key = key;
         connection = createConnection(selector, key, ipv4Header, transportHeader);
-        this.removeHandler = removeHandler;
+        this.closeListener = closeListener;
     }
 
     private Connection createConnection(Selector selector, Key key, IPv4Header ipv4Header, TransportHeader transportHeader) throws IOException {
@@ -50,8 +50,8 @@ public class Route {
         return connection.isExpired();
     }
 
-    public void discard() {
-        removeHandler.remove(key);
+    public void close() {
+        closeListener.onClosed(key);
     }
 
     public void disconnect() {

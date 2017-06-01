@@ -31,11 +31,11 @@ public abstract class AbstractConnection implements Connection {
         this.route = route;
     }
 
-    protected void destroy() {
+    protected void close() {
         logi(TAG, "Close");
 
         // remove the route from the router
-        route.discard();
+        route.close();
 
         // close and unregister the channel
         disconnect();

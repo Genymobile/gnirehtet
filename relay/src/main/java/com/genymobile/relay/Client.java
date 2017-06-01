@@ -35,7 +35,7 @@ public class Client {
     private final int id;
     private final SocketChannel clientChannel;
     private final SelectionKey selectionKey;
-    private final RemoveHandler<Client> removeHandler;
+    private final CloseListener<Client> closeListener;
 
     private final IPv4PacketBuffer clientToNetwork = new IPv4PacketBuffer();
     private final StreamBuffer networkToClient = new StreamBuffer(16 * IPv4Packet.MAX_PACKET_LENGTH);
@@ -46,7 +46,7 @@ public class Client {
     // store the remaining bytes of "id" to send to the client before relaying any data
     private ByteBuffer pendingIdBuffer;
 
-    public Client(Selector selector, SocketChannel clientChannel, RemoveHandler<Client> removeHandler) throws ClosedChannelException {
+    public Client(Selector selector, SocketChannel clientChannel, CloseListener<Client> closeListener) throws ClosedChannelException {
         id = nextId++;
         this.clientChannel = clientChannel;
         router = new Router(this, selector);
@@ -66,7 +66,7 @@ public class Client {
         // on start, we are interested only in writing (we must first send the client id)
         selectionKey = clientChannel.register(selector, SelectionKey.OP_WRITE, selectionHandler);
 
-        this.removeHandler = removeHandler;
+        this.closeListener = closeListener;
     }
 
     private static ByteBuffer createIntBuffer(int value) {
@@ -83,7 +83,7 @@ public class Client {
 
     private void processReceive() {
         if (!read()) {
-            destroy();
+            close();
             return;
         }
         pushToNetwork();
@@ -92,12 +92,12 @@ public class Client {
     private void processSend() {
         if (mustSendId()) {
             if (!sendId()) {
-                destroy();
+                close();
             }
             return;
         }
         if (!write()) {
-            destroy();
+            close();
             return;
         }
         processPending();
@@ -152,7 +152,7 @@ public class Client {
         }
     }
 
-    private void destroy() {
+    private void close() {
         selectionKey.cancel();
         try {
             clientChannel.close();
@@ -160,7 +160,7 @@ public class Client {
             Log.e(TAG, "Cannot close client connection", e);
         }
         router.clear();
-        removeHandler.remove(this);
+        closeListener.onClosed(this);
     }
 
     private void updateInterests() {
