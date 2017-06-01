@@ -7,8 +7,10 @@ use mio::net::TcpStream;
 use mio::{Event, PollOpt, Ready};
 
 use super::close_listener::CloseListener;
+use super::ipv4_packet::MAX_PACKET_LENGTH;
 use super::ipv4_packet_buffer::IPv4PacketBuffer;
 use super::selector::Selector;
+use super::stream_buffer::StreamBuffer;
 
 const TAG: &'static str = "Client";
 
@@ -16,6 +18,7 @@ pub struct Client {
     id: u32,
     stream: TcpStream,
     client_to_network: IPv4PacketBuffer,
+    network_to_client: StreamBuffer,
     closed: bool,
     close_listener: Box<CloseListener<Client>>,
     token: Token,
@@ -28,6 +31,7 @@ impl Client {
             id: id,
             stream: stream,
             client_to_network: IPv4PacketBuffer::new(),
+            network_to_client: StreamBuffer::new(16 * MAX_PACKET_LENGTH),
             closed: false,
             close_listener: Box::new(close_listener),
             token: Token(0), // default value, will be set afterwards
@@ -82,8 +86,7 @@ impl Client {
     }
 
     fn write(&mut self) -> io::Result<()> {
-        // TODO
-        Ok(())
+        self.network_to_client.write_to(&mut self.stream)
     }
 
     fn push_to_network(&mut self) {
