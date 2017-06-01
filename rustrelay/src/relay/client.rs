@@ -38,6 +38,10 @@ impl Client {
         Ok(rc)
     }
 
+    pub fn get_id(&self) -> u32 {
+        return self.id;
+    }
+
     fn kill(&mut self) {
         self.dead = true;
         // TODO unregister from Selector
