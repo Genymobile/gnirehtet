@@ -45,15 +45,13 @@ impl TunnelServer {
         let (stream, _) = self.tcp_listener.accept()?;
         let client_id = self.next_client_id;
         self.next_client_id += 1;
-        /*let on_client_death = move |target| {
-            //self_rc.clone();
-        };*/
-        struct L;
-        impl DeathListener<Client> for L {
-            fn on_death(&self, target: &Client) {
+        let weak = Rc::downgrade(self_rc);
+        let on_client_death = move |target: &Client| {
+            if let Some(rc) = weak.upgrade() {
+                let tunnel_server = rc.borrow_mut();
+                // TODO remove client from the list
             }
-        }
-        let on_client_death = L;
+        };
         let client = Client::new(client_id, selector, stream, on_client_death)?;
         self.clients.push(client);
         info!(target: TAG, "Client #{} connected", client_id);
