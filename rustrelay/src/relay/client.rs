@@ -86,7 +86,8 @@ impl Client {
     }
 
     fn write(&mut self) -> io::Result<()> {
-        self.network_to_client.write_to(&mut self.stream)
+        self.network_to_client.write_to(&mut self.stream)?;
+        Ok(())
     }
 
     fn push_to_network(&mut self) {

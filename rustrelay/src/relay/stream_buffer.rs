@@ -16,9 +16,20 @@ impl StreamBuffer {
         }
     }
 
-    pub fn write_to<W: io::Write>(&mut self, destination: &mut W) -> io::Result<()> {
-        // TODO
-        Ok(())
+    pub fn write_to<W: io::Write>(&mut self, destination: &mut W) -> io::Result<usize> {
+        if self.head > self.tail {
+            let source_slice = &self.buf[self.tail..self.head];
+            let w = destination.write(source_slice)?;
+            self.tail += w;
+            Ok(w)
+        } else if self.head < self.tail {
+            let source_slice = &self.buf[self.tail..];
+            let w = destination.write(source_slice)?;
+            self.tail = (self.tail + w) % self.buf.len();
+            Ok(w)
+        } else {
+            Ok(0)
+        }
     }
 
     pub fn read_from(&mut self, source: &[u8]) -> io::Result<()> {
