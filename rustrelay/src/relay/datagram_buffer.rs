@@ -104,11 +104,8 @@ mod tests {
         let datagram = create_datagram(5);
         let mut datagram_buffer = DatagramBuffer::new(9);
 
-        let mut cursor = io::Cursor::new(vec![]);
         datagram_buffer.read_from(&datagram);
-        datagram_buffer.write_to(&mut cursor).unwrap();
-
-        assert_eq!(cursor.get_ref(), &datagram);
+        assert_eq!(read_datagram(&mut datagram_buffer), datagram);
     }
 
     #[test]
@@ -120,26 +117,15 @@ mod tests {
         let datagram3 = create_datagram(3);
         let datagram4 = create_datagram(4);
 
-        datagram_buffer.read_from(&datagram5);
-        datagram_buffer.read_from(&datagram0);
-        datagram_buffer.read_from(&datagram3);
-        datagram_buffer.read_from(&datagram4);
+        datagram_buffer.read_from(&datagram5).unwrap();
+        datagram_buffer.read_from(&datagram0).unwrap();
+        datagram_buffer.read_from(&datagram3).unwrap();
+        datagram_buffer.read_from(&datagram4).unwrap();
 
-        let mut cursor = io::Cursor::new(vec![]);
-        datagram_buffer.write_to(&mut cursor).unwrap();
-        assert_eq!(cursor.get_ref(), &datagram5);
-
-        let mut cursor = io::Cursor::new(vec![]);
-        datagram_buffer.write_to(&mut cursor).unwrap();
-        assert_eq!(cursor.get_ref(), &datagram0);
-
-        let mut cursor = io::Cursor::new(vec![]);
-        datagram_buffer.write_to(&mut cursor).unwrap();
-        assert_eq!(cursor.get_ref(), &datagram3);
-
-        let mut cursor = io::Cursor::new(vec![]);
-        datagram_buffer.write_to(&mut cursor).unwrap();
-        assert_eq!(cursor.get_ref(), &datagram4);
+        assert_eq!(read_datagram(&mut datagram_buffer), datagram5);
+        assert_eq!(read_datagram(&mut datagram_buffer), datagram0);
+        assert_eq!(read_datagram(&mut datagram_buffer), datagram3);
+        assert_eq!(read_datagram(&mut datagram_buffer), datagram4);
     }
 
     #[test]
@@ -161,12 +147,13 @@ mod tests {
         datagram_buffer.read_from(&datagram5).unwrap();
         datagram_buffer.read_from(&datagram3).unwrap();
 
-        let mut cursor = io::Cursor::new(vec![]);
-        datagram_buffer.write_to(&mut cursor).unwrap();
-        assert_eq!(cursor.get_ref(), &datagram5);
+        assert_eq!(read_datagram(&mut datagram_buffer), datagram5);
+        assert_eq!(read_datagram(&mut datagram_buffer), datagram3);
+    }
 
+    fn read_datagram(datagram_buffer: &mut DatagramBuffer) -> Vec<u8> {
         let mut cursor = io::Cursor::new(vec![]);
         datagram_buffer.write_to(&mut cursor).unwrap();
-        assert_eq!(cursor.get_ref(), &datagram3);
+        cursor.into_inner()
     }
 }
