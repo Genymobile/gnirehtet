@@ -16,6 +16,10 @@ impl StreamBuffer {
         }
     }
 
+    pub fn is_empty(&self) -> bool{
+        self.head == self.tail
+    }
+
     pub fn size(&self) -> usize {
         if self.head < self.tail {
             self.head + self.buf.len() - self.tail
@@ -29,19 +33,22 @@ impl StreamBuffer {
     }
 
     pub fn write_to<W: io::Write>(&mut self, destination: &mut W) -> io::Result<usize> {
-        if self.head > self.tail {
-            let source_slice = &self.buf[self.tail..self.head];
-            let w = destination.write(source_slice)?;
-            self.tail += w;
-            Ok(w)
-        } else if self.head < self.tail {
-            let source_slice = &self.buf[self.tail..];
-            let w = destination.write(source_slice)?;
-            self.tail = (self.tail + w) % self.buf.len();
-            Ok(w)
-        } else {
-            // else head == tail, which means empty buffer, nothing to do
+        if self.head == self.tail {
+            // buffer is empty, nothing to do
             Ok(0)
+        } else {
+            let w;
+            if self.head > self.tail {
+                let source_slice = &self.buf[self.tail..self.head];
+                w = destination.write(source_slice)?;
+                self.tail += w;
+            } else { // self.head < self.tail
+                let source_slice = &self.buf[self.tail..];
+                w = destination.write(source_slice)?;
+                self.tail = (self.tail + w) % self.buf.len();
+            }
+            self.optimize();
+            Ok(w)
         }
     }
 
@@ -65,5 +72,20 @@ impl StreamBuffer {
             target_slice.copy_from_slice(source_slice);
         }
         self.head = (self.head + source_len) % buf_len;
+    }
+
+    /// To avoid unnecessary copies, StreamBuffer writes at most until the "end" of the circular
+    /// buffer, which is suboptimal (it could have written more data if they have been contiguous).
+    ///
+    /// In order to minimize the occurrence of this event, reset the head and tail to 0 when the
+    /// buffer is empty (no copy is involved).
+    ///
+    /// This is especially useful when the StreamBuffer is used to read/write one packet at a time,
+    /// so the "end" of the buffer is guaranteed to never be reached.
+    fn optimize(&mut self) {
+        if self.is_empty() {
+            self.head = 0;
+            self.tail = 0;
+        }
     }
 }
