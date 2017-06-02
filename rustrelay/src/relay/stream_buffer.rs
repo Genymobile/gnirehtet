@@ -65,12 +65,12 @@ impl StreamBuffer {
             {
                 // fill until the right-end of the buffer
                 let target_slice = &mut self.buf[self.head..];
-                let source_slice = &source[..source_len - self.head];
+                let source_slice = &source[..buf_len - self.head];
                 target_slice.copy_from_slice(source_slice);
             }
             // fill the remaining from the left-end of the buffer
             let target_slice = &mut self.buf[..self.head + source_len - buf_len];
-            let source_slice = &source[source_len - self.head..];
+            let source_slice = &source[buf_len - self.head..];
             target_slice.copy_from_slice(source_slice);
         }
         self.head = (self.head + source_len) % buf_len;
@@ -90,5 +90,68 @@ impl StreamBuffer {
             self.head = 0;
             self.tail = 0;
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_data() -> Vec<u8> {
+        (0..6).collect()
+    }
+
+    #[test]
+    fn bufferize_data() {
+        let data = create_data();
+        let mut stream_buffer = StreamBuffer::new(9);
+
+        let mut cursor = io::Cursor::new(vec![]);
+        stream_buffer.read_from(&data).unwrap();
+        stream_buffer.write_to(&mut cursor).unwrap();
+
+        assert_eq!(cursor.get_ref(), &data);
+    }
+
+    #[test]
+    fn circular() {
+        let data = create_data();
+        let mut stream_buffer = StreamBuffer::new(9);
+
+        // put 6 bytes
+        stream_buffer.read_from(&data).unwrap();
+        // consume 3 bytes
+        read_some(&mut stream_buffer, 3);
+
+        // put test data
+        stream_buffer.read_from(&data).unwrap();
+        // consume 3 bytes (so that the first 6 bytes are totally consumed, and the "tail" position is 6)
+        read_some(&mut stream_buffer, 3);
+
+        // consume test data
+        let result = read(&mut stream_buffer);
+
+        // StreamBuffer is expected to break writes at circular buffer boundaries (capacity + 1)
+        // This is not a requirement, but this verifies that the implementation works as expected
+        assert_eq!([0u8, 1, 2, 3], &result[..]);
+
+        // consume the remaining
+        let result = read(&mut stream_buffer);
+        assert_eq!([4u8, 5], &result[..]);
+    }
+
+    fn read_some(stream_buffer: &mut StreamBuffer, bytes: usize) -> Vec<u8> {
+        let mut vec = vec![0u8; bytes];
+        {
+            let mut cursor = io::Cursor::new(&mut vec[..bytes]);
+            stream_buffer.write_to(&mut cursor).unwrap();
+        }
+        vec
+    }
+
+    fn read(stream_buffer: &mut StreamBuffer) -> Vec<u8> {
+        let mut cursor = io::Cursor::new(vec![]);
+        stream_buffer.write_to(&mut cursor).unwrap();
+        cursor.into_inner()
     }
 }
