@@ -92,7 +92,7 @@ public class StreamBuffer {
 
     /**
      * To avoid unnecessary copies, StreamBuffer writes at most until the "end" of the circular
-     * buffer, which is subobtimal (it could have written more data if they have been contiguous).
+     * buffer, which is suboptimal (it could have written more data if they have been contiguous).
      * <p>
      * In order to minimize the occurrence of this event, reset the head and tail to 0 when the
      * buffer is empty (no copy is involved).
