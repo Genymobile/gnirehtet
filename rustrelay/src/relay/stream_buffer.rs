@@ -28,8 +28,12 @@ impl StreamBuffer {
         }
     }
 
+    pub fn capacity(&self) -> usize {
+        self.buf.len() - 1
+    }
+
     pub fn remaining(&self) -> usize {
-        self.buf.len() - self.size()
+        self.capacity() - self.size()
     }
 
     pub fn write_to<W: io::Write>(&mut self, destination: &mut W) -> io::Result<usize> {
@@ -138,6 +142,22 @@ mod tests {
         // consume the remaining
         let result = read(&mut stream_buffer);
         assert_eq!([4u8, 5], &result[..]);
+    }
+
+    #[test]
+    fn not_enough_space() {
+        let data = create_data();
+        let mut stream_buffer = StreamBuffer::new(9);
+
+        // fill the buffer twice
+        stream_buffer.read_from(&data).unwrap();
+        assert_eq!(3, stream_buffer.remaining());
+
+        // not enough space for another packet of 6 bytes
+        assert!(stream_buffer.read_from(&data).is_err());
+
+        // but enough space for a smaller one
+        stream_buffer.read_from(&[0, 1, 2]).unwrap();
     }
 
     fn read_some(stream_buffer: &mut StreamBuffer, bytes: usize) -> Vec<u8> {
