@@ -1,5 +1,6 @@
 pub use self::relay::*;
 
+mod binary;
 mod client;
 mod close_listener;
 mod datagram_buffer;

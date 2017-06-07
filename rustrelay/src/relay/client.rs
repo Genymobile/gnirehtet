@@ -2,11 +2,11 @@ use std::cell::RefCell;
 use std::io::{self, Write};
 use std::net::Shutdown;
 use std::rc::Rc;
-use byteorder::{BigEndian, ByteOrder};
 use mio::Token;
 use mio::net::TcpStream;
 use mio::{Event, PollOpt, Ready};
 
+use super::binary;
 use super::close_listener::CloseListener;
 use super::ipv4_packet::MAX_PACKET_LENGTH;
 use super::ipv4_packet_buffer::IPv4PacketBuffer;
@@ -103,7 +103,7 @@ impl Client {
 
     fn send_id(&mut self) -> io::Result<()> {
         assert!(self.must_send_id());
-        let raw_id = Client::to_byte_array(self.id);
+        let raw_id = binary::to_byte_array(self.id);
         let w = self.stream.write(&raw_id[4 - self.pending_id_bytes..])?;
         self.pending_id_bytes -= w;
         Ok(())
@@ -167,11 +167,5 @@ impl Client {
 
     fn must_send_id(&self) -> bool{
         self.pending_id_bytes > 0
-    }
-
-    fn to_byte_array(value: u32) -> [u8; 4] {
-        let mut raw = [0u8; 4];
-        BigEndian::write_u32(&mut raw, value);
-        raw
     }
 }
