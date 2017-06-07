@@ -10,7 +10,7 @@ pub struct IPv4Header {
     pub destination: u32,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum Protocol {
     TCP,
     UDP,
