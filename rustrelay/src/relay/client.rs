@@ -1,7 +1,8 @@
 use std::cell::RefCell;
-use std::io;
+use std::io::{self, Write};
 use std::net::Shutdown;
 use std::rc::Rc;
+use byteorder::{BigEndian, ByteOrder};
 use mio::Token;
 use mio::net::TcpStream;
 use mio::{Event, PollOpt, Ready};
@@ -22,6 +23,8 @@ pub struct Client {
     closed: bool,
     close_listener: Box<CloseListener<Client>>,
     token: Token,
+    // number of remaining bytes of "id" to send to the client before relaying any data
+    pending_id_bytes: usize,
 }
 
 impl Client {
@@ -35,6 +38,7 @@ impl Client {
             closed: false,
             close_listener: Box::new(close_listener),
             token: Token(0), // default value, will be set afterwards
+            pending_id_bytes: 4,
         }));
         let rc_clone = rc.clone();
         let handler = move |selector: &mut Selector, ready| {
@@ -64,7 +68,27 @@ impl Client {
     }
 
     fn process_send(&mut self, selector: &mut Selector) {
-        
+        if self.must_send_id() {
+            match self.send_id() {
+                Ok(_) => {
+                    if self.pending_id_bytes == 0 {
+                        debug!("Client id #{} sent to client", self.id);
+                    }
+                }
+                Err(_) => {
+                    error!(target: TAG, "Cannot write client id #{}", self.id);
+                    self.close(selector);
+                }
+            }
+        } else {
+            match self.write() {
+                Ok(_) => self.process_pending(),
+                Err(_) => {
+                    error!(target: TAG, "Cannot write");
+                    self.close(selector);
+                }
+            }
+        }
     }
 
     fn process_receive(&mut self, selector: &mut Selector) {
@@ -77,8 +101,21 @@ impl Client {
         }
     }
 
-    fn update_interests(&mut self, selector: &mut Selector) {
+    fn send_id(&mut self) -> io::Result<()> {
+        assert!(self.must_send_id());
+        let raw_id = Client::to_byte_array(self.id);
+        let w = self.stream.write(&raw_id[4 - self.pending_id_bytes..])?;
+        self.pending_id_bytes -= w;
+        Ok(())
+    }
 
+    fn update_interests(&mut self, selector: &mut Selector) -> io::Result<()> {
+        let ready = if self.network_to_client.is_empty() {
+            Ready::readable()
+        } else {
+            Ready::readable() | Ready::writable()
+        };
+        selector.reregister(&self.stream, self.token, ready, PollOpt::level())
     }
 
     fn read(&mut self) -> io::Result<()> {
@@ -118,5 +155,23 @@ impl Client {
         if !self.closed {
             self.update_interests(selector);
         }
+    }
+
+    fn process_pending(&mut self) {
+        // TODO
+    }
+
+    fn clean_expired_connections() {
+        // TODO
+    }
+
+    fn must_send_id(&self) -> bool{
+        self.pending_id_bytes > 0
+    }
+
+    fn to_byte_array(value: u32) -> [u8; 4] {
+        let mut raw = [0u8; 4];
+        BigEndian::write_u32(&mut raw, value);
+        raw
     }
 }
