@@ -10,6 +10,7 @@ mod ipv4_packet_buffer;
 mod net;
 mod relay;
 mod route;
+mod router;
 mod selector;
 mod source_destination;
 mod stream_buffer;
