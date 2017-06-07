@@ -93,7 +93,7 @@ impl Client {
 
     fn process_receive(&mut self, selector: &mut Selector) {
         match self.read() {
-            Ok(_) => self.push_to_network(),
+            Ok(_) => self.push_to_network(selector),
             Err(_) => {
                 error!(target: TAG, "Cannot read");
                 self.close(selector);
@@ -127,13 +127,13 @@ impl Client {
         Ok(())
     }
 
-    fn push_to_network(&mut self) {
-        while self.push_one_packet_to_network() {
+    fn push_to_network(&mut self, selector: &mut Selector) {
+        while self.push_one_packet_to_network(selector) {
             self.client_to_network.next();
         }
     }
 
-    fn push_one_packet_to_network(&mut self) -> bool {
+    fn push_one_packet_to_network(&mut self, selector: &mut Selector) -> bool {
         match self.client_to_network.as_ipv4_packet() {
             Some(ref packet) => {
                 // router.send_to_network(packet);

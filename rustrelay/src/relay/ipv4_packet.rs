@@ -6,7 +6,7 @@ use super::udp_header::UDPHeader;
 pub const MAX_PACKET_LENGTH: usize = 1 << 16;
 
 pub struct IPv4Packet<'a> {
-    raw: &'a mut [u8],
+    pub raw: &'a mut [u8],
     pub ipv4_header: IPv4Header,
     pub transport_header: Option<TransportHeader>,
 }

@@ -1,8 +1,29 @@
+use std::cell::RefCell;
 use std::fmt;
 use std::net::SocketAddrV4;
+use std::rc::Rc;
 
-use super::ipv4_header::Protocol;
+use super::client::Client;
+use super::ipv4_header::{IPv4Header, Protocol};
+use super::ipv4_packet::IPv4Packet;
+use super::source_destination::SourceDestination;
+use super::transport_header::TransportHeader;
 use super::net;
+
+pub struct Route {
+    client: Rc<RefCell<Client>>,
+    key: RouteKey,
+}
+
+impl Route {
+    pub fn new(client: &Rc<RefCell<Client>>, route_key: RouteKey, ipv4_packet: &IPv4Packet) -> Self {
+        Self {
+            client: client.clone(),
+            key: route_key,
+            // TODO
+        }
+    }
+}
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct RouteKey {
@@ -24,6 +45,19 @@ impl RouteKey {
         }
     }
 
+    fn from_packet(ipv4_packet: &IPv4Packet) -> Self {
+        let raw = &ipv4_packet.raw;
+        let ipv4_header = &ipv4_packet.ipv4_header;
+        let transport_header = ipv4_packet.transport_header.as_ref().expect("Packet without transport header");
+        Self {
+            protocol: ipv4_header.protocol,
+            source_ip: ipv4_header.source,
+            source_port: transport_header.get_source(raw),
+            destination_ip: ipv4_header.destination,
+            destination_port: transport_header.get_destination(raw),
+        }
+    }
+
     pub fn get_source(&self) -> SocketAddrV4 {
         net::to_socket_addr(self.source_ip, self.source_port)
     }
@@ -37,8 +71,4 @@ impl fmt::Display for RouteKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} -> {}", self.get_source(), self.get_destination())
     }
-}
-
-pub struct Route {
-    key: RouteKey,
 }
