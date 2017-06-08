@@ -33,12 +33,12 @@ impl Router {
                 // TODO log binary
             }
         } else {
-            let route = self.get_route(ipv4_packet);
-            // route.send_to_network(ipv4_packet);
+            let mut route = self.get_route(ipv4_packet);
+            route.send_to_network(ipv4_packet);
         }
     }
 
-    fn get_route(&mut self, ipv4_packet: &IPv4Packet) -> &Route {
+    fn get_route(&mut self, ipv4_packet: &IPv4Packet) -> &mut Route {
         let key = RouteKey::from_packet(ipv4_packet);
         let index = match self.find_route_index(&key) {
             Some(index) => index,
@@ -49,7 +49,7 @@ impl Router {
                 index
             }
         };
-        self.routes.get(index).unwrap()
+        self.routes.get_mut(index).unwrap()
     }
 
     fn find_route_index(&self, key: &RouteKey) -> Option<usize> {
