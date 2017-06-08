@@ -28,6 +28,10 @@ impl Route {
         &self.key
     }
 
+    pub fn send_to_network(&mut self, ipv4_packet: &IPv4Packet) {
+        // TODO
+    }
+
     pub fn disconnect(&mut self) {
         // TODO
     }
