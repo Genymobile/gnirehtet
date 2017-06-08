@@ -10,6 +10,7 @@ use super::binary;
 use super::close_listener::CloseListener;
 use super::ipv4_packet::MAX_PACKET_LENGTH;
 use super::ipv4_packet_buffer::IPv4PacketBuffer;
+use super::router::Router;
 use super::selector::Selector;
 use super::stream_buffer::StreamBuffer;
 
@@ -20,6 +21,7 @@ pub struct Client {
     stream: TcpStream,
     client_to_network: IPv4PacketBuffer,
     network_to_client: StreamBuffer,
+    router: Router,
     closed: bool,
     close_listener: Box<CloseListener<Client>>,
     token: Token,
@@ -35,11 +37,15 @@ impl Client {
             stream: stream,
             client_to_network: IPv4PacketBuffer::new(),
             network_to_client: StreamBuffer::new(16 * MAX_PACKET_LENGTH),
+            router: Router::new(),
             closed: false,
             close_listener: Box::new(close_listener),
             token: Token(0), // default value, will be set afterwards
             pending_id_bytes: 4,
         }));
+        // set client as router owner
+        rc.borrow_mut().router.set_client(Rc::downgrade(&rc));
+
         let rc_clone = rc.clone();
         let handler = move |selector: &mut Selector, ready| {
             let mut self_ref = rc_clone.borrow_mut();
