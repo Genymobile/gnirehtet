@@ -41,6 +41,6 @@ impl Router {
     }
 
     fn find_route_index(&self, key: &RouteKey) -> Option<usize> {
-        None
+        self.routes.iter().position(|route| route.get_key() == key)
     }
 }
