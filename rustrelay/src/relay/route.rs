@@ -27,6 +27,10 @@ impl Route {
     pub fn get_key(&self) -> &RouteKey {
         &self.key
     }
+
+    pub fn disconnect(&mut self) {
+        // TODO
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
