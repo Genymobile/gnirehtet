@@ -23,6 +23,10 @@ impl Route {
             // TODO
         }
     }
+
+    pub fn get_key(&self) -> &RouteKey {
+        &self.key
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
