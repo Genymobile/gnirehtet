@@ -45,12 +45,12 @@ impl TunnelServer {
         let client_id = self.next_client_id;
         self.next_client_id += 1;
         let weak = Rc::downgrade(self_rc);
-        let on_client_closed = move |client: &Client| {
+        let on_client_closed = Box::new(move |client: &Client| {
             if let Some(rc) = weak.upgrade() {
                 let mut tunnel_server = rc.borrow_mut();
                 tunnel_server.remove_client(client);
             }
-        };
+        });
         let client = Client::new(client_id, selector, stream, on_client_closed)?;
         self.clients.push(client);
         info!(target: TAG, "Client #{} connected", client_id);

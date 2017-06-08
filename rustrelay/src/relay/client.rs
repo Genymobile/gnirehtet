@@ -30,8 +30,7 @@ pub struct Client {
 }
 
 impl Client {
-    pub fn new<C>(id: u32, selector: &mut Selector, stream: TcpStream, close_listener: C) -> io::Result<Rc<RefCell<Self>>>
-            where C: CloseListener<Client> + 'static {
+    pub fn new(id: u32, selector: &mut Selector, stream: TcpStream, close_listener: Box<CloseListener<Client>>) -> io::Result<Rc<RefCell<Self>>> {
         let rc = Rc::new(RefCell::new(Self {
             id: id,
             stream: stream,
@@ -39,7 +38,7 @@ impl Client {
             network_to_client: StreamBuffer::new(16 * MAX_PACKET_LENGTH),
             router: Router::new(),
             closed: false,
-            close_listener: Box::new(close_listener),
+            close_listener: close_listener,
             token: Token(0), // default value, will be set afterwards
             pending_id_bytes: 4,
         }));
