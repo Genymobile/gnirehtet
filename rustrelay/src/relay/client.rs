@@ -138,7 +138,7 @@ impl Client {
             Some(ref packet) => {
                 // router.send_to_network(packet);
                 true
-            },
+            }
             None => false
         }
     }
