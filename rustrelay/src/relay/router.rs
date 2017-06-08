@@ -16,11 +16,12 @@ pub struct Router {
 impl Router {
     pub fn new() -> Self {
         Self {
-            client: Weak::new(), // initialized by set_client() to break cyclic initialization dependencies
+            client: Weak::new(),
             routes: Vec::new(),
         }
     }
 
+    // expose client initialization after construction to break cyclic initialization dependencies
     pub fn set_client(&mut self, client: Weak<RefCell<Client>>) {
         self.client = client;
     }
