@@ -54,4 +54,12 @@ impl Router {
     fn find_route_index(&self, key: &RouteKey) -> Option<usize> {
         self.routes.iter().position(|route| route.get_key() == key)
     }
+
+    pub fn clear(&mut self) {
+        for route in &mut self.routes {
+            route.disconnect();
+        }
+        // optimization of route.close() for all routes
+        self.routes.clear();
+    }
 }
