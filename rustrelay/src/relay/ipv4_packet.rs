@@ -29,6 +29,10 @@ impl<'a> IPv4Packet<'a> {
         }
     }
 
+    pub fn is_valid(&self) -> bool {
+        self.transport_header.is_some()
+    }
+
     fn compute_checksum(&mut self) {
         if let Some(TransportHeader::TCP(ref tcp_header)) = self.transport_header {
             tcp_header.compute_checksum(self.raw, &self.ipv4_header);

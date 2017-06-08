@@ -35,7 +35,7 @@ pub struct RouteKey {
 }
 
 impl RouteKey {
-    fn new(protocol: Protocol, source_ip: u32, source_port: u16, destination_ip: u32, destination_port: u16) -> Self {
+    pub fn new(protocol: Protocol, source_ip: u32, source_port: u16, destination_ip: u32, destination_port: u16) -> Self {
         Self {
             protocol: protocol,
             source_ip: source_ip,
@@ -45,7 +45,7 @@ impl RouteKey {
         }
     }
 
-    fn from_packet(ipv4_packet: &IPv4Packet) -> Self {
+    pub fn from_packet(ipv4_packet: &IPv4Packet) -> Self {
         let raw = &ipv4_packet.raw;
         let ipv4_header = &ipv4_packet.ipv4_header;
         let transport_header = ipv4_packet.transport_header.as_ref().expect("Packet without transport header");
