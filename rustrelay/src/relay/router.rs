@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use log::LogLevel;
 
 use super::client::Client;
@@ -9,11 +9,22 @@ use super::route::{Route, RouteKey};
 const TAG: &'static str = "Router";
 
 pub struct Router {
-    client: Rc<RefCell<Client>>,
+    client: Weak<RefCell<Client>>,
     routes: Vec<Route>,
 }
 
 impl Router {
+    pub fn new() -> Self {
+        Self {
+            client: Weak::new(), // initialized by set_client() to break cyclic initialization dependencies
+            routes: Vec::new(),
+        }
+    }
+
+    pub fn set_client(&mut self, client: Weak<RefCell<Client>>) {
+        self.client = client;
+    }
+
     pub fn send_to_network(&mut self, ipv4_packet: &IPv4Packet) {
         if !ipv4_packet.is_valid() {
             warn!(target: TAG, "Dropping invalid packet");
@@ -31,7 +42,7 @@ impl Router {
         let index = match self.find_route_index(&key) {
             Some(index) => index,
             None => {
-                let route = Route::new(&self.client, key, ipv4_packet);
+                let route = Route::new(self.client.clone(), key, ipv4_packet);
                 let index = self.routes.len();
                 self.routes.push(route);
                 index

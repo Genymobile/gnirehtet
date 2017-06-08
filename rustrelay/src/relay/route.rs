@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::fmt;
 use std::net::SocketAddrV4;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 
 use super::client::Client;
 use super::ipv4_header::{IPv4Header, Protocol};
@@ -11,14 +11,14 @@ use super::transport_header::TransportHeader;
 use super::net;
 
 pub struct Route {
-    client: Rc<RefCell<Client>>,
+    client: Weak<RefCell<Client>>,
     key: RouteKey,
 }
 
 impl Route {
-    pub fn new(client: &Rc<RefCell<Client>>, route_key: RouteKey, ipv4_packet: &IPv4Packet) -> Self {
+    pub fn new(client: Weak<RefCell<Client>>, route_key: RouteKey, ipv4_packet: &IPv4Packet) -> Self {
         Self {
-            client: client.clone(),
+            client: client,
             key: route_key,
             // TODO
         }
