@@ -70,7 +70,7 @@ public class PacketizerTest {
     }
 
     @Test
-    public void testPacketizeChunksFromChannel() throws IOException {
+    public void testPacketizeChunks() throws IOException {
         IPv4Packet originalPacket = new IPv4Packet(createMockPacket());
         IPv4Header ipv4Header = originalPacket.getIpv4Header();
         TransportHeader transportHeader = originalPacket.getTransportHeader();
