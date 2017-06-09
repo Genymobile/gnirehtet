@@ -26,6 +26,10 @@ impl TCPHeader {
         }
     }
 
+    pub fn get_header_length(&self) -> u8 {
+        self.header_length
+    }
+
     pub fn set_source_port(&mut self, raw: &mut [u8], source_port: u16) {
         self.source_port = source_port;
         BigEndian::write_u16(&mut raw[0..2], source_port);
