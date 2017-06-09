@@ -18,6 +18,13 @@ impl TransportHeader {
         }
     }
 
+    pub fn set_payload_length(&mut self, raw: &mut [u8], payload_length: u16) {
+        match *self {
+            TransportHeader::UDP(ref mut udp_header) => udp_header.set_payload_length(raw, payload_length),
+            _ => (), // TCP does not store its payload length
+        }
+    }
+
     pub fn get_header_length(&self) -> u8 {
         match *self {
             TransportHeader::TCP(ref tcp_header) => tcp_header.get_header_length(),
