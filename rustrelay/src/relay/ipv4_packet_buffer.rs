@@ -38,7 +38,7 @@ impl IPv4PacketBuffer {
     pub fn as_ipv4_packet<'a>(&'a mut self) -> Option<IPv4Packet<'a>> {
         let length = self.get_available_packet_length();
         if let Some(len) = length {
-            Some(IPv4Packet::new(&mut self.buf[..len as usize]))
+            Some(IPv4Packet::parse(&mut self.buf[..len as usize]))
         } else {
             None
         }
