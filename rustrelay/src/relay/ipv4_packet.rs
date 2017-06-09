@@ -13,7 +13,7 @@ pub struct IPv4Packet<'a> {
 }
 
 impl<'a> IPv4Packet<'a> {
-    pub fn new(raw: &'a mut [u8]) -> Self {
+    pub fn parse(raw: &'a mut [u8]) -> Self {
         let ipv4_header = IPv4Header::parse(raw);
         let transport_header = {
             let payload = &raw[ipv4_header.header_length as usize..];
