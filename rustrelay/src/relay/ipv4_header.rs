@@ -195,7 +195,7 @@ mod tests {
 
     #[test]
     fn read_ip_version_unavailable() {
-        let empty_slice = &[][0..0];
+        let empty_slice = &[][..0];
         let version = IPv4Header::read_version(empty_slice);
         assert!(version.is_none());
     }
@@ -210,7 +210,7 @@ mod tests {
 
     #[test]
     fn read_ip_length_unavailable() {
-        let empty_slice = &[][0..0];
+        let empty_slice = &[][..0];
         let length = IPv4Header::read_length(empty_slice);
         assert!(length.is_none());
     }

@@ -20,7 +20,7 @@ impl Packetizer {
 
         let headers_length = ipv4_header.header_length as usize +
                              transport_header.get_header_length() as usize;
-        &mut buffer[0..headers_length].copy_from_slice(&raw[0..headers_length]);
+        &mut buffer[..headers_length].copy_from_slice(&raw[..headers_length]);
 
         ipv4_header.switch_source_and_destination(&mut buffer[..]);
         {
