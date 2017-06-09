@@ -115,9 +115,8 @@ public class IPv4Packet {
         return raw.limit() - ipv4Header.getHeaderLength() - transportHeader.getHeaderLength();
     }
 
-    public void recompute() {
+    public void computeChecksums() {
         ipv4Header.computeChecksum();
-        transportHeader.setPayloadLength(getPayloadLength());
         transportHeader.computeChecksum(ipv4Header, getPayload());
     }
 }

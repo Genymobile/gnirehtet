@@ -389,7 +389,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     private void updateAcknowledgementNumber(IPv4Packet packet) {
         TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
         tcpHeader.setAcknowledgementNumber(acknowledgementNumber);
-        packet.recompute();
+        packet.computeChecksums();
     }
 
     @Override

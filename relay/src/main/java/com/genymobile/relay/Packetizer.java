@@ -78,7 +78,7 @@ public class Packetizer {
         // In order to avoid copies, buffer is shared with this IPv4Packet instance that is returned.
         // Don't use it after another call to createPacket()!
         IPv4Packet packet = new IPv4Packet(buffer);
-        packet.recompute();
+        packet.computeChecksums();
         return packet;
     }
 }
