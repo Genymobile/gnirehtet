@@ -64,3 +64,79 @@ impl Packetizer {
         ipv4_packet
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io;
+    use byteorder::{BigEndian, WriteBytesExt};
+
+    fn create_packet() -> Vec<u8> {
+        let mut raw = Vec::new();
+        raw.write_u8(4u8 << 4 | 5).unwrap();
+        raw.write_u8(0).unwrap(); // ToS
+        raw.write_u16::<BigEndian>(32).unwrap(); // total length 20 + 8 + 4
+        raw.write_u32::<BigEndian>(0).unwrap(); // id_flags_fragment_offset
+        raw.write_u8(0).unwrap(); // TTL
+        raw.write_u8(17).unwrap(); // protocol (UDP)
+        raw.write_u16::<BigEndian>(0).unwrap(); // checksum
+        raw.write_u32::<BigEndian>(0x12345678).unwrap(); // source address
+        raw.write_u32::<BigEndian>(0x42424242).unwrap(); // destination address
+
+        raw.write_u16::<BigEndian>(1234).unwrap(); // source port
+        raw.write_u16::<BigEndian>(5678).unwrap(); // destination port
+        raw.write_u16::<BigEndian>(12).unwrap(); // length
+        raw.write_u16::<BigEndian>(0).unwrap(); // checksum
+
+        raw.write_u32::<BigEndian>(0x11223344).unwrap(); // payload
+        raw
+    }
+
+    #[test]
+    fn merge_headers_and_payload() {
+        let mut raw = &mut create_packet()[..];
+        let reference_packet = IPv4Packet::parse(raw);
+
+        let data = [ 0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 ];
+        let mut cursor = io::Cursor::new(&data);
+
+        let transport_header = reference_packet.transport_header.unwrap();
+        let mut packetizer = Packetizer::new(reference_packet.raw, reference_packet.ipv4_header, transport_header);
+
+        let packet = packetizer.packetize(&mut cursor).unwrap();
+        assert_eq!(36, packet.ipv4_header.total_length);
+    }
+
+    #[test]
+    fn packetize_chunks() {
+        let mut raw = &mut create_packet()[..];
+        let reference_packet = IPv4Packet::parse(raw);
+
+        let data = [ 0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 ];
+        let mut cursor = io::Cursor::new(&data);
+
+        let transport_header = reference_packet.transport_header.unwrap();
+        let mut packetizer = Packetizer::new(reference_packet.raw, reference_packet.ipv4_header, transport_header);
+
+        {
+            let packet = packetizer.packetize_chunk(&mut cursor, 2).unwrap();
+            assert_eq!(30, packet.ipv4_header.total_length);
+            assert_eq!(2, packet.get_payload_length().unwrap());
+            assert_eq!([0x11, 0x22], packet.raw[packet.get_payload_index().unwrap() as usize..]);
+        }
+
+        {
+            let packet = packetizer.packetize_chunk(&mut cursor, 3).unwrap();
+            assert_eq!(31, packet.ipv4_header.total_length);
+            assert_eq!(3, packet.get_payload_length().unwrap());
+            assert_eq!([0x33, 0x44, 0x55], packet.raw[packet.get_payload_index().unwrap() as usize..]);
+        }
+
+        {
+            let packet = packetizer.packetize_chunk(&mut cursor, 1024).unwrap();
+            assert_eq!(31, packet.ipv4_header.total_length);
+            assert_eq!(3, packet.get_payload_length().unwrap());
+            assert_eq!([0x66, 0x77, 0x88], packet.raw[packet.get_payload_index().unwrap() as usize..]);
+        }
+    }
+}
