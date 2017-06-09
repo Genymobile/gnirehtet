@@ -1,3 +1,4 @@
+use super::ipv4_header::Protocol;
 use super::source_destination::SourceDestination;
 use super::tcp_header::TCPHeader;
 use super::udp_header::{UDPHeader, UDP_HEADER_LENGTH};
@@ -8,6 +9,14 @@ pub enum TransportHeader {
 }
 
 impl TransportHeader {
+    pub fn parse(protocol: Protocol, raw: &[u8]) -> Option<Self> {
+        match protocol {
+            Protocol::UDP => Some(UDPHeader::parse(raw).into()),
+            Protocol::TCP => Some(TCPHeader::parse(raw).into()),
+            _ => None
+        }
+    }
+
     fn get_header_length(&self) -> u8 {
         match *self {
             TransportHeader::TCP(ref tcp_header) => tcp_header.get_header_length(),
