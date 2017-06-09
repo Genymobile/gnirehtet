@@ -70,7 +70,7 @@ mod tests {
     use ::relay::transport_header::TransportHeader;
 
     fn create_packet() -> Vec<u8> {
-        let mut raw: Vec<u8> = vec![];
+        let mut raw = Vec::new();
         write_packet_to(&mut raw);
         raw
     }
@@ -140,7 +140,7 @@ mod tests {
     }
 
     fn create_multi_packets() -> Vec<u8> {
-        let mut raw: Vec<u8> = vec![];
+        let mut raw = Vec::new();
         for _ in 0..3 {
             write_packet_to(&mut raw);
         }

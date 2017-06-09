@@ -62,7 +62,7 @@ mod tests {
     use byteorder::{BigEndian, WriteBytesExt};
 
     fn create_header() -> Vec<u8> {
-        let mut raw: Vec<u8> = vec![];
+        let mut raw = Vec::new();
         raw.reserve(8);
         raw.write_u16::<BigEndian>(1234).unwrap(); // source port
         raw.write_u16::<BigEndian>(5678).unwrap(); // destination port

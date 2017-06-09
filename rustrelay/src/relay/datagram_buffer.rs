@@ -139,7 +139,7 @@ mod tests {
         datagram_buffer.read_from(&create_datagram(10));
         {
             // write and forget
-            let mut cursor = io::Cursor::new(vec![]);
+            let mut cursor = io::Cursor::new(Vec::new());
             datagram_buffer.write_to(&mut cursor);
         }
 
@@ -152,7 +152,7 @@ mod tests {
     }
 
     fn read_datagram(datagram_buffer: &mut DatagramBuffer) -> Vec<u8> {
-        let mut cursor = io::Cursor::new(vec![]);
+        let mut cursor = io::Cursor::new(Vec::new());
         datagram_buffer.write_to(&mut cursor).unwrap();
         cursor.into_inner()
     }
