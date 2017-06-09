@@ -117,7 +117,7 @@ mod tests {
     use byteorder::{BigEndian, WriteBytesExt};
 
     fn create_header() -> Vec<u8> {
-        let mut raw: Vec<u8> = vec![];
+        let mut raw: Vec<u8> = Vec::new();
         raw.reserve(20);
         raw.write_u8(4u8 << 4 | 5).unwrap(); // version_and_ihl
         raw.write_u8(0).unwrap(); //ToS

@@ -110,7 +110,7 @@ mod tests {
         let data = create_data();
         let mut stream_buffer = StreamBuffer::new(9);
 
-        let mut cursor = io::Cursor::new(vec![]);
+        let mut cursor = io::Cursor::new(Vec::new());
         stream_buffer.read_from(&data).unwrap();
         stream_buffer.write_to(&mut cursor).unwrap();
 
@@ -170,7 +170,7 @@ mod tests {
     }
 
     fn read(stream_buffer: &mut StreamBuffer) -> Vec<u8> {
-        let mut cursor = io::Cursor::new(vec![]);
+        let mut cursor = io::Cursor::new(Vec::new());
         stream_buffer.write_to(&mut cursor).unwrap();
         cursor.into_inner()
     }
