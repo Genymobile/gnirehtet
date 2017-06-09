@@ -1,3 +1,4 @@
+use std::io;
 use super::ipv4_header::IPv4Header;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
 use super::source_destination::SourceDestination;
@@ -37,6 +38,19 @@ impl Packetizer {
 
     pub fn packetize_empty_payload(&mut self) -> IPv4Packet {
         self.inflate(0)
+    }
+
+    pub fn packetize_chunk<R: io::Read>(&mut self, source: &mut R, max_chunk_size: usize) -> io::Result<IPv4Packet> {
+        assert!(max_chunk_size <= self.buffer.len() - self.payload_index);
+        let range = self.payload_index..self.payload_index + max_chunk_size;
+        let r = source.read(&mut self.buffer[range])?;
+        let ipv4_packet = self.inflate(r as u16);
+        Ok(ipv4_packet)
+    }
+
+    pub fn packetize<R: io::Read>(&mut self, source: &mut R) -> io::Result<IPv4Packet> {
+        let payload_max_length = self.buffer.len() - self.payload_index;
+        self.packetize_chunk(source, payload_max_length)
     }
 
     fn inflate(&mut self, payload_length: u16) -> IPv4Packet {
