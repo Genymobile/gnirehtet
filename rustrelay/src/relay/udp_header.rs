@@ -1,7 +1,7 @@
 use byteorder::{BigEndian, ByteOrder};
 use super::source_destination::SourceDestination;
 
-const UDP_HEADER_LENGTH: u16 = 8;
+pub const UDP_HEADER_LENGTH: u8 = 8;
 
 pub struct UDPHeader {
     pub source_port: u16,
@@ -27,7 +27,7 @@ impl UDPHeader {
     }
 
     pub fn set_payload_length(&mut self, raw: &mut [u8], payload_length: u16) {
-        let total_length = UDP_HEADER_LENGTH + payload_length;
+        let total_length = UDP_HEADER_LENGTH as u16 + payload_length;
         BigEndian::write_u16(&mut raw[4..6], total_length);
     }
 
