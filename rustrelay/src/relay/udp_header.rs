@@ -3,6 +3,7 @@ use super::source_destination::SourceDestination;
 
 pub const UDP_HEADER_LENGTH: u8 = 8;
 
+#[derive(Copy, Clone)]
 pub struct UDPHeader {
     pub source_port: u16,
     pub destination_port: u16,
