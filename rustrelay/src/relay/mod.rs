@@ -9,6 +9,7 @@ mod ipv4_header;
 mod ipv4_packet;
 mod ipv4_packet_buffer;
 mod net;
+mod packetizer;
 mod relay;
 mod route;
 mod router;

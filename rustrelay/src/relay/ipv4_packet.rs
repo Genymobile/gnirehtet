@@ -1,4 +1,5 @@
 use super::ipv4_header::{IPv4Header, Protocol};
+use super::source_destination::SourceDestination;
 use super::tcp_header::TCPHeader;
 use super::transport_header::TransportHeader;
 use super::udp_header::UDPHeader;
@@ -36,6 +37,14 @@ impl<'a> IPv4Packet<'a> {
     fn compute_checksum(&mut self) {
         if let Some(TransportHeader::TCP(ref tcp_header)) = self.transport_header {
             tcp_header.compute_checksum(self.raw, &self.ipv4_header);
+        }
+    }
+
+    pub fn switch_source_and_destination(&mut self) {
+        self.ipv4_header.switch_source_and_destination(&mut self.raw);
+        if let Some(ref mut transport_header) = self.transport_header {
+            let raw_payload = &mut self.raw[self.ipv4_header.header_length as usize..];
+            transport_header.switch_source_and_destination(raw_payload);
         }
     }
 }
