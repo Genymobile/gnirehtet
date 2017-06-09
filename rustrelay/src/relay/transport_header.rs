@@ -3,6 +3,7 @@ use super::source_destination::SourceDestination;
 use super::tcp_header::TCPHeader;
 use super::udp_header::{UDPHeader, UDP_HEADER_LENGTH};
 
+#[derive(Copy, Clone)]
 pub enum TransportHeader {
     TCP(TCPHeader),
     UDP(UDPHeader),
@@ -17,7 +18,7 @@ impl TransportHeader {
         }
     }
 
-    fn get_header_length(&self) -> u8 {
+    pub fn get_header_length(&self) -> u8 {
         match *self {
             TransportHeader::TCP(ref tcp_header) => tcp_header.get_header_length(),
             TransportHeader::UDP(_) => UDP_HEADER_LENGTH,

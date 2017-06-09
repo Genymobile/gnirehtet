@@ -2,6 +2,7 @@ use byteorder::{BigEndian, ByteOrder};
 use super::ipv4_header::IPv4Header;
 use super::source_destination::SourceDestination;
 
+#[derive(Copy, Clone)]
 pub struct TCPHeader {
     source_port: u16,
     destination_port: u16,

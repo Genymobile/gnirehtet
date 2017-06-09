@@ -1,6 +1,7 @@
 use byteorder::{BigEndian, ByteOrder};
 use super::source_destination::SourceDestination;
 
+#[derive(Copy, Clone)]
 pub struct IPv4Header {
     pub version: u8,
     pub header_length: u8,
