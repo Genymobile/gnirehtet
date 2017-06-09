@@ -17,7 +17,6 @@
 package com.genymobile.relay;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
@@ -31,7 +30,6 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
     private static final int MAX_PAYLOAD_SIZE = 1400;
 
-    private static final ByteBuffer ZERO_LENGTH_BUFFER = ByteBuffer.allocate(0);
     private static final Random RANDOM = new Random();
 
     public enum State {
@@ -337,7 +335,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
     private IPv4Packet createEmptyResponsePacket(int flags) {
         updateHeaders(flags);
-        IPv4Packet packet = networkToClient.packetize(ZERO_LENGTH_BUFFER);
+        IPv4Packet packet = networkToClient.packetizeEmptyPayload();
         logd(TAG, "Forging empty response (flags=" + flags + ") " + numbers());
         if (Log.isVerboseEnabled()) {
             logd(TAG, Binary.toString(packet.getRaw()));
