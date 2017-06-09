@@ -52,8 +52,9 @@ public class Packetizer {
         int savedLimit = payload.limit();
         payload.limit(payload.position() + chunkSize);
         payloadBuffer.put(payload);
+        payloadBuffer.flip();
         payload.limit(savedLimit);
-        return inflate(chunkSize);
+        return inflate();
     }
 
     public IPv4Packet packetize(ByteBuffer payload) {
@@ -67,14 +68,15 @@ public class Packetizer {
             return null;
         }
         payloadBuffer.flip();
-        return inflate(payloadLength);
+        return inflate();
     }
 
     public IPv4Packet packetize(ReadableByteChannel channel) throws IOException {
         return packetize(channel, payloadBuffer.capacity());
     }
 
-    private IPv4Packet inflate(int payloadLength) {
+    private IPv4Packet inflate() {
+        int payloadLength = payloadBuffer.remaining();
         buffer.limit(payloadBuffer.arrayOffset() + payloadBuffer.limit()).position(0);
 
         int ipv4HeaderLength = responseIPv4Header.getHeaderLength();
