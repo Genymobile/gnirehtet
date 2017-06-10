@@ -64,8 +64,8 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         shrinkedTcpHeader.shrinkOptions(); // no TCP options
 
         networkToClient = new Packetizer(ipv4Header, shrinkedTcpHeader);
-        networkToClient.getResponseIPv4Header().switchSourceAndDestination();
-        networkToClient.getResponseTransportHeader().switchSourceAndDestination();
+        networkToClient.getResponseIPv4Header().swapSourceAndDestination();
+        networkToClient.getResponseTransportHeader().swapSourceAndDestination();
 
         SelectionHandler selectionHandler = (selectionKey) -> {
             if (selectionKey.isValid() && selectionKey.isConnectable()) {

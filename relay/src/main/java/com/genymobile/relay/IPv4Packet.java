@@ -91,9 +91,9 @@ public class IPv4Packet {
         return transportHeader;
     }
 
-    public void switchSourceAndDestination() {
-        ipv4Header.switchSourceAndDestination();
-        transportHeader.switchSourceAndDestination();
+    public void swapSourceAndDestination() {
+        ipv4Header.swapSourceAndDestination();
+        transportHeader.swapSourceAndDestination();
     }
 
     public ByteBuffer getRaw() {

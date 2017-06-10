@@ -64,7 +64,7 @@ public class UDPHeaderTest {
         Assert.assertEquals(2222, destinationPort);
         Assert.assertEquals(42, length);
 
-        header.switchSourceAndDestination();
+        header.swapSourceAndDestination();
 
         Assert.assertEquals(2222, header.getSourcePort());
         Assert.assertEquals(1111, header.getDestinationPort());

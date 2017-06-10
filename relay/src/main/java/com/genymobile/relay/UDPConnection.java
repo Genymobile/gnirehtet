@@ -40,8 +40,8 @@ public class UDPConnection extends AbstractConnection {
         super(route);
 
         networkToClient = new Packetizer(ipv4Header, udpHeader);
-        networkToClient.getResponseIPv4Header().switchSourceAndDestination();
-        networkToClient.getResponseTransportHeader().switchSourceAndDestination();
+        networkToClient.getResponseIPv4Header().swapSourceAndDestination();
+        networkToClient.getResponseTransportHeader().swapSourceAndDestination();
 
         touch();
 

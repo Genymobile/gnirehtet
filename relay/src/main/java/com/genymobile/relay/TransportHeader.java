@@ -38,7 +38,7 @@ public interface TransportHeader {
 
     void computeChecksum(IPv4Header ipv4Header, ByteBuffer payload);
 
-    default void switchSourceAndDestination() {
+    default void swapSourceAndDestination() {
         int tmp = getSourcePort();
         setSourcePort(getDestinationPort());
         setDestinationPort(tmp);

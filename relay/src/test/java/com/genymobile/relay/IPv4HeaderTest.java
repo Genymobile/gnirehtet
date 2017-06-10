@@ -112,7 +112,7 @@ public class IPv4HeaderTest {
         Assert.assertEquals(0x24242424, destination);
         Assert.assertEquals(42, totalLength);
 
-        header.switchSourceAndDestination();
+        header.swapSourceAndDestination();
 
         Assert.assertEquals(0x24242424, header.getSource());
         Assert.assertEquals(0x87654321, header.getDestination());

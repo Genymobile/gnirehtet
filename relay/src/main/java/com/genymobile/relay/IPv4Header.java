@@ -118,7 +118,7 @@ public class IPv4Header {
         raw.putInt(16, destination);
     }
 
-    public void switchSourceAndDestination() {
+    public void swapSourceAndDestination() {
         int tmp = source;
         setSource(destination);
         setDestination(tmp);

@@ -65,7 +65,7 @@ public class IPv4PacketTest {
         Assert.assertEquals(5678, udpHeader.getDestinationPort());
         Assert.assertEquals(8, udpHeader.getHeaderLength());
 
-        packet.switchSourceAndDestination();
+        packet.swapSourceAndDestination();
 
         Assert.assertEquals(0x42424242, ipv4Header.getSource());
         Assert.assertEquals(0x12345678, ipv4Header.getDestination());

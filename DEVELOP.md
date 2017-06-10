@@ -188,7 +188,7 @@ IP and transport headers.
 
 When the first packet for a specific UDP connection is received from the device,
 a new [`UDPConnection`] is created. It keeps a copy of the IP and UDP headers
-of this first packet, switching the source and the destination, in order to use
+of this first packet, swapping the source and the destination, in order to use
 them as headers for all response packets.
 
 The relaying is simple for UDP: each packet received from one side must be sent
