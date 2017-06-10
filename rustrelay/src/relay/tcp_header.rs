@@ -1,6 +1,6 @@
 use byteorder::{BigEndian, ByteOrder};
+use std::mem;
 use super::ipv4_header::IPv4Header;
-use super::source_destination::SourceDestination;
 
 #[derive(Copy, Clone)]
 pub struct TCPHeader {
@@ -31,6 +31,14 @@ impl TCPHeader {
         self.header_length
     }
 
+    pub fn get_source_port(&self) -> u16 {
+        self.source_port
+    }
+
+    pub fn get_destination_port(&self) -> u16 {
+        self.destination_port
+    }
+
     pub fn set_source_port(&mut self, raw: &mut [u8], source_port: u16) {
         self.source_port = source_port;
         BigEndian::write_u16(&mut raw[0..2], source_port);
@@ -39,6 +47,13 @@ impl TCPHeader {
     pub fn set_destination_port(&mut self, raw: &mut [u8], destination_port: u16) {
         self.destination_port = destination_port;
         BigEndian::write_u16(&mut raw[2..4], destination_port);
+    }
+
+    pub fn switch_source_and_destination(&mut self, raw: &mut [u8]) {
+        mem::swap(&mut self.source_port, &mut self.destination_port);
+        for i in 0..2 {
+            raw.swap(i, i + 2);
+        }
     }
 
     pub fn set_sequence_number(&mut self, raw: &mut [u8], sequence_number: u32) {
@@ -74,23 +89,5 @@ impl TCPHeader {
 
     pub fn set_checksum(&mut self, raw: &mut [u8], checksum: u16) {
         BigEndian::write_u16(&mut raw[16..18], checksum);
-    }
-}
-
-impl SourceDestination<u16> for TCPHeader {
-    fn get_source(&self, _: &[u8]) -> u16 {
-        self.source_port
-    }
-
-    fn get_destination(&self, _: &[u8]) -> u16 {
-        self.destination_port
-    }
-
-    fn set_source(&mut self, raw: &mut [u8], source: u16) {
-        self.set_source_port(raw, source);
-    }
-
-    fn set_destination(&mut self, raw: &mut [u8], destination: u16) {
-        self.set_destination_port(raw, destination);
     }
 }

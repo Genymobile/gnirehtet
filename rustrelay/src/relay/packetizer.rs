@@ -1,7 +1,6 @@
 use std::io;
 use super::ipv4_header::IPv4Header;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
-use super::source_destination::SourceDestination;
 use super::transport_header::TransportHeader;
 
 /// Convert from level 5 to level 3 by appending correct IP and transport headers.

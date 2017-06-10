@@ -1,5 +1,5 @@
 use byteorder::{BigEndian, ByteOrder};
-use super::source_destination::SourceDestination;
+use std::mem;
 
 #[derive(Copy, Clone)]
 pub struct IPv4Header {
@@ -34,6 +34,14 @@ impl IPv4Header {
         }
     }
 
+    fn get_source(&self) -> u32 {
+        self.source
+    }
+
+    fn get_destination(&self) -> u32 {
+        self.destination
+    }
+
     pub fn set_total_length(&mut self, raw: &mut [u8], total_length: u16) {
         self.total_length = total_length;
         BigEndian::write_u16(&mut raw[2..4], total_length);
@@ -47,6 +55,13 @@ impl IPv4Header {
     pub fn set_destination(&mut self, raw: &mut [u8], destination: u32) {
         self.destination = destination;
         BigEndian::write_u32(&mut raw[16..20], destination);
+    }
+
+    pub fn switch_source_and_destination(&mut self, raw: &mut [u8]) {
+        mem::swap(&mut self.source, &mut self.destination);
+        for i in 12..16 {
+            raw.swap(i, i + 4);
+        }
     }
 
     pub fn compute_checksum(&mut self, raw: &mut [u8]) {
@@ -90,24 +105,6 @@ impl IPv4Header {
             let length = BigEndian::read_u16(&raw[2..4]);
             Some(length)
         }
-    }
-}
-
-impl SourceDestination<u32> for IPv4Header {
-    fn get_source(&self, _: &[u8]) -> u32 {
-        self.source
-    }
-
-    fn get_destination(&self, _: &[u8]) -> u32 {
-        self.destination
-    }
-
-    fn set_source(&mut self, raw: &mut [u8], source: u32) {
-        (self as &mut IPv4Header).set_source(raw, source);
-    }
-
-    fn set_destination(&mut self, raw: &mut [u8], destination: u32) {
-        (self as &mut IPv4Header).set_destination(raw, destination);
     }
 }
 
