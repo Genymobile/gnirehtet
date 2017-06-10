@@ -23,8 +23,8 @@ impl Packetizer {
         let payload_index = transport_index + transport_header.get_header_length() as usize;
         &mut buffer[..payload_index].copy_from_slice(&raw[..payload_index]);
 
-        ipv4_header.switch_source_and_destination(&mut buffer[..]);
-        transport_header.switch_source_and_destination(&mut buffer[transport_index..]);
+        ipv4_header.swap_source_and_destination(&mut buffer[..]);
+        transport_header.swap_source_and_destination(&mut buffer[transport_index..]);
 
         Self {
             buffer: buffer,

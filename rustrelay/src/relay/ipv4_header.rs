@@ -57,7 +57,7 @@ impl IPv4Header {
         BigEndian::write_u32(&mut raw[16..20], destination);
     }
 
-    pub fn switch_source_and_destination(&mut self, raw: &mut [u8]) {
+    pub fn swap_source_and_destination(&mut self, raw: &mut [u8]) {
         mem::swap(&mut self.source, &mut self.destination);
         for i in 12..16 {
             raw.swap(i, i + 4);
@@ -160,7 +160,7 @@ mod tests {
         assert_eq!(0x24242424, raw_destination);
         assert_eq!(42, raw_total_length);
 
-        header.switch_source_and_destination(raw);
+        header.swap_source_and_destination(raw);
 
         assert_eq!(0x24242424, header.source);
         assert_eq!(0x87654321, header.destination);
