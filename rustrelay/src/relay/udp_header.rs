@@ -35,7 +35,7 @@ impl UDPHeader {
         BigEndian::write_u16(&mut raw[2..4], destination_port);
     }
 
-    pub fn switch_source_and_destination(&mut self, raw: &mut [u8]) {
+    pub fn swap_source_and_destination(&mut self, raw: &mut [u8]) {
         mem::swap(&mut self.source_port, &mut self.destination_port);
         for i in 0..2 {
             raw.swap(i, i + 2);
@@ -95,7 +95,7 @@ mod tests {
         assert_eq!(2222, raw_destination_port);
         assert_eq!(34 + 8, raw_total_length);
 
-        header.switch_source_and_destination(raw);
+        header.swap_source_and_destination(raw);
 
         assert_eq!(2222, header.source_port);
         assert_eq!(1111, header.destination_port);

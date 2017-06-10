@@ -64,11 +64,11 @@ impl<'a> IPv4Packet<'a> {
         }
     }
 
-    pub fn switch_source_and_destination(&mut self) {
-        self.ipv4_header.switch_source_and_destination(&mut self.raw);
+    pub fn swap_source_and_destination(&mut self) {
+        self.ipv4_header.swap_source_and_destination(&mut self.raw);
         if let Some(ref mut transport_header) = self.transport_header {
             let raw_payload = &mut self.raw[self.ipv4_header.header_length as usize..];
-            transport_header.switch_source_and_destination(raw_payload);
+            transport_header.swap_source_and_destination(raw_payload);
         }
     }
 }

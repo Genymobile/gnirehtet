@@ -31,10 +31,10 @@ impl TransportHeader {
         }
     }
 
-    pub fn switch_source_and_destination(&mut self, raw: &mut [u8]) {
+    pub fn swap_source_and_destination(&mut self, raw: &mut [u8]) {
         match *self {
-            TransportHeader::TCP(ref mut tcp_header) => tcp_header.switch_source_and_destination(raw),
-            TransportHeader::UDP(ref mut udp_header) => udp_header.switch_source_and_destination(raw),
+            TransportHeader::TCP(ref mut tcp_header) => tcp_header.swap_source_and_destination(raw),
+            TransportHeader::UDP(ref mut udp_header) => udp_header.swap_source_and_destination(raw),
         }
     }
 
