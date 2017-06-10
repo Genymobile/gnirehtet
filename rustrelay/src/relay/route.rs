@@ -6,7 +6,6 @@ use std::rc::{Rc, Weak};
 use super::client::Client;
 use super::ipv4_header::{IPv4Header, Protocol};
 use super::ipv4_packet::IPv4Packet;
-use super::source_destination::SourceDestination;
 use super::transport_header::TransportHeader;
 use super::net;
 
@@ -64,9 +63,9 @@ impl RouteKey {
         Self {
             protocol: ipv4_header.protocol,
             source_ip: ipv4_header.source,
-            source_port: transport_header.get_source(raw),
+            source_port: transport_header.get_source_port(),
             destination_ip: ipv4_header.destination,
-            destination_port: transport_header.get_destination(raw),
+            destination_port: transport_header.get_destination_port(),
         }
     }
 
