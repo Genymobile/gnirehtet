@@ -17,17 +17,17 @@ impl TransportHeader {
         }
     }
 
-    pub fn get_source_port(&self) -> u16 {
+    pub fn source_port(&self) -> u16 {
         match *self {
-            TransportHeader::TCP(ref tcp_header) => tcp_header.get_source_port(),
-            TransportHeader::UDP(ref udp_header) => udp_header.get_source_port(),
+            TransportHeader::TCP(ref tcp_header) => tcp_header.source_port(),
+            TransportHeader::UDP(ref udp_header) => udp_header.source_port(),
         }
     }
 
-    pub fn get_destination_port(&self) -> u16 {
+    pub fn destination_port(&self) -> u16 {
         match *self {
-            TransportHeader::TCP(ref tcp_header) => tcp_header.get_destination_port(),
-            TransportHeader::UDP(ref udp_header) => udp_header.get_destination_port(),
+            TransportHeader::TCP(ref tcp_header) => tcp_header.destination_port(),
+            TransportHeader::UDP(ref udp_header) => udp_header.destination_port(),
         }
     }
 
@@ -45,9 +45,9 @@ impl TransportHeader {
         }
     }
 
-    pub fn get_header_length(&self) -> u8 {
+    pub fn header_length(&self) -> u8 {
         match *self {
-            TransportHeader::TCP(ref tcp_header) => tcp_header.get_header_length(),
+            TransportHeader::TCP(ref tcp_header) => tcp_header.header_length(),
             TransportHeader::UDP(_) => UDP_HEADER_LENGTH,
         }
     }

@@ -23,7 +23,7 @@ impl Route {
         }
     }
 
-    pub fn get_key(&self) -> &RouteKey {
+    pub fn key(&self) -> &RouteKey {
         &self.key
     }
 
@@ -63,23 +63,23 @@ impl RouteKey {
         Self {
             protocol: ipv4_header.protocol,
             source_ip: ipv4_header.source,
-            source_port: transport_header.get_source_port(),
+            source_port: transport_header.source_port(),
             destination_ip: ipv4_header.destination,
-            destination_port: transport_header.get_destination_port(),
+            destination_port: transport_header.destination_port(),
         }
     }
 
-    pub fn get_source(&self) -> SocketAddrV4 {
+    pub fn source(&self) -> SocketAddrV4 {
         net::to_socket_addr(self.source_ip, self.source_port)
     }
 
-    pub fn get_destination(&self) -> SocketAddrV4 {
+    pub fn destination(&self) -> SocketAddrV4 {
         net::to_socket_addr(self.destination_ip, self.destination_port)
     }
 }
 
 impl fmt::Display for RouteKey {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} -> {}", self.get_source(), self.get_destination())
+        write!(f, "{} -> {}", self.source(), self.destination())
     }
 }

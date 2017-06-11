@@ -17,11 +17,11 @@ impl UDPHeader {
         }
     }
 
-    pub fn get_source_port(&self) -> u16 {
+    pub fn source_port(&self) -> u16 {
         self.source_port
     }
 
-    pub fn get_destination_port(&self) -> u16 {
+    pub fn destination_port(&self) -> u16 {
         self.destination_port
     }
 
