@@ -34,11 +34,11 @@ impl IPv4Header {
         }
     }
 
-    fn get_source(&self) -> u32 {
+    fn source(&self) -> u32 {
         self.source
     }
 
-    fn get_destination(&self) -> u32 {
+    fn destination(&self) -> u32 {
         self.destination
     }
 
@@ -80,7 +80,7 @@ impl IPv4Header {
         self.set_checksum(raw, !sum as u16);
     }
 
-    fn get_checksum(&mut self, raw: &[u8]) -> u16 {
+    fn checksum(&mut self, raw: &[u8]) -> u16 {
         BigEndian::read_u16(&raw[10..12])
     }
 
@@ -187,7 +187,7 @@ mod tests {
             sum = (sum & 0xffff) + (sum >> 16);
         }
         let sum = !sum as u16;
-        assert_eq!(sum, header.get_checksum(raw));
+        assert_eq!(sum, header.checksum(raw));
     }
 
     #[test]

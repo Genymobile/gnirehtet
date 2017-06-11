@@ -37,21 +37,21 @@ impl<'a> IPv4Packet<'a> {
         self.transport_header.is_some()
     }
 
-    pub fn get_packet_length(&self) -> u16 {
+    pub fn packet_length(&self) -> u16 {
         self.ipv4_header.total_length
     }
 
-    pub fn get_payload_index(&self) -> Option<u16> {
+    pub fn payload_index(&self) -> Option<u16> {
         if let Some(ref transport_header) = self.transport_header {
-            Some(self.ipv4_header.header_length as u16 + transport_header.get_header_length() as u16)
+            Some(self.ipv4_header.header_length as u16 + transport_header.header_length() as u16)
         } else {
             None
         }
     }
 
-    pub fn get_payload_length(&self) -> Option<u16> {
-        if let Some(payload_index) = self.get_payload_index() {
-            Some(self.get_packet_length() - payload_index)
+    pub fn payload_length(&self) -> Option<u16> {
+        if let Some(payload_index) = self.payload_index() {
+            Some(self.packet_length() - payload_index)
         } else {
             None
         }

@@ -20,7 +20,7 @@ impl Packetizer {
         let mut transport_header = transport_header.clone();
 
         let transport_index = ipv4_header.header_length as usize;
-        let payload_index = transport_index + transport_header.get_header_length() as usize;
+        let payload_index = transport_index + transport_header.header_length() as usize;
         &mut buffer[..payload_index].copy_from_slice(&raw[..payload_index]);
 
         ipv4_header.swap_source_and_destination(&mut buffer[..]);
@@ -120,22 +120,22 @@ mod tests {
         {
             let packet = packetizer.packetize_chunk(&mut cursor, 2).unwrap();
             assert_eq!(30, packet.ipv4_header.total_length);
-            assert_eq!(2, packet.get_payload_length().unwrap());
-            assert_eq!([0x11, 0x22], packet.raw[packet.get_payload_index().unwrap() as usize..]);
+            assert_eq!(2, packet.payload_length().unwrap());
+            assert_eq!([0x11, 0x22], packet.raw[packet.payload_index().unwrap() as usize..]);
         }
 
         {
             let packet = packetizer.packetize_chunk(&mut cursor, 3).unwrap();
             assert_eq!(31, packet.ipv4_header.total_length);
-            assert_eq!(3, packet.get_payload_length().unwrap());
-            assert_eq!([0x33, 0x44, 0x55], packet.raw[packet.get_payload_index().unwrap() as usize..]);
+            assert_eq!(3, packet.payload_length().unwrap());
+            assert_eq!([0x33, 0x44, 0x55], packet.raw[packet.payload_index().unwrap() as usize..]);
         }
 
         {
             let packet = packetizer.packetize_chunk(&mut cursor, 1024).unwrap();
             assert_eq!(31, packet.ipv4_header.total_length);
-            assert_eq!(3, packet.get_payload_length().unwrap());
-            assert_eq!([0x66, 0x77, 0x88], packet.raw[packet.get_payload_index().unwrap() as usize..]);
+            assert_eq!(3, packet.payload_length().unwrap());
+            assert_eq!([0x66, 0x77, 0x88], packet.raw[packet.payload_index().unwrap() as usize..]);
         }
     }
 }

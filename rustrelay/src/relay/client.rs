@@ -59,7 +59,7 @@ impl Client {
         Ok(rc)
     }
 
-    pub fn get_id(&self) -> u32 {
+    pub fn id(&self) -> u32 {
         return self.id;
     }
 

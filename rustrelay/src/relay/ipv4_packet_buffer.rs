@@ -23,7 +23,7 @@ impl IPv4PacketBuffer {
         Ok(())
     }
 
-    fn get_available_packet_length(&self) -> Option<u16> {
+    fn available_packet_length(&self) -> Option<u16> {
         let length = IPv4Header::read_length(&self.buf);
         match length {
             // no packet
@@ -36,7 +36,7 @@ impl IPv4PacketBuffer {
     }
 
     pub fn as_ipv4_packet<'a>(&'a mut self) -> Option<IPv4Packet<'a>> {
-        let length = self.get_available_packet_length();
+        let length = self.available_packet_length();
         if let Some(len) = length {
             Some(IPv4Packet::parse(&mut self.buf[..len as usize]))
         } else {
@@ -46,7 +46,7 @@ impl IPv4PacketBuffer {
 
     pub fn next(&mut self) {
         // remove the packet in front of the buffer
-        let length = self.get_available_packet_length()
+        let length = self.available_packet_length()
                 .expect("next() called while there was no packet") as usize;
         assert!(self.head >= length);
         self.head -= length;
