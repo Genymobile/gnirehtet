@@ -1,28 +1,41 @@
 use std::cell::RefCell;
 use std::fmt;
+use std::io;
 use std::net::SocketAddrV4;
 use std::rc::{Rc, Weak};
 
 use super::client::Client;
 use super::close_listener::CloseListener;
+use super::connection::Connection;
 use super::ipv4_header::{IPv4Header, Protocol};
 use super::ipv4_packet::IPv4Packet;
-use super::transport_header::TransportHeader;
 use super::net;
+use super::transport_header::TransportHeader;
+use super::udp_connection::UDPConnection;
 
 pub struct Route {
     client: Weak<RefCell<Client>>,
     key: RouteKey,
+    connection: Connection,
     close_listener: Box<CloseListener<RouteKey>>,
 }
 
 impl Route {
-    pub fn new(client: Weak<RefCell<Client>>, route_key: RouteKey, ipv4_packet: &IPv4Packet, close_listener: Box<CloseListener<RouteKey>>) -> Self {
-        Self {
+    pub fn new(client: Weak<RefCell<Client>>, route_key: RouteKey, ipv4_packet: &IPv4Packet, close_listener: Box<CloseListener<RouteKey>>) -> io::Result<Self> {
+        let connection = Route::create_connection(&route_key)?;
+        Ok(Self {
             client: client,
             key: route_key,
+            connection: connection,
             close_listener: close_listener,
-            // TODO
+        })
+    }
+
+    fn create_connection(route_key: &RouteKey) -> io::Result<Connection> {
+        match route_key.protocol() {
+            Protocol::TCP => Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet")),
+            Protocol::UDP => Ok(UDPConnection::new().into()),
+            p => Err(io::Error::new(io::ErrorKind::Other, format!("Unsupported protocol: {:?}", p))),
         }
     }
 
@@ -75,6 +88,10 @@ impl RouteKey {
             destination_ip: ipv4_header.destination,
             destination_port: transport_header.destination_port(),
         }
+    }
+
+    pub fn protocol(&self) -> Protocol {
+        self.protocol
     }
 
     pub fn source(&self) -> SocketAddrV4 {
