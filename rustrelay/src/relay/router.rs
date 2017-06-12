@@ -43,7 +43,16 @@ impl Router {
         let index = match self.find_route_index(&key) {
             Some(index) => index,
             None => {
-                let route = Route::new(self.client.clone(), key, ipv4_packet);
+                let weak = self.client.clone();
+                let on_route_closed = Box::new(move |key: &RouteKey| {
+                    if let Some(rc) = weak.upgrade() {
+                        let mut client = rc.borrow_mut();
+                        client.router().remove_route(key);
+                    } else {
+                        warn!(target: TAG, "on_route_closed called but no client available");
+                    }
+                });
+                let route = Route::new(self.client.clone(), key, ipv4_packet, on_route_closed);
                 let index = self.routes.len();
                 self.routes.push(route);
                 index
@@ -54,6 +63,11 @@ impl Router {
 
     fn find_route_index(&self, key: &RouteKey) -> Option<usize> {
         self.routes.iter().position(|route| route.key() == key)
+    }
+
+    fn remove_route(&mut self, key: &RouteKey) {
+        let index = self.find_route_index(key).expect("Removing an unknown route");
+        self.routes.swap_remove(index);
     }
 
     pub fn clear(&mut self) {
