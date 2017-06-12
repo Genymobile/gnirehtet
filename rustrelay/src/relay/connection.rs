@@ -24,3 +24,9 @@ impl Connection {
         }
     }
 }
+
+impl From<UDPConnection> for Connection {
+    fn from(udp_connection: UDPConnection) -> Connection {
+        Connection::UDP(udp_connection)
+    }
+}

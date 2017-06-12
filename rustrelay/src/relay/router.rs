@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::io;
 use std::rc::{Rc, Weak};
 use log::LogLevel;
 
@@ -33,12 +34,15 @@ impl Router {
                 // TODO log binary
             }
         } else {
-            let mut route = self.route(ipv4_packet);
-            route.send_to_network(ipv4_packet);
+            if let Ok(mut route) = self.route(ipv4_packet) {
+                route.send_to_network(ipv4_packet);
+            } else {
+                error!(target: TAG, "Cannot create route, dropping packet");
+            }
         }
     }
 
-    fn route(&mut self, ipv4_packet: &IPv4Packet) -> &mut Route {
+    fn route(&mut self, ipv4_packet: &IPv4Packet) -> io::Result<&mut Route> {
         let key = RouteKey::from_packet(ipv4_packet);
         let index = match self.find_route_index(&key) {
             Some(index) => index,
@@ -52,13 +56,13 @@ impl Router {
                         warn!(target: TAG, "on_route_closed called but no client available");
                     }
                 });
-                let route = Route::new(self.client.clone(), key, ipv4_packet, on_route_closed);
+                let route = Route::new(self.client.clone(), key, ipv4_packet, on_route_closed)?;
                 let index = self.routes.len();
                 self.routes.push(route);
                 index
             }
         };
-        self.routes.get_mut(index).unwrap()
+        Ok(self.routes.get_mut(index).unwrap())
     }
 
     fn find_route_index(&self, key: &RouteKey) -> Option<usize> {
