@@ -88,7 +88,7 @@ public class Router {
         routes.clear();
     }
 
-    public boolean removeRoute(Route.Key key) {
+    private boolean removeRoute(Route.Key key) {
         int routeIndex = findRouteIndex(key);
         if (routeIndex == -1) {
             return false;
