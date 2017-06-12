@@ -44,7 +44,7 @@ impl Route {
     }
 
     pub fn send_to_network(&mut self, ipv4_packet: &IPv4Packet) {
-        // TODO
+        self.connection.send_to_network(ipv4_packet);
     }
 
     pub fn close(&mut self) {
@@ -53,7 +53,11 @@ impl Route {
     }
 
     pub fn disconnect(&mut self) {
-        // TODO
+        self.connection.disconnect();
+    }
+
+    pub fn is_connection_expired(&self) -> bool {
+        self.connection.is_expired()
     }
 }
 
