@@ -51,6 +51,7 @@ public class Route {
     }
 
     public void close() {
+        disconnect();
         closeListener.onClosed(key);
     }
 

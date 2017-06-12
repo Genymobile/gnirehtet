@@ -34,11 +34,8 @@ public abstract class AbstractConnection implements Connection {
     protected void close() {
         logi(TAG, "Close");
 
-        // remove the route from the router
+        // disconnect the channel and remove the route from the router
         route.close();
-
-        // close and unregister the channel
-        disconnect();
     }
 
     protected void consume(PacketSource source) {
