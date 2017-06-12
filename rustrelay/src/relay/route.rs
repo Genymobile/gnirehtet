@@ -4,6 +4,7 @@ use std::net::SocketAddrV4;
 use std::rc::{Rc, Weak};
 
 use super::client::Client;
+use super::close_listener::CloseListener;
 use super::ipv4_header::{IPv4Header, Protocol};
 use super::ipv4_packet::IPv4Packet;
 use super::transport_header::TransportHeader;
@@ -12,13 +13,15 @@ use super::net;
 pub struct Route {
     client: Weak<RefCell<Client>>,
     key: RouteKey,
+    close_listener: Box<CloseListener<RouteKey>>,
 }
 
 impl Route {
-    pub fn new(client: Weak<RefCell<Client>>, route_key: RouteKey, ipv4_packet: &IPv4Packet) -> Self {
+    pub fn new(client: Weak<RefCell<Client>>, route_key: RouteKey, ipv4_packet: &IPv4Packet, close_listener: Box<CloseListener<RouteKey>>) -> Self {
         Self {
             client: client,
             key: route_key,
+            close_listener: close_listener,
             // TODO
         }
     }
@@ -29,6 +32,11 @@ impl Route {
 
     pub fn send_to_network(&mut self, ipv4_packet: &IPv4Packet) {
         // TODO
+    }
+
+    pub fn close(&mut self) {
+        self.disconnect();
+        self.close_listener.on_closed(&self.key);
     }
 
     pub fn disconnect(&mut self) {

@@ -49,6 +49,8 @@ impl TunnelServer {
             if let Some(rc) = weak.upgrade() {
                 let mut tunnel_server = rc.borrow_mut();
                 tunnel_server.remove_client(client);
+            } else {
+                warn!(target: TAG, "on_client_closed called but no client available");
             }
         });
         let client = Client::new(client_id, selector, stream, on_client_closed)?;

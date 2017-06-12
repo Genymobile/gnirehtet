@@ -63,6 +63,10 @@ impl Client {
         return self.id;
     }
 
+    pub fn router(&mut self) -> &mut Router {
+        &mut self.router
+    }
+
     fn close(&mut self, selector: &mut Selector) {
         self.closed = true;
         selector.deregister(&self.stream, self.token);
