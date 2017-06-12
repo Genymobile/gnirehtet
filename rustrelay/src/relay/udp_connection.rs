@@ -1,4 +1,3 @@
-use super::connection::Connection;
 use super::datagram_buffer::DatagramBuffer;
 use super::ipv4_packet::IPv4Packet;
 
@@ -7,21 +6,16 @@ pub struct UDPConnection {
 }
 
 impl UDPConnection {
-
-}
-
-impl Connection for UDPConnection {
-    fn send_to_network(&mut self, ipv4_packet: &IPv4Packet) {
+    pub fn send_to_network(&mut self, ipv4_packet: &IPv4Packet) {
         // TODO
     }
 
-    fn disconnect() {
+    pub fn disconnect(&mut self) {
         // TODO
     }
 
-    fn is_expired() -> bool {
+    pub fn is_expired(&self) -> bool {
         // TODO
         false
     }
-
 }
