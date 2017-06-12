@@ -85,6 +85,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
     @Override
     public void disconnect() {
+        logi(TAG, "Close");
         selectionKey.cancel();
         try {
             channel.close();

@@ -21,8 +21,6 @@ import java.net.InetSocketAddress;
 
 public abstract class AbstractConnection implements Connection {
 
-    private static final String TAG = AbstractConnection.class.getSimpleName();
-
     private static final int LOCALHOST_FORWARD = 0x0a000202; // 10.0.2.2 must be forwarded to localhost
 
     private final Route route;
@@ -32,8 +30,6 @@ public abstract class AbstractConnection implements Connection {
     }
 
     protected void close() {
-        logi(TAG, "Close");
-
         // disconnect the channel and remove the route from the router
         route.close();
     }

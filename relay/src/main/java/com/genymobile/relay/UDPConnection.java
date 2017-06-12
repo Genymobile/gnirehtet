@@ -70,6 +70,7 @@ public class UDPConnection extends AbstractConnection {
 
     @Override
     public void disconnect() {
+        logi(TAG, "Close");
         selectionKey.cancel();
         try {
             channel.close();
