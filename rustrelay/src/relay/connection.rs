@@ -6,19 +6,19 @@ pub enum Connection {
 }
 
 impl Connection {
-    fn send_to_network(&mut self, ipv4_packet: &IPv4Packet) {
+    pub fn send_to_network(&mut self, ipv4_packet: &IPv4Packet) {
         match *self {
             Connection::UDP(ref mut udp_connection) => udp_connection.send_to_network(ipv4_packet),
         }
     }
 
-    fn disconnect(&mut self) {
+    pub fn disconnect(&mut self) {
         match *self {
             Connection::UDP(ref mut udp_connection) => udp_connection.disconnect(),
         }
     }
 
-    fn is_expired(&self) -> bool {
+    pub fn is_expired(&self) -> bool {
         match *self {
             Connection::UDP(ref udp_connection) => udp_connection.is_expired(),
         }
