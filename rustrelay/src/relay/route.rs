@@ -86,10 +86,10 @@ impl RouteKey {
         let ipv4_header = &ipv4_packet.ipv4_header;
         let transport_header = ipv4_packet.transport_header.as_ref().expect("Packet without transport header");
         Self {
-            protocol: ipv4_header.protocol,
-            source_ip: ipv4_header.source,
+            protocol: ipv4_header.protocol(),
+            source_ip: ipv4_header.source(),
             source_port: transport_header.source_port(),
-            destination_ip: ipv4_header.destination,
+            destination_ip: ipv4_header.destination(),
             destination_port: transport_header.destination_port(),
         }
     }

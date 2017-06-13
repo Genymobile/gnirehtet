@@ -96,15 +96,15 @@ mod tests {
 
     fn check_packet_headers(ipv4_packet: &IPv4Packet) {
         let ipv4_header = &ipv4_packet.ipv4_header;
-        assert_eq!(20, ipv4_header.header_length);
-        assert_eq!(32, ipv4_header.total_length);
-        assert_eq!(Protocol::UDP, ipv4_header.protocol);
-        assert_eq!(0x12345678, ipv4_header.source);
-        assert_eq!(0x42424242, ipv4_header.destination);
+        assert_eq!(20, ipv4_header.header_length());
+        assert_eq!(32, ipv4_header.total_length());
+        assert_eq!(Protocol::UDP, ipv4_header.protocol());
+        assert_eq!(0x12345678, ipv4_header.source());
+        assert_eq!(0x42424242, ipv4_header.destination());
 
         if let Some(TransportHeader::UDP(ref udp_header)) = ipv4_packet.transport_header {
-            assert_eq!(1234, udp_header.source_port);
-            assert_eq!(5678, udp_header.destination_port);
+            assert_eq!(1234, udp_header.source_port());
+            assert_eq!(5678, udp_header.destination_port());
         } else {
             panic!("No UDP transport header");
         }

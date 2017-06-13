@@ -15,8 +15,8 @@ impl<'a> IPv4Packet<'a> {
     pub fn parse(raw: &'a mut [u8]) -> Self {
         let ipv4_header = IPv4Header::parse(raw);
         let transport_header = {
-            let payload = &raw[ipv4_header.header_length as usize..];
-            TransportHeader::parse(ipv4_header.protocol, payload)
+            let payload = &raw[ipv4_header.header_length() as usize..];
+            TransportHeader::parse(ipv4_header.protocol(), payload)
         };
         Self {
             raw: raw,
@@ -38,12 +38,12 @@ impl<'a> IPv4Packet<'a> {
     }
 
     pub fn packet_length(&self) -> u16 {
-        self.ipv4_header.total_length
+        self.ipv4_header.total_length()
     }
 
     pub fn payload_index(&self) -> Option<u16> {
         if let Some(ref transport_header) = self.transport_header {
-            Some(self.ipv4_header.header_length as u16 + transport_header.header_length() as u16)
+            Some(self.ipv4_header.header_length() as u16 + transport_header.header_length() as u16)
         } else {
             None
         }
@@ -67,7 +67,7 @@ impl<'a> IPv4Packet<'a> {
     pub fn swap_source_and_destination(&mut self) {
         self.ipv4_header.swap_source_and_destination(&mut self.raw);
         if let Some(ref mut transport_header) = self.transport_header {
-            let raw_payload = &mut self.raw[self.ipv4_header.header_length as usize..];
+            let raw_payload = &mut self.raw[self.ipv4_header.header_length() as usize..];
             transport_header.swap_source_and_destination(raw_payload);
         }
     }
