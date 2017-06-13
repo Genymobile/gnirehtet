@@ -13,7 +13,7 @@ pub struct Packetizer {
 }
 
 impl Packetizer {
-    pub fn new(raw: &mut [u8], mut ipv4_header: IPv4Header, mut transport_header: TransportHeader) -> Self {
+    pub fn new(raw: &[u8], mut ipv4_header: IPv4Header, mut transport_header: TransportHeader) -> Self {
         let mut buffer = Box::new([0; MAX_PACKET_LENGTH]);
 
         let mut ipv4_header = ipv4_header.clone();
