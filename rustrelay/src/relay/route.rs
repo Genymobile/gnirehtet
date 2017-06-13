@@ -16,7 +16,7 @@ use super::udp_connection::UDPConnection;
 pub struct Route {
     client: Weak<RefCell<Client>>,
     key: RouteKey,
-    connection: Connection,
+    connection: Rc<RefCell<Connection>>,
     close_listener: Box<CloseListener<RouteKey>>,
 }
 
@@ -31,10 +31,10 @@ impl Route {
         })
     }
 
-    fn create_connection(route_key: &RouteKey, reference_packet: &IPv4Packet) -> io::Result<Connection> {
+    fn create_connection(route_key: &RouteKey, reference_packet: &IPv4Packet) -> io::Result<Rc<RefCell<Connection>>> {
         match route_key.protocol() {
             Protocol::TCP => Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet")),
-            Protocol::UDP => Ok(UDPConnection::new(reference_packet).into()),
+            Protocol::UDP => Ok(UDPConnection::new(reference_packet)),
             p => Err(io::Error::new(io::ErrorKind::Other, format!("Unsupported protocol: {:?}", p))),
         }
     }
@@ -44,7 +44,7 @@ impl Route {
     }
 
     pub fn send_to_network(&mut self, ipv4_packet: &IPv4Packet) {
-        self.connection.send_to_network(ipv4_packet);
+        self.connection.borrow_mut().send_to_network(ipv4_packet);
     }
 
     pub fn close(&mut self) {
@@ -53,11 +53,11 @@ impl Route {
     }
 
     pub fn disconnect(&mut self) {
-        self.connection.disconnect();
+        self.connection.borrow_mut().disconnect();
     }
 
     pub fn is_connection_expired(&self) -> bool {
-        self.connection.is_expired()
+        self.connection.borrow_mut().is_expired()
     }
 }
 
