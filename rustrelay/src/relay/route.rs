@@ -22,7 +22,7 @@ pub struct Route {
 
 impl Route {
     pub fn new(client: Weak<RefCell<Client>>, route_key: RouteKey, ipv4_packet: &IPv4Packet, close_listener: Box<CloseListener<RouteKey>>) -> io::Result<Self> {
-        let connection = Route::create_connection(client.clone(), &route_key, ipv4_packet)?;
+        let connection = Route::create_connection(client.clone(), route_key.clone(), ipv4_packet)?;
         Ok(Self {
             client: client,
             key: route_key,
@@ -31,10 +31,10 @@ impl Route {
         })
     }
 
-    fn create_connection(client: Weak<RefCell<Client>>, route_key: &RouteKey, reference_packet: &IPv4Packet) -> io::Result<Rc<RefCell<Connection>>> {
+    fn create_connection(client: Weak<RefCell<Client>>, route_key: RouteKey, reference_packet: &IPv4Packet) -> io::Result<Rc<RefCell<Connection>>> {
         match route_key.protocol() {
             Protocol::TCP => Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet")),
-            Protocol::UDP => Ok(UDPConnection::new(client, reference_packet)),
+            Protocol::UDP => Ok(UDPConnection::new(client, route_key, reference_packet)),
             p => Err(io::Error::new(io::ErrorKind::Other, format!("Unsupported protocol: {:?}", p))),
         }
     }
@@ -61,7 +61,7 @@ impl Route {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RouteKey {
     protocol: Protocol,
     source_ip: u32,
