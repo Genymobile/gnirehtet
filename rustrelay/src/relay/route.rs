@@ -82,9 +82,9 @@ impl RouteKey {
     }
 
     pub fn from_packet(ipv4_packet: &IPv4Packet) -> Self {
-        let raw = &ipv4_packet.raw;
-        let ipv4_header = &ipv4_packet.ipv4_header;
-        let transport_header = ipv4_packet.transport_header.as_ref().expect("Packet without transport header");
+        let raw = ipv4_packet.raw();
+        let ipv4_header = ipv4_packet.ipv4_header();
+        let transport_header = ipv4_packet.transport_header().as_ref().expect("Packet without transport header");
         Self {
             protocol: ipv4_header.protocol(),
             source_ip: ipv4_header.source(),

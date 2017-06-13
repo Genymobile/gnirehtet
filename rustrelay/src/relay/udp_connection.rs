@@ -9,9 +9,9 @@ pub struct UDPConnection {
 
 impl UDPConnection {
     pub fn new(reference_packet: &IPv4Packet) -> Self {
-        let raw: &[u8] = reference_packet.raw;
-        let ipv4_header = reference_packet.ipv4_header.clone();
-        let transport_header = reference_packet.transport_header.as_ref().unwrap().clone();
+        let raw: &[u8] = reference_packet.raw();
+        let ipv4_header = reference_packet.ipv4_header().clone();
+        let transport_header = reference_packet.transport_header().as_ref().unwrap().clone();
         Self {
             client_to_network: DatagramBuffer::new(4 * MAX_PACKET_LENGTH),
             network_to_client: Packetizer::new(raw, ipv4_header, transport_header),
