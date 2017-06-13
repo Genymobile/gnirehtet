@@ -1,8 +1,10 @@
 use std::cell::RefCell;
+use std::io;
 use std::rc::{Rc, Weak};
+use std::net::UdpSocket;
 
 use super::client::Client;
-use super::connection::Connection;
+use super::connection::{self, Connection};
 use super::datagram_buffer::DatagramBuffer;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
 use super::packetizer::Packetizer;
@@ -26,6 +28,11 @@ impl UDPConnection {
             client_to_network: DatagramBuffer::new(4 * MAX_PACKET_LENGTH),
             network_to_client: Packetizer::new(raw, ipv4_header, transport_header),
         }))
+    }
+
+    fn create_socket(route_key: &RouteKey) -> io::Result<UdpSocket> {
+        let rewritten_destination = connection::rewritten_destination(route_key.destination_ip(), route_key.destination_port());
+        Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet"))
     }
 }
 

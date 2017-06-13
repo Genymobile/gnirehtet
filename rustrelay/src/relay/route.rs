@@ -98,6 +98,22 @@ impl RouteKey {
         self.protocol
     }
 
+    pub fn source_ip(&self) -> u32 {
+        self.source_ip
+    }
+
+    pub fn source_port(&self) -> u16 {
+        self.source_port
+    }
+
+    pub fn destination_ip(&self) -> u32 {
+        self.destination_ip
+    }
+
+    pub fn destination_port(&self) -> u16 {
+        self.destination_port
+    }
+
     pub fn source(&self) -> SocketAddrV4 {
         net::to_socket_addr(self.source_ip, self.source_port)
     }
