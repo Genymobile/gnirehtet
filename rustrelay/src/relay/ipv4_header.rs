@@ -3,12 +3,12 @@ use std::mem;
 
 #[derive(Clone)]
 pub struct IPv4Header {
-    pub version: u8,
-    pub header_length: u8,
-    pub total_length: u16,
-    pub protocol: Protocol,
-    pub source: u32,
-    pub destination: u32,
+    version: u8,
+    header_length: u8,
+    total_length: u16,
+    protocol: Protocol,
+    source: u32,
+    destination: u32,
 }
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -34,11 +34,23 @@ impl IPv4Header {
         }
     }
 
-    fn source(&self) -> u32 {
+    pub fn header_length(&self) -> u8 {
+        self.header_length
+    }
+
+    pub fn total_length(&self) -> u16 {
+        self.total_length
+    }
+
+    pub fn protocol(&self) -> Protocol {
+        self.protocol
+    }
+
+    pub fn source(&self) -> u32 {
         self.source
     }
 
-    fn destination(&self) -> u32 {
+    pub fn destination(&self) -> u32 {
         self.destination
     }
 
