@@ -1,7 +1,7 @@
 use byteorder::{BigEndian, ByteOrder};
 use std::mem;
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct IPv4Header {
     pub version: u8,
     pub header_length: u8,

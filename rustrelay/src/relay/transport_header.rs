@@ -2,7 +2,7 @@ use super::ipv4_header::Protocol;
 use super::tcp_header::TCPHeader;
 use super::udp_header::{UDPHeader, UDP_HEADER_LENGTH};
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub enum TransportHeader {
     TCP(TCPHeader),
     UDP(UDPHeader),
