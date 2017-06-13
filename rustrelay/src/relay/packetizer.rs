@@ -58,7 +58,7 @@ impl Packetizer {
         self.ipv4_header.set_total_length(&mut self.buffer[..], total_length);
         self.transport_header.set_payload_length(&mut self.buffer[self.transport_index..], payload_length);
 
-        let mut ipv4_packet = IPv4Packet::new(&mut self.buffer[..total_length as usize], self.ipv4_header, self.transport_header);
+        let mut ipv4_packet = IPv4Packet::new(&mut self.buffer[..total_length as usize], self.ipv4_header.clone(), self.transport_header.clone());
         ipv4_packet.compute_checksums();
         ipv4_packet
     }
