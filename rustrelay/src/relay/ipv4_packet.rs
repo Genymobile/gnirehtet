@@ -6,9 +6,9 @@ use super::udp_header::UDPHeader;
 pub const MAX_PACKET_LENGTH: usize = 1 << 16;
 
 pub struct IPv4Packet<'a> {
-    pub raw: &'a mut [u8],
-    pub ipv4_header: IPv4Header,
-    pub transport_header: Option<TransportHeader>,
+    raw: &'a mut [u8],
+    ipv4_header: IPv4Header,
+    transport_header: Option<TransportHeader>,
 }
 
 impl<'a> IPv4Packet<'a> {
@@ -31,6 +31,30 @@ impl<'a> IPv4Packet<'a> {
             ipv4_header: ipv4_header,
             transport_header: Some(transport_header),
         }
+    }
+
+    pub fn raw(&self) -> &[u8] {
+        self.raw
+    }
+
+    pub fn raw_mut(&mut self) -> &mut [u8] {
+        self.raw
+    }
+
+    pub fn ipv4_header(&self) -> &IPv4Header {
+        &self.ipv4_header
+    }
+
+    pub fn ipv4_header_mut(&mut self) -> &mut IPv4Header {
+        &mut self.ipv4_header
+    }
+
+    pub fn transport_header(&self) -> &Option<TransportHeader> {
+        &self.transport_header
+    }
+
+    pub fn transport_header_mut(&mut self) -> &mut Option<TransportHeader> {
+        &mut self.transport_header
     }
 
     pub fn is_valid(&self) -> bool {
