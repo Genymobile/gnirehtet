@@ -22,7 +22,7 @@ pub struct Route {
 
 impl Route {
     pub fn new(client: Weak<RefCell<Client>>, route_key: RouteKey, ipv4_packet: &IPv4Packet, close_listener: Box<CloseListener<RouteKey>>) -> io::Result<Self> {
-        let connection = Route::create_connection(&route_key)?;
+        let connection = Route::create_connection(&route_key, ipv4_packet)?;
         Ok(Self {
             client: client,
             key: route_key,
@@ -31,10 +31,10 @@ impl Route {
         })
     }
 
-    fn create_connection(route_key: &RouteKey) -> io::Result<Connection> {
+    fn create_connection(route_key: &RouteKey, reference_packet: &IPv4Packet) -> io::Result<Connection> {
         match route_key.protocol() {
             Protocol::TCP => Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet")),
-            Protocol::UDP => Ok(UDPConnection::new().into()),
+            Protocol::UDP => Ok(UDPConnection::new(reference_packet).into()),
             p => Err(io::Error::new(io::ErrorKind::Other, format!("Unsupported protocol: {:?}", p))),
         }
     }
