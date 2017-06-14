@@ -13,13 +13,16 @@ use super::packetizer::Packetizer;
 use super::route::RouteKey;
 use super::selector::Selector;
 
+const TAG: &'static str = "UDPConnection";
+
 pub struct UDPConnection {
     client: Weak<RefCell<Client>>,
     route_key: RouteKey,
     socket: UdpSocket,
+    token: Token,
     client_to_network: DatagramBuffer,
     network_to_client: Packetizer,
-    token: Token,
+    closed: bool,
 }
 
 impl UDPConnection {
@@ -32,9 +35,10 @@ impl UDPConnection {
             client: client,
             route_key: route_key,
             socket: socket,
+            token: Token(0), // default value, will be set afterwards
             client_to_network: DatagramBuffer::new(4 * MAX_PACKET_LENGTH),
             network_to_client: Packetizer::new(raw, ipv4_header, transport_header),
-            token: Token(0), // default value, will be set afterwards
+            closed: false,
         }));
 
         {
@@ -57,9 +61,63 @@ impl UDPConnection {
         udp_socket.connect(rewritten_destination)?;
         Ok(udp_socket)
     }
+    fn close(&mut self, selector: &mut Selector) {
+        // TODO
+    }
+
+    fn process_send(&mut self, selector: &mut Selector) {
+        if let Err(_) = self.write() {
+            error!(target: TAG, "Cannot write");
+            self.close(selector);
+        }
+    }
+
+    fn process_receive(&mut self, selector: &mut Selector) {
+        // TODO
+    }
+
+    fn update_interests(&mut self, selector: &mut Selector) -> io::Result<()> {
+        let mut ready = Ready::empty();
+        if self.may_read() {
+            ready = Ready::readable();
+        }
+        if self.may_write() {
+            ready = ready | Ready::writable();
+        }
+        selector.reregister(&self.socket, self.token, ready, PollOpt::level())
+    }
+
+    fn read(&mut self) -> io::Result<()> {
+        // TODO
+        Ok(())
+    }
+
+    fn write(&mut self) -> io::Result<()> {
+        // TODO
+        Ok(())
+    }
+
+    fn may_read(&self) -> bool {
+        // TODO
+        true
+    }
+
+    fn may_write(&self) -> bool {
+        !self.client_to_network.is_empty()
+    }
 
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
-
+        assert!(!self.closed);
+        let ready = event.readiness();
+        if ready.is_writable() {
+            self.process_send(selector);
+        }
+        if !self.closed && ready.is_readable() {
+            self.process_receive(selector);
+        }
+        if !self.closed {
+            self.update_interests(selector);
+        }
     }
 }
 

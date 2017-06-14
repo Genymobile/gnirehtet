@@ -18,12 +18,12 @@ const TAG: &'static str = "Client";
 pub struct Client {
     id: u32,
     stream: TcpStream,
+    token: Token,
     client_to_network: IPv4PacketBuffer,
     network_to_client: StreamBuffer,
     router: Router,
-    closed: bool,
     close_listener: Box<CloseListener<Client>>,
-    token: Token,
+    closed: bool,
     // number of remaining bytes of "id" to send to the client before relaying any data
     pending_id_bytes: usize,
 }
@@ -33,12 +33,12 @@ impl Client {
         let rc = Rc::new(RefCell::new(Self {
             id: id,
             stream: stream,
+            token: Token(0), // default value, will be set afterwards
             client_to_network: IPv4PacketBuffer::new(),
             network_to_client: StreamBuffer::new(16 * MAX_PACKET_LENGTH),
             router: Router::new(),
             closed: false,
             close_listener: close_listener,
-            token: Token(0), // default value, will be set afterwards
             pending_id_bytes: 4,
         }));
         // set client as router owner
