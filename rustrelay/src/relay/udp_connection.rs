@@ -1,8 +1,9 @@
 use std::cell::RefCell;
 use std::io;
 use std::rc::{Rc, Weak};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket};
+use std::net::{IpAddr, Ipv4Addr, SocketAddr};
 use mio::{Event, PollOpt, Ready};
+use mio::net::UdpSocket;
 
 use super::client::Client;
 use super::connection::{self, Connection};
@@ -41,15 +42,15 @@ impl UDPConnection {
                 self_ref.on_ready(selector, ready);
             };
             let mut self_ref = rc.borrow_mut();
-            //let token = selector.register(&self_ref.socket, handler, Ready::readable(), PollOpt::level())?;
+            let token = selector.register(&self_ref.socket, handler, Ready::readable(), PollOpt::level())?;
         }
         Ok(rc)
     }
 
     fn create_socket(route_key: &RouteKey) -> io::Result<UdpSocket> {
         let autobind_addr = SocketAddr::new(Ipv4Addr::new(0, 0, 0, 0).into(), 0);
-        let udp_socket = UdpSocket::bind(autobind_addr)?;
-        let rewritten_destination = connection::rewritten_destination(route_key.destination_ip(), route_key.destination_port());
+        let udp_socket = UdpSocket::bind(&autobind_addr)?;
+        let rewritten_destination = connection::rewritten_destination(route_key.destination_ip(), route_key.destination_port()).into();
         udp_socket.connect(rewritten_destination)?;
         Ok(udp_socket)
     }
