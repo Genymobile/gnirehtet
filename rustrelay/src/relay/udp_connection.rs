@@ -61,8 +61,14 @@ impl UDPConnection {
         udp_socket.connect(rewritten_destination)?;
         Ok(udp_socket)
     }
+
     fn close(&mut self, selector: &mut Selector) {
-        // TODO
+        self.disconnect();
+
+        // route is embedded in router which is embedded in client: the client necessarily exists
+        let client_rc = self.client.upgrade().expect("expected client not found");
+        let mut client = client_rc.borrow_mut();
+        client.router().remove_route(&self.route_key);
     }
 
     fn process_send(&mut self, selector: &mut Selector) {
