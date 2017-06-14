@@ -47,6 +47,7 @@ impl Route {
     }
 
     pub fn close(&mut self) {
+        // TODO remove route class
         self.disconnect();
 
         // route is embedded in router which is embedded in client: the client necessarily exists
