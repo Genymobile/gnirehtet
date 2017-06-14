@@ -21,7 +21,7 @@ pub struct UDPConnection {
 }
 
 impl UDPConnection {
-    pub fn new(client: Weak<RefCell<Client>>, route_key: RouteKey, reference_packet: &IPv4Packet) -> io::Result<Rc<RefCell<Self>>> {
+    pub fn new(selector: &mut Selector, client: Weak<RefCell<Client>>, route_key: RouteKey, reference_packet: &IPv4Packet) -> io::Result<Rc<RefCell<Self>>> {
         let socket = UDPConnection::create_socket(&route_key)?;
         let raw: &[u8] = reference_packet.raw();
         let ipv4_header = reference_packet.ipv4_header().clone();
@@ -60,7 +60,7 @@ impl UDPConnection {
 }
 
 impl Connection for UDPConnection {
-    fn send_to_network(&mut self, ipv4_packet: &IPv4Packet) {
+    fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
         // TODO
     }
 

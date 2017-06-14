@@ -6,6 +6,7 @@ use log::LogLevel;
 use super::client::Client;
 use super::ipv4_packet::IPv4Packet;
 use super::route::{Route, RouteKey};
+use super::selector::Selector;
 
 const TAG: &'static str = "Router";
 
@@ -27,28 +28,28 @@ impl Router {
         self.client = client;
     }
 
-    pub fn send_to_network(&mut self, ipv4_packet: &IPv4Packet) {
+    pub fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
         if !ipv4_packet.is_valid() {
             warn!(target: TAG, "Dropping invalid packet");
             if log_enabled!(target: TAG, LogLevel::Trace) {
                 // TODO log binary
             }
         } else {
-            if let Ok(mut route) = self.route(ipv4_packet) {
-                route.send_to_network(ipv4_packet);
+            if let Ok(mut route) = self.route(selector, ipv4_packet) {
+                route.send_to_network(selector, ipv4_packet);
             } else {
                 error!(target: TAG, "Cannot create route, dropping packet");
             }
         }
     }
 
-    fn route(&mut self, ipv4_packet: &IPv4Packet) -> io::Result<&mut Route> {
+    fn route(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<&mut Route> {
         let key = RouteKey::from_packet(ipv4_packet);
         let index = match self.find_route_index(&key) {
             Some(index) => index,
             None => {
                 let weak = self.client.clone();
-                let route = Route::new(self.client.clone(), key, ipv4_packet)?;
+                let route = Route::new(selector, self.client.clone(), key, ipv4_packet)?;
                 let index = self.routes.len();
                 self.routes.push(route);
                 index
