@@ -2,9 +2,8 @@ use std::cell::RefCell;
 use std::io::{self, Write};
 use std::net::Shutdown;
 use std::rc::Rc;
-use mio::Token;
 use mio::net::TcpStream;
-use mio::{Event, PollOpt, Ready};
+use mio::{Event, PollOpt, Ready, Token};
 
 use super::binary;
 use super::close_listener::CloseListener;

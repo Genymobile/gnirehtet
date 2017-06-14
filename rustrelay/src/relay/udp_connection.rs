@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::io;
 use std::rc::{Rc, Weak};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
-use mio::{Event, PollOpt, Ready};
+use mio::{Event, PollOpt, Ready, Token};
 use mio::net::UdpSocket;
 
 use super::client::Client;
@@ -19,6 +19,7 @@ pub struct UDPConnection {
     socket: UdpSocket,
     client_to_network: DatagramBuffer,
     network_to_client: Packetizer,
+    token: Token,
 }
 
 impl UDPConnection {
@@ -33,6 +34,7 @@ impl UDPConnection {
             socket: socket,
             client_to_network: DatagramBuffer::new(4 * MAX_PACKET_LENGTH),
             network_to_client: Packetizer::new(raw, ipv4_header, transport_header),
+            token: Token(0), // default value, will be set afterwards
         }));
 
         {
@@ -43,6 +45,7 @@ impl UDPConnection {
             };
             let mut self_ref = rc.borrow_mut();
             let token = selector.register(&self_ref.socket, handler, Ready::readable(), PollOpt::level())?;
+            self_ref.token = token;
         }
         Ok(rc)
     }
