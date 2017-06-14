@@ -17,17 +17,15 @@ pub struct Route {
     client: Weak<RefCell<Client>>,
     key: RouteKey,
     connection: Rc<RefCell<Connection>>,
-    close_listener: Box<CloseListener<RouteKey>>,
 }
 
 impl Route {
-    pub fn new(client: Weak<RefCell<Client>>, route_key: RouteKey, ipv4_packet: &IPv4Packet, close_listener: Box<CloseListener<RouteKey>>) -> io::Result<Self> {
+    pub fn new(client: Weak<RefCell<Client>>, route_key: RouteKey, ipv4_packet: &IPv4Packet) -> io::Result<Self> {
         let connection = Route::create_connection(client.clone(), route_key.clone(), ipv4_packet)?;
         Ok(Self {
             client: client,
             key: route_key,
             connection: connection,
-            close_listener: close_listener,
         })
     }
 
@@ -49,7 +47,11 @@ impl Route {
 
     pub fn close(&mut self) {
         self.disconnect();
-        self.close_listener.on_closed(&self.key);
+
+        // route is embedded in router which is embedded in client: the client necessarily exists
+        let client_rc = self.client.upgrade().expect("expected client not found");
+        let mut client = client_rc.borrow_mut();
+        client.router().remove_route(&self.key);
     }
 
     pub fn disconnect(&mut self) {
