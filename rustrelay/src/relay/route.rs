@@ -32,7 +32,7 @@ impl Route {
     fn create_connection(client: Weak<RefCell<Client>>, route_key: RouteKey, reference_packet: &IPv4Packet) -> io::Result<Rc<RefCell<Connection>>> {
         match route_key.protocol() {
             Protocol::TCP => Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet")),
-            Protocol::UDP => Ok(UDPConnection::new(client, route_key, reference_packet)),
+            Protocol::UDP => Ok(UDPConnection::new(client, route_key, reference_packet)?),
             p => Err(io::Error::new(io::ErrorKind::Other, format!("Unsupported protocol: {:?}", p))),
         }
     }
