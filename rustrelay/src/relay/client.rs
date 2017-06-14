@@ -45,12 +45,12 @@ impl Client {
         // set client as router owner
         rc.borrow_mut().router.set_client(Rc::downgrade(&rc));
 
-        let rc_clone = rc.clone();
-        let handler = move |selector: &mut Selector, ready| {
-            let mut self_ref = rc_clone.borrow_mut();
-            self_ref.on_ready(selector, ready);
-        };
         {
+            let rc_clone = rc.clone();
+            let handler = move |selector: &mut Selector, ready| {
+                let mut self_ref = rc_clone.borrow_mut();
+                self_ref.on_ready(selector, ready);
+            };
             let mut self_ref = rc.borrow_mut();
             // on start, we are interested only in writing (we must first send the client id)
             let token = selector.register(&self_ref.stream, handler, Ready::writable(), PollOpt::level())?;
