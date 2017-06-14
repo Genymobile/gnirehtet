@@ -145,7 +145,7 @@ impl Client {
     fn push_one_packet_to_network(&mut self, selector: &mut Selector) -> bool {
         match self.client_to_network.as_ipv4_packet() {
             Some(ref packet) => {
-                self.router.send_to_network(packet);
+                self.router.send_to_network(selector, packet);
                 true
             }
             None => false

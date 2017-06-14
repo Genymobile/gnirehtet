@@ -10,6 +10,7 @@ use super::connection::Connection;
 use super::ipv4_header::{IPv4Header, Protocol};
 use super::ipv4_packet::IPv4Packet;
 use super::net;
+use super::selector::Selector;
 use super::transport_header::TransportHeader;
 use super::udp_connection::UDPConnection;
 
@@ -20,8 +21,8 @@ pub struct Route {
 }
 
 impl Route {
-    pub fn new(client: Weak<RefCell<Client>>, route_key: RouteKey, ipv4_packet: &IPv4Packet) -> io::Result<Self> {
-        let connection = Route::create_connection(client.clone(), route_key.clone(), ipv4_packet)?;
+    pub fn new(selector: &mut Selector, client: Weak<RefCell<Client>>, route_key: RouteKey, ipv4_packet: &IPv4Packet) -> io::Result<Self> {
+        let connection = Route::create_connection(selector, client.clone(), route_key.clone(), ipv4_packet)?;
         Ok(Self {
             client: client,
             key: route_key,
@@ -29,10 +30,10 @@ impl Route {
         })
     }
 
-    fn create_connection(client: Weak<RefCell<Client>>, route_key: RouteKey, reference_packet: &IPv4Packet) -> io::Result<Rc<RefCell<Connection>>> {
+    fn create_connection(selector: &mut Selector, client: Weak<RefCell<Client>>, route_key: RouteKey, reference_packet: &IPv4Packet) -> io::Result<Rc<RefCell<Connection>>> {
         match route_key.protocol() {
             Protocol::TCP => Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet")),
-            Protocol::UDP => Ok(UDPConnection::new(client, route_key, reference_packet)?),
+            Protocol::UDP => Ok(UDPConnection::new(selector, client, route_key, reference_packet)?),
             p => Err(io::Error::new(io::ErrorKind::Other, format!("Unsupported protocol: {:?}", p))),
         }
     }
@@ -41,8 +42,8 @@ impl Route {
         &self.key
     }
 
-    pub fn send_to_network(&mut self, ipv4_packet: &IPv4Packet) {
-        self.connection.borrow_mut().send_to_network(ipv4_packet);
+    pub fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+        self.connection.borrow_mut().send_to_network(selector, ipv4_packet);
     }
 
     pub fn close(&mut self) {

@@ -3,11 +3,12 @@ use std::net::{Ipv4Addr, SocketAddrV4};
 use super::ipv4_packet::IPv4Packet;
 use super::net;
 use super::route::RouteKey;
+use super::selector::Selector;
 
 const LOCALHOST_FORWARD: u32 = 0x0A000202;
 
 pub trait Connection {
-    fn send_to_network(&mut self, ipv4_packet: &IPv4Packet);
+    fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet);
     fn disconnect(&mut self);
     fn is_expired(&self) -> bool;
 }
