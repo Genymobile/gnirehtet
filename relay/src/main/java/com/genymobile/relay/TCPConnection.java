@@ -57,8 +57,8 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
     private boolean remoteClosed;
 
-    public TCPConnection(Route route, Selector selector, IPv4Header ipv4Header, TCPHeader tcpHeader) throws IOException {
-        super(route);
+    public TCPConnection(ConnectionId id, Client client, Selector selector, IPv4Header ipv4Header, TCPHeader tcpHeader) throws IOException {
+        super(id, client);
 
         TCPHeader shrinkedTcpHeader = tcpHeader.copy();
         shrinkedTcpHeader.shrinkOptions(); // no TCP options

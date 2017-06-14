@@ -152,7 +152,7 @@ need to copy or synchronize access to the packets data: the [`IPv4Packet`]s
 just point to the buffer where they are stored.
 
 Each [`Client`] holds a [`Router`], responsible to send the packets to the
-right [`Route`], identified by these 4 properties available in the IP and
+right [`Connection`], identified by these 4 properties available in the IP and
 transport headers:
 
  - source address
@@ -160,8 +160,8 @@ transport headers:
  - destination address
  - destination port
 
-The [`Route`] creates a [`Connection`] ([`TCPConnection`] or [`UDPConnection`])
-to the requested destination, and registers its channel to the selector.
+A [`Connection`] is either a [`TCPConnection`] or a [`UDPConnection`]
+to the requested destination. It registers its own channel to the selector.
 
 The connection is responsible for converting data from level 3 to level 5 for
 device-to-network packets, and from level 5 to level 3 for network-to-device
@@ -176,7 +176,6 @@ IP and transport headers.
 
 [`IPv4Packet`]: relay/src/main/java/com/genymobile/relay/IPv4Packet.java
 [`Router`]: relay/src/main/java/com/genymobile/relay/Router.java
-[`Route`]: relay/src/main/java/com/genymobile/relay/Route.java
 [`Connection`]: relay/src/main/java/com/genymobile/relay/Connection.java
 [`TCPConnection`]: relay/src/main/java/com/genymobile/relay/TCPConnection.java
 [`UDPConnection`]: relay/src/main/java/com/genymobile/relay/UDPConnection.java

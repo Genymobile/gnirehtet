@@ -81,6 +81,10 @@ public class Client {
         return id;
     }
 
+    public Router getRouter() {
+        return router;
+    }
+
     private void processReceive() {
         if (!read()) {
             close();

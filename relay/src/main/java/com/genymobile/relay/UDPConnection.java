@@ -36,8 +36,8 @@ public class UDPConnection extends AbstractConnection {
 
     private long idleSince;
 
-    public UDPConnection(Route route, Selector selector, IPv4Header ipv4Header, UDPHeader udpHeader) throws IOException {
-        super(route);
+    public UDPConnection(ConnectionId id, Client client, Selector selector, IPv4Header ipv4Header, UDPHeader udpHeader) throws IOException {
+        super(id, client);
 
         networkToClient = new Packetizer(ipv4Header, udpHeader);
         networkToClient.getResponseIPv4Header().swapSourceAndDestination();

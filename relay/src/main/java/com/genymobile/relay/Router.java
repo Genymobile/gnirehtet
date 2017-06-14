@@ -29,7 +29,7 @@ public class Router {
     private final Selector selector;
 
     // there are typically only few connections per client, HashMap would be less efficient
-    private final List<Route> routes = new ArrayList<>();
+    private final List<Connection> connections = new ArrayList<>();
 
     public Router(Client client, Selector selector) {
         this.client = client;
@@ -45,65 +45,75 @@ public class Router {
             return;
         }
         try {
-            Route route = getRoute(packet.getIpv4Header(), packet.getTransportHeader());
-            route.sendToNetwork(packet);
+            Connection connection = getConnection(packet.getIpv4Header(), packet.getTransportHeader());
+            connection.sendToNetwork(packet);
         } catch (IOException e) {
-            Log.e(TAG, "Cannot create route, dropping packet", e);
+            Log.e(TAG, "Cannot create connection, dropping packet", e);
         }
     }
 
-    private Route getRoute(IPv4Header ipv4Header, TransportHeader transportHeader) throws IOException {
-        Route.Key key = Route.getKey(ipv4Header, transportHeader);
-        Route route = findRoute(key);
-        if (route == null) {
-            route = new Route(client, selector, key, ipv4Header, transportHeader, this::removeRoute);
-            routes.add(route);
+    private Connection getConnection(IPv4Header ipv4Header, TransportHeader transportHeader) throws IOException {
+        ConnectionId id = ConnectionId.from(ipv4Header, transportHeader);
+        Connection connection = find(id);
+        if (connection == null) {
+            connection = createConnection(id, ipv4Header, transportHeader);
+            connections.add(connection);
         }
-        return route;
+        return connection;
     }
 
-    private int findRouteIndex(Route.Key key) {
-        for (int i = 0; i < routes.size(); ++i) {
-            Route route = routes.get(i);
-            if (key.equals(route.getKey())) {
+    private Connection createConnection(ConnectionId id, IPv4Header ipv4Header, TransportHeader transportHeader) throws IOException {
+        IPv4Header.Protocol protocol = id.getProtocol();
+        if (protocol == IPv4Header.Protocol.UDP) {
+            return new UDPConnection(id, client, selector, ipv4Header, (UDPHeader) transportHeader);
+        }
+        if (protocol == IPv4Header.Protocol.TCP) {
+            return new TCPConnection(id, client, selector, ipv4Header, (TCPHeader) transportHeader);
+        }
+        throw new UnsupportedOperationException("Unsupported protocol: " + protocol);
+    }
+
+    private int findIndex(ConnectionId id) {
+        for (int i = 0; i < connections.size(); ++i) {
+            Connection connection = connections.get(i);
+            if (id.equals(connection.getId())) {
                 return i;
             }
         }
         return -1;
     }
 
-    private Route findRoute(Route.Key key) {
-        int routeIndex = findRouteIndex(key);
-        if (routeIndex == -1) {
+    private Connection find(ConnectionId id) {
+        int connectionIndex = findIndex(id);
+        if (connectionIndex == -1) {
             return null;
         }
-        return routes.get(routeIndex);
+        return connections.get(connectionIndex);
     }
 
     public void clear() {
-        for (Route route : routes) {
-            route.disconnect();
+        for (Connection connection : connections) {
+            connection.disconnect();
         }
-        // optimization of route.close() for all routes
-        routes.clear();
+        connections.clear();
     }
 
-    private boolean removeRoute(Route.Key key) {
-        int routeIndex = findRouteIndex(key);
-        if (routeIndex == -1) {
+    public boolean remove(ConnectionId connectionId) {
+        int connectionIndex = findIndex(connectionId);
+        if (connectionIndex == -1) {
             return false;
         }
-        routes.remove(routeIndex);
+        connections.remove(connectionIndex);
         return true;
     }
 
     public void cleanExpiredConnections() {
-        for (int i = routes.size() - 1; i >= 0; --i) {
-            Route route = routes.get(i);
-            if (route.isConnectionExpired()) {
-                Log.d(TAG, "Remove expired connection: " + route.getKey());
-                route.disconnect();
-                routes.remove(i);
+        for (int i = connections.size() - 1; i >= 0; --i) {
+            Connection connection = connections.get(i);
+            if (connection.isExpired()) {
+                Log.d(TAG, "Remove expired connection: " + connection.getId());
+                connection.disconnect();
+                connections.remove(i);
             }
         }
     }
