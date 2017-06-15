@@ -4,22 +4,24 @@ use std::rc::{Rc, Weak};
 use log::LogLevel;
 
 use super::client::Client;
+use super::connection::{Connection, ConnectionId};
+use super::ipv4_header::Protocol;
 use super::ipv4_packet::IPv4Packet;
-use super::route::{Route, RouteKey};
 use super::selector::Selector;
+use super::udp_connection::UDPConnection;
 
 const TAG: &'static str = "Router";
 
 pub struct Router {
     client: Weak<RefCell<Client>>,
-    routes: Vec<Route>,
+    connections: Vec<Rc<RefCell<Connection>>>,
 }
 
 impl Router {
     pub fn new() -> Self {
         Self {
             client: Weak::new(),
-            routes: Vec::new(),
+            connections: Vec::new(),
         }
     }
 
@@ -35,43 +37,50 @@ impl Router {
                 // TODO log binary
             }
         } else {
-            if let Ok(mut route) = self.route(selector, ipv4_packet) {
-                route.send_to_network(selector, ipv4_packet);
+            if let Ok(mut connection) = self.connection(selector, ipv4_packet) {
+                connection.borrow_mut().send_to_network(selector, ipv4_packet);
             } else {
                 error!(target: TAG, "Cannot create route, dropping packet");
             }
         }
     }
 
-    fn route(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<&mut Route> {
-        let key = RouteKey::from_packet(ipv4_packet);
-        let index = match self.find_route_index(&key) {
+    fn connection(&mut self, selector: &mut Selector, reference_packet: &IPv4Packet) -> io::Result<&Rc<RefCell<Connection>>> {
+        let id = ConnectionId::from_packet(reference_packet);
+        let index = match self.find_index(&id) {
             Some(index) => index,
             None => {
                 let weak = self.client.clone();
-                let route = Route::new(selector, self.client.clone(), key, ipv4_packet)?;
-                let index = self.routes.len();
-                self.routes.push(route);
+                let connection = Router::create_connection(selector, id, self.client.clone(), reference_packet)?;
+                let index = self.connections.len();
+                self.connections.push(connection);
                 index
             }
         };
-        Ok(self.routes.get_mut(index).unwrap())
+        Ok(self.connections.get_mut(index).unwrap())
     }
 
-    fn find_route_index(&self, key: &RouteKey) -> Option<usize> {
-        self.routes.iter().position(|route| route.key() == key)
+    fn create_connection(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, reference_packet: &IPv4Packet) -> io::Result<Rc<RefCell<Connection>>> {
+        match id.protocol() {
+            Protocol::TCP => Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet")),
+            Protocol::UDP => Ok(UDPConnection::new(selector, id, client, reference_packet)?),
+            p => Err(io::Error::new(io::ErrorKind::Other, format!("Unsupported protocol: {:?}", p))),
+        }
     }
 
-    pub fn remove_route(&mut self, key: &RouteKey) {
-        let index = self.find_route_index(key).expect("Removing an unknown route");
-        self.routes.swap_remove(index);
+    fn find_index(&self, id: &ConnectionId) -> Option<usize> {
+        self.connections.iter().position(|connection| connection.borrow_mut().id() == id)
+    }
+
+    pub fn remove(&mut self, id: &ConnectionId) {
+        let index = self.find_index(id).expect("Removing an unknown connection");
+        self.connections.swap_remove(index);
     }
 
     pub fn clear(&mut self) {
-        for route in &mut self.routes {
-            route.disconnect();
+        for connection in &mut self.connections {
+            connection.borrow_mut().disconnect();
         }
-        // optimization of route.close() for all routes
-        self.routes.clear();
+        self.connections.clear();
     }
 }

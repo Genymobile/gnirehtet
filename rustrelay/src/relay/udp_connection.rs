@@ -6,18 +6,17 @@ use mio::{Event, PollOpt, Ready, Token};
 use mio::net::UdpSocket;
 
 use super::client::Client;
-use super::connection::{self, Connection};
+use super::connection::{self, Connection, ConnectionId};
 use super::datagram_buffer::DatagramBuffer;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
 use super::packetizer::Packetizer;
-use super::route::RouteKey;
 use super::selector::Selector;
 
 const TAG: &'static str = "UDPConnection";
 
 pub struct UDPConnection {
+    id: ConnectionId,
     client: Weak<RefCell<Client>>,
-    route_key: RouteKey,
     socket: UdpSocket,
     token: Token,
     client_to_network: DatagramBuffer,
@@ -26,14 +25,14 @@ pub struct UDPConnection {
 }
 
 impl UDPConnection {
-    pub fn new(selector: &mut Selector, client: Weak<RefCell<Client>>, route_key: RouteKey, reference_packet: &IPv4Packet) -> io::Result<Rc<RefCell<Self>>> {
-        let socket = UDPConnection::create_socket(&route_key)?;
+    pub fn new(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, reference_packet: &IPv4Packet) -> io::Result<Rc<RefCell<Self>>> {
+        let socket = UDPConnection::create_socket(&id)?;
         let raw: &[u8] = reference_packet.raw();
         let ipv4_header = reference_packet.ipv4_header().clone();
         let transport_header = reference_packet.transport_header().as_ref().unwrap().clone();
         let rc = Rc::new(RefCell::new(Self {
+            id: id,
             client: client,
-            route_key: route_key,
             socket: socket,
             token: Token(0), // default value, will be set afterwards
             client_to_network: DatagramBuffer::new(4 * MAX_PACKET_LENGTH),
@@ -54,10 +53,10 @@ impl UDPConnection {
         Ok(rc)
     }
 
-    fn create_socket(route_key: &RouteKey) -> io::Result<UdpSocket> {
+    fn create_socket(id: &ConnectionId) -> io::Result<UdpSocket> {
         let autobind_addr = SocketAddr::new(Ipv4Addr::new(0, 0, 0, 0).into(), 0);
         let udp_socket = UdpSocket::bind(&autobind_addr)?;
-        let rewritten_destination = connection::rewritten_destination(route_key.destination_ip(), route_key.destination_port()).into();
+        let rewritten_destination = connection::rewritten_destination(id.destination_ip(), id.destination_port()).into();
         udp_socket.connect(rewritten_destination)?;
         Ok(udp_socket)
     }
@@ -68,7 +67,7 @@ impl UDPConnection {
         // route is embedded in router which is embedded in client: the client necessarily exists
         let client_rc = self.client.upgrade().expect("expected client not found");
         let mut client = client_rc.borrow_mut();
-        client.router().remove_route(&self.route_key);
+        client.router().remove(&self.id);
     }
 
     fn process_send(&mut self, selector: &mut Selector) {
@@ -128,6 +127,10 @@ impl UDPConnection {
 }
 
 impl Connection for UDPConnection {
+    fn id(&self) -> &ConnectionId {
+        &self.id
+    }
+
     fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
         // TODO
     }

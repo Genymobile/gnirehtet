@@ -11,7 +11,6 @@ mod ipv4_packet_buffer;
 mod net;
 mod packetizer;
 mod relay;
-mod route;
 mod router;
 mod selector;
 mod stream_buffer;
