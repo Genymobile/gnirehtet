@@ -3,8 +3,9 @@ use std::cmp;
 use std::io;
 use mio::net::UdpSocket;
 
+use super::datagram::{DatagramSender, MAX_DATAGRAM_LENGTH};
+
 const HEADER_LENGTH: usize = 2;
-const MAX_DATAGRAM_LENGTH: usize = 1 << 16;
 const MAX_BLOCK_LENGTH: usize = HEADER_LENGTH + MAX_DATAGRAM_LENGTH;
 
 const TAG: &'static str = "DatagramBuffer";
@@ -93,48 +94,10 @@ impl DatagramBuffer {
     }
 }
 
-pub trait DatagramSender {
-    fn send(&mut self, buf: &[u8]) -> io::Result<(usize)>;
-}
-
-// Expose UdpSocket as DatagramSender
-impl DatagramSender for UdpSocket {
-    fn send(&mut self, buf: &[u8]) -> io::Result<(usize)> {
-        // call the Self implementation
-        (self as &Self).send(buf)
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    struct MockDatagramSocket {
-        buf: [u8; MAX_DATAGRAM_LENGTH],
-        len: usize,
-    }
-
-    impl MockDatagramSocket {
-        fn new() -> Self {
-            Self {
-                buf: [0; MAX_DATAGRAM_LENGTH],
-                len: 0,
-            }
-        }
-
-        fn data(&self) -> &[u8] {
-            &self.buf[..self.len]
-        }
-    }
-
-    impl DatagramSender for MockDatagramSocket {
-        fn send(&mut self, buf: &[u8]) -> io::Result<(usize)> {
-            let len = cmp::min(self.buf.len(), buf.len());
-            &mut self.buf[..len].copy_from_slice(&buf[..len]);
-            self.len = len;
-            Ok(len)
-        }
-    }
+    use relay::datagram::tests::MockDatagramSocket;
 
     fn create_datagram(length: u8) -> Vec<u8> {
         (0..length).collect()

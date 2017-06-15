@@ -4,6 +4,7 @@ mod binary;
 mod client;
 mod close_listener;
 mod connection;
+mod datagram;
 mod datagram_buffer;
 mod ipv4_header;
 mod ipv4_packet;
