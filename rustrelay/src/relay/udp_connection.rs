@@ -21,6 +21,7 @@ pub struct UDPConnection {
     token: Token,
     client_to_network: DatagramBuffer,
     network_to_client: Packetizer,
+    pending_packet_for_client: Option<Box<[u8]>>, // used when the client buffer is full, should be rare
     closed: bool,
 }
 
@@ -37,6 +38,7 @@ impl UDPConnection {
             token: Token(0), // default value, will be set afterwards
             client_to_network: DatagramBuffer::new(4 * MAX_PACKET_LENGTH),
             network_to_client: Packetizer::new(raw, ipv4_header, transport_header),
+            pending_packet_for_client: None,
             closed: false,
         }));
 
@@ -71,14 +73,18 @@ impl UDPConnection {
     }
 
     fn process_send(&mut self, selector: &mut Selector) {
-        if let Err(_) = self.write() {
-            error!(target: TAG, "Cannot write");
+        if let Err(err) = self.write() {
+            error!(target: TAG, "Cannot write: {}", err);
             self.close(selector);
         }
     }
 
     fn process_receive(&mut self, selector: &mut Selector) {
-        // TODO
+        if let Err(err) = self.read() {
+            error!(target: TAG, "Cannot read: {}", err);
+            self.close(selector);
+        }
+        // TODO push to client
     }
 
     fn update_interests(&mut self, selector: &mut Selector) -> io::Result<()> {
@@ -93,6 +99,7 @@ impl UDPConnection {
     }
 
     fn read(&mut self) -> io::Result<()> {
+        assert!(self.pending_packet_for_client.is_none());
         let packet = self.network_to_client.packetize(&mut self.socket)?;
         // TODO
         Ok(())
