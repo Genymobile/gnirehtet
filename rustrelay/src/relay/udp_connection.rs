@@ -93,7 +93,7 @@ impl UDPConnection {
     }
 
     fn read(&mut self) -> io::Result<()> {
-        //let packet = self.network_to_client.packetize(&mut self.socket)?;
+        let packet = self.network_to_client.packetize(&mut self.socket)?;
         // TODO
         Ok(())
     }
