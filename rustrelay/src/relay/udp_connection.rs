@@ -98,7 +98,7 @@ impl UDPConnection {
     }
 
     fn write(&mut self) -> io::Result<()> {
-        // TODO
+        self.client_to_network.write_to(&mut self.socket)?;
         Ok(())
     }
 

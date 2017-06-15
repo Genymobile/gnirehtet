@@ -1,5 +1,7 @@
 use byteorder::{BigEndian, ByteOrder};
+use std::cmp;
 use std::io;
+use mio::net::UdpSocket;
 
 const HEADER_LENGTH: usize = 2;
 const MAX_DATAGRAM_LENGTH: usize = 1 << 16;
@@ -49,14 +51,14 @@ impl DatagramBuffer {
         HEADER_LENGTH + datagram_length < remaining
     }
 
-    pub fn write_to<W: io::Write>(&mut self, destination: &mut W) -> io::Result<()> {
+    pub fn write_to<S: DatagramSender>(&mut self, destination: &mut S) -> io::Result<()> {
         let length = self.read_length() as usize;
         let source_slice = &self.buf[self.tail..self.tail + length];
         self.tail += length;
         if self.tail >= self.circular_buffer_length {
             self.tail = 0;
         }
-        let w = destination.write(source_slice)?;
+        let w = destination.send(source_slice)?;
         if w != length {
             error!(target: TAG, "Cannot write the whole datagram to the buffer (only {}/{})", w, length);
             return Err(io::Error::new(io::ErrorKind::Other, "Cannot write the whole datagram"))
@@ -91,9 +93,48 @@ impl DatagramBuffer {
     }
 }
 
+pub trait DatagramSender {
+    fn send(&mut self, buf: &[u8]) -> io::Result<(usize)>;
+}
+
+// Expose UdpSocket as DatagramSender
+impl DatagramSender for UdpSocket {
+    fn send(&mut self, buf: &[u8]) -> io::Result<(usize)> {
+        // call the Self implementation
+        (self as &Self).send(buf)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    struct MockDatagramSocket {
+        buf: [u8; MAX_DATAGRAM_LENGTH],
+        len: usize,
+    }
+
+    impl MockDatagramSocket {
+        fn new() -> Self {
+            Self {
+                buf: [0; MAX_DATAGRAM_LENGTH],
+                len: 0,
+            }
+        }
+
+        fn data(&self) -> &[u8] {
+            &self.buf[..self.len]
+        }
+    }
+
+    impl DatagramSender for MockDatagramSocket {
+        fn send(&mut self, buf: &[u8]) -> io::Result<(usize)> {
+            let len = cmp::min(self.buf.len(), buf.len());
+            &mut self.buf[..len].copy_from_slice(&buf[..len]);
+            self.len = len;
+            Ok(len)
+        }
+    }
 
     fn create_datagram(length: u8) -> Vec<u8> {
         (0..length).collect()
@@ -139,8 +180,8 @@ mod tests {
         datagram_buffer.read_from(&create_datagram(10));
         {
             // write and forget
-            let mut cursor = io::Cursor::new(Vec::new());
-            datagram_buffer.write_to(&mut cursor);
+            let mut mock = MockDatagramSocket::new();
+            datagram_buffer.write_to(&mut mock);
         }
 
         // DatagramBuffer is expected to store the whole datagram (even if it exceeds its "capacity")
@@ -152,8 +193,8 @@ mod tests {
     }
 
     fn read_datagram(datagram_buffer: &mut DatagramBuffer) -> Vec<u8> {
-        let mut cursor = io::Cursor::new(Vec::new());
-        datagram_buffer.write_to(&mut cursor).unwrap();
-        cursor.into_inner()
+        let mut mock = MockDatagramSocket::new();
+        datagram_buffer.write_to(&mut mock).unwrap();
+        mock.data().to_vec()
     }
 }
