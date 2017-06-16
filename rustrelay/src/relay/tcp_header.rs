@@ -84,7 +84,8 @@ impl TCPHeader {
         self.header_length = data_offset << 2;
     }
 
-    pub fn compute_checksum(&self, raw: &mut [u8], ipv4_header: &IPv4Header) {
+    pub fn compute_checksum(&mut self, raw: &mut [u8], ipv4_header: &IPv4Header) {
+        // TODO
     }
 
     pub fn set_checksum(&mut self, raw: &mut [u8], checksum: u16) {

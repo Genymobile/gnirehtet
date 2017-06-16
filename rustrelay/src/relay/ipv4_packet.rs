@@ -87,9 +87,8 @@ impl<'a> IPv4Packet<'a> {
 
     pub fn compute_checksums(&mut self) {
         self.ipv4_header.compute_checksum(self.raw);
-        if let Some(TransportHeader::TCP(ref tcp_header)) = self.transport_header {
-            tcp_header.compute_checksum(self.raw, &self.ipv4_header);
-        }
+        let mut transport = self.transport_header.as_mut().expect("No known transport header");
+        transport.compute_checksum(self.raw, &self.ipv4_header);
     }
 
     pub fn swap_source_and_destination(&mut self) {
