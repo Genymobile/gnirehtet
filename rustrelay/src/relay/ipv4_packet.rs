@@ -81,6 +81,10 @@ impl<'a> IPv4Packet<'a> {
         }
     }
 
+    pub fn payload(&self) -> &[u8] {
+        &self.raw[self.payload_index().unwrap() as usize..]
+    }
+
     pub fn compute_checksums(&mut self) {
         self.ipv4_header.compute_checksum(self.raw);
         if let Some(TransportHeader::TCP(ref tcp_header)) = self.transport_header {
