@@ -151,7 +151,12 @@ impl Connection for UDPConnection {
     }
 
     fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
-        // TODO
+        match self.client_to_network.read_from(ipv4_packet.payload()) {
+            Ok(_) => {
+                self.update_interests(selector);
+            },
+            Err(err) => warn!(target: TAG, "Cannot send to network, drop packet: {}", err),
+        }
     }
 
     fn disconnect(&mut self) {
