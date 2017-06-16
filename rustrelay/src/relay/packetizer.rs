@@ -18,9 +18,6 @@ impl Packetizer {
     pub fn new(raw: &[u8], mut ipv4_header: IPv4Header, mut transport_header: TransportHeader) -> Self {
         let mut buffer = Box::new([0; MAX_PACKET_LENGTH]);
 
-        let mut ipv4_header = ipv4_header.clone();
-        let mut transport_header = transport_header.clone();
-
         let transport_index = ipv4_header.header_length() as usize;
         let payload_index = transport_index + transport_header.header_length() as usize;
         &mut buffer[..payload_index].copy_from_slice(&raw[..payload_index]);
