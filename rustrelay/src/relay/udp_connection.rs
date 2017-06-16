@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::io;
 use std::rc::{Rc, Weak};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use log::LogLevel;
 use mio::{Event, PollOpt, Ready, Token};
 use mio::net::UdpSocket;
 
@@ -80,11 +81,33 @@ impl UDPConnection {
     }
 
     fn process_receive(&mut self, selector: &mut Selector) {
-        if let Err(err) = self.read() {
+        if let Err(err) = self.read(selector) {
             error!(target: TAG, "Cannot read: {}", err);
             self.close(selector);
         }
-        // TODO push to client
+    }
+
+    fn read(&mut self, selector: &mut Selector) -> io::Result<()> {
+        let ipv4_packet = self.network_to_client.packetize(&mut self.socket)?;
+        let client_rc = self.client.upgrade().expect("expected client not found");
+        match client_rc.borrow_mut().send_to_client(selector, &ipv4_packet) {
+            Ok(_) => {
+                debug!(target: TAG, "Packet ({} bytes) sent to client", ipv4_packet.length());
+                if log_enabled!(target: TAG, LogLevel::Trace) {
+                    // TODO log binary
+                }
+            },
+            Err(err) => {
+                // TODO copy packet locally for further sending
+
+            }
+        }
+        Ok(())
+    }
+
+    fn write(&mut self) -> io::Result<()> {
+        self.client_to_network.write_to(&mut self.socket)?;
+        Ok(())
     }
 
     fn update_interests(&mut self, selector: &mut Selector) -> io::Result<()> {
@@ -96,18 +119,6 @@ impl UDPConnection {
             ready = ready | Ready::writable();
         }
         selector.reregister(&self.socket, self.token, ready, PollOpt::level())
-    }
-
-    fn read(&mut self) -> io::Result<()> {
-        assert!(self.pending_packet_for_client.is_none());
-        let packet = self.network_to_client.packetize(&mut self.socket)?;
-        // TODO
-        Ok(())
-    }
-
-    fn write(&mut self) -> io::Result<()> {
-        self.client_to_network.write_to(&mut self.socket)?;
-        Ok(())
     }
 
     fn may_read(&self) -> bool {
