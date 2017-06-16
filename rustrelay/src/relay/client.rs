@@ -128,13 +128,13 @@ impl Client {
         Ok(())
     }
 
-    fn update_interests(&mut self, selector: &mut Selector) -> io::Result<()> {
+    fn update_interests(&mut self, selector: &mut Selector) {
         let ready = if self.network_to_client.is_empty() {
             Ready::readable()
         } else {
             Ready::readable() | Ready::writable()
         };
-        selector.reregister(&self.stream, self.token, ready, PollOpt::level())
+        selector.reregister(&self.stream, self.token, ready, PollOpt::level()).expect("Cannot register on poll");
     }
 
     fn read(&mut self) -> io::Result<()> {
