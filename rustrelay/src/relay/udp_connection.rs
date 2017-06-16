@@ -110,7 +110,7 @@ impl UDPConnection {
         Ok(())
     }
 
-    fn update_interests(&mut self, selector: &mut Selector) -> io::Result<()> {
+    fn update_interests(&mut self, selector: &mut Selector) {
         let mut ready = Ready::empty();
         if self.may_read() {
             ready = Ready::readable();
@@ -118,7 +118,7 @@ impl UDPConnection {
         if self.may_write() {
             ready = ready | Ready::writable();
         }
-        selector.reregister(&self.socket, self.token, ready, PollOpt::level())
+        selector.reregister(&self.socket, self.token, ready, PollOpt::level()).expect("Cannot register on poll");
     }
 
     fn may_read(&self) -> bool {
