@@ -61,7 +61,7 @@ impl<'a> IPv4Packet<'a> {
         self.transport_header.is_some()
     }
 
-    pub fn packet_length(&self) -> u16 {
+    pub fn length(&self) -> u16 {
         self.ipv4_header.total_length()
     }
 
@@ -75,7 +75,7 @@ impl<'a> IPv4Packet<'a> {
 
     pub fn payload_length(&self) -> Option<u16> {
         if let Some(payload_index) = self.payload_index() {
-            Some(self.packet_length() - payload_index)
+            Some(self.length() - payload_index)
         } else {
             None
         }
