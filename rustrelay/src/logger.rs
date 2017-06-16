@@ -1,13 +1,13 @@
 use log::*;
 use chrono::prelude::Local;
 
-const THRESHOLD: LogLevelFilter = LogLevelFilter::Info;
+const THRESHOLD: LogLevelFilter = LogLevelFilter::Debug;
 
 pub struct SimpleLogger;
 
 impl Log for SimpleLogger {
     fn enabled(&self, metadata: &LogMetadata) -> bool {
-        metadata.level() <= LogLevel::Info
+        metadata.level() <= THRESHOLD
     }
 
     fn log(&self, record: &LogRecord) {
