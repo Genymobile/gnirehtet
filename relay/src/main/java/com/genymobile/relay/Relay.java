@@ -23,9 +23,8 @@ import java.util.Set;
 
 public class Relay {
 
-    private static final String TAG = Relay.class.getSimpleName();
-
     private static final int DEFAULT_PORT = 31416;
+    private static final int CLEANING_INTERVAL = 60 * 1000;
 
     private final int port;
 
@@ -43,15 +42,16 @@ public class Relay {
         // will register the socket on the selector
         TunnelServer tunnelServer = new TunnelServer(port, selector);
 
-        SelectorAlarm selectorAlarm = new SelectorAlarm(selector);
-        selectorAlarm.start();
-
+        long nextCleaningDeadline = System.currentTimeMillis() + UDPConnection.IDLE_TIMEOUT;
         while (true) {
-            selector.select();
+            long timeout = Math.max(0, nextCleaningDeadline - System.currentTimeMillis());
+            selector.select(timeout);
             Set<SelectionKey> selectedKeys = selector.selectedKeys();
 
-            if (selectorAlarm.accept()) {
+            long now = System.currentTimeMillis();
+            if (now >= nextCleaningDeadline) {
                 tunnelServer.cleanUp();
+                nextCleaningDeadline = now + CLEANING_INTERVAL;
             } else if (selectedKeys.isEmpty()) {
                 throw new AssertionError("selector.select() returned without any event, an invalid SelectionKey was probably been registered");
             }
