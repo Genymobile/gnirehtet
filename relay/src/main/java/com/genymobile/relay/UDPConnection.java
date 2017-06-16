@@ -62,7 +62,7 @@ public class UDPConnection extends AbstractConnection {
     @Override
     public void sendToNetwork(IPv4Packet packet) {
         if (!clientToNetwork.readFrom(packet.getPayload())) {
-            logd(TAG, "Cannot send to network, drop packet");
+            logw(TAG, "Cannot send to network, drop packet");
             return;
         }
         updateInterests();
