@@ -7,7 +7,7 @@ use mio::{Event, PollOpt, Ready, Token};
 
 use super::binary;
 use super::close_listener::CloseListener;
-use super::ipv4_packet::MAX_PACKET_LENGTH;
+use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
 use super::ipv4_packet_buffer::IPv4PacketBuffer;
 use super::router::Router;
 use super::selector::Selector;
@@ -106,6 +106,17 @@ impl Client {
                 error!(target: TAG, "Cannot read");
                 self.close(selector);
             }
+        }
+    }
+
+    pub fn send_to_client(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<()> {
+        if ipv4_packet.packet_length() as usize <= self.network_to_client.remaining() {
+            self.network_to_client.read_from(ipv4_packet.raw());
+            self.update_interests(selector);
+            Ok(())
+        } else {
+            warn!(target: TAG, "Client buffer full, delaying packet processing");
+            Err(io::Error::new(io::ErrorKind::WouldBlock, "Client buffer full"))
         }
     }
 
