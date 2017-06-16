@@ -77,9 +77,9 @@ impl Router {
         self.connections.swap_remove(index);
     }
 
-    pub fn clear(&mut self) {
+    pub fn clear(&mut self, selector: &mut Selector) {
         for connection in &mut self.connections {
-            connection.borrow_mut().disconnect();
+            connection.borrow_mut().disconnect(selector);
         }
         self.connections.clear();
     }
