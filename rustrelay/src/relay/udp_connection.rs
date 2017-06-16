@@ -65,7 +65,8 @@ impl UDPConnection {
     }
 
     fn close(&mut self, selector: &mut Selector) {
-        self.disconnect();
+        self.closed = true;
+        self.disconnect(selector);
 
         // route is embedded in router which is embedded in client: the client necessarily exists
         let client_rc = self.client.upgrade().expect("expected client not found");
@@ -159,8 +160,9 @@ impl Connection for UDPConnection {
         }
     }
 
-    fn disconnect(&mut self) {
-        // TODO
+    fn disconnect(&mut self, selector: &mut Selector) {
+        selector.deregister(&self.socket, self.token).unwrap();
+        // socket will be closed by RAII
     }
 
     fn is_expired(&self) -> bool {

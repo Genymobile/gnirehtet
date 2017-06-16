@@ -11,7 +11,7 @@ const LOCALHOST_FORWARD: u32 = 0x0A000202;
 pub trait Connection {
     fn id(&self) -> &ConnectionId;
     fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet);
-    fn disconnect(&mut self);
+    fn disconnect(&mut self, selector: &mut Selector);
     fn is_expired(&self) -> bool;
 }
 

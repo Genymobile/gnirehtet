@@ -68,10 +68,10 @@ impl Client {
 
     fn close(&mut self, selector: &mut Selector) {
         self.closed = true;
-        selector.deregister(&self.stream, self.token);
+        selector.deregister(&self.stream, self.token).unwrap();
         // shutdown only (there is no close), the socket will be closed on drop
         self.stream.shutdown(Shutdown::Both);
-        self.router.clear();
+        self.router.clear(selector);
         self.close_listener.on_closed(self);
     }
 
