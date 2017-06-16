@@ -80,7 +80,7 @@ impl Client {
             match self.send_id() {
                 Ok(_) => {
                     if self.pending_id_bytes == 0 {
-                        debug!("Client id #{} sent to client", self.id);
+                        debug!(target:TAG, "Client id #{} sent to client", self.id);
                     }
                 }
                 Err(_) => {
