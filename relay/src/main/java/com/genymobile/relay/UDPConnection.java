@@ -137,8 +137,9 @@ public class UDPConnection extends AbstractConnection {
             if (Log.isVerboseEnabled()) {
                 logv(TAG, Binary.toString(packetForClient.getRaw()));
             }
-            packetForClient = null;
         }
+        // drop packet anyway
+        packetForClient = null;
     }
 
     protected void updateInterests() {
