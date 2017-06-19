@@ -19,7 +19,7 @@ impl<'a> IPv4Packet<'a> {
             TransportHeader::parse(ipv4_header.protocol(), payload)
         };
         Self {
-            raw: raw,
+            raw: &mut raw[..ipv4_header.total_length() as usize],
             ipv4_header: ipv4_header,
             transport_header: transport_header,
         }
