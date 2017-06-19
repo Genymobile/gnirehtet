@@ -61,7 +61,7 @@ impl Selector {
     }
 
     pub fn poll(&mut self, events: &mut Events, timeout: Option<Duration>) -> io::Result<usize> {
-        self.poll.poll(events, None)
+        self.poll.poll(events, timeout)
     }
 
     pub fn run_handler(&mut self, event: Event) {

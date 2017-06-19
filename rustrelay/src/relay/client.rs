@@ -180,8 +180,8 @@ impl Client {
         // TODO
     }
 
-    fn clean_expired_connections() {
-        // TODO
+    pub fn clean_expired_connections(&mut self, selector: &mut Selector) {
+        self.router.clean_expired_connections(selector);
     }
 
     fn must_send_id(&self) -> bool{
