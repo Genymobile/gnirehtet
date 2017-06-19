@@ -54,9 +54,7 @@ impl Selector {
 
     pub fn deregister<E>(&mut self, handle: &E, token: Token) -> io::Result<()>
             where E: Evented + ?Sized {
-        if self.handlers.remove(token).is_some() {
-            panic!("Unknown token removed");
-        }
+        self.handlers.remove(token).expect("Unknown token removed");
         self.poll.deregister(handle)
     }
 
