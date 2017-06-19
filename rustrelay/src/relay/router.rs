@@ -83,4 +83,22 @@ impl Router {
         }
         self.connections.clear();
     }
+
+    pub fn clean_expired_connections(&mut self, selector: &mut Selector) {
+        for i in 0..self.connections.len() {
+            let expired = {
+                let mut connection = self.connections[i].borrow_mut();
+                if connection.is_expired() {
+                    debug!(target: TAG, "Removed expired connection: {}", connection.id());
+                    connection.disconnect(selector);
+                    true
+                } else {
+                    false
+                }
+            };
+            if expired {
+                self.connections.swap_remove(i);
+            }
+        }
+    }
 }

@@ -2,6 +2,7 @@ use std::cell::RefCell;
 use std::io;
 use std::rc::{Rc, Weak};
 use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::time::Instant;
 use log::LogLevel;
 use mio::{Event, PollOpt, Ready, Token};
 use mio::net::UdpSocket;
@@ -15,6 +16,8 @@ use super::selector::Selector;
 
 const TAG: &'static str = "UDPConnection";
 
+pub const IDLE_TIMEOUT_SECONDS: u64 = 2 * 60;
+
 pub struct UDPConnection {
     id: ConnectionId,
     client: Weak<RefCell<Client>>,
@@ -24,6 +27,7 @@ pub struct UDPConnection {
     network_to_client: Packetizer,
     pending_packet_for_client: Option<Box<[u8]>>, // used when the client buffer is full, should be rare
     closed: bool,
+    idle_since: Instant,
 }
 
 impl UDPConnection {
@@ -41,6 +45,7 @@ impl UDPConnection {
             network_to_client: Packetizer::new(raw, ipv4_header, transport_header),
             pending_packet_for_client: None,
             closed: false,
+            idle_since: Instant::now(),
         }));
 
         {
@@ -133,6 +138,7 @@ impl UDPConnection {
 
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
         assert!(!self.closed);
+        self.touch();
         let ready = event.readiness();
         if ready.is_writable() {
             self.process_send(selector);
@@ -143,6 +149,10 @@ impl UDPConnection {
         if !self.closed {
             self.update_interests(selector);
         }
+    }
+
+    fn touch(&mut self) {
+        self.idle_since = Instant::now();
     }
 }
 
@@ -166,7 +176,6 @@ impl Connection for UDPConnection {
     }
 
     fn is_expired(&self) -> bool {
-        // TODO
-        false
+        self.idle_since.elapsed().as_secs() > IDLE_TIMEOUT_SECONDS
     }
 }

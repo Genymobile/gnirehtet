@@ -73,6 +73,12 @@ impl TunnelServer {
             error!(target: TAG, "Cannot accept client: {}", err);
         }
     }
+
+    pub fn clean_up(&mut self, selector: &mut Selector) {
+        for client in &self.clients {
+            client.borrow_mut().clean_expired_connections(selector);
+        }
+    }
 }
 
 // std::ptr::eq is too recent:
