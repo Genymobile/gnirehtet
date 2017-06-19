@@ -81,14 +81,14 @@ impl UDPConnection {
 
     fn process_send(&mut self, selector: &mut Selector) {
         if let Err(err) = self.write() {
-            error!(target: TAG, "Cannot write: {}", err);
+            error!(target: TAG, "{} Cannot write: {}", self.id, err);
             self.close(selector);
         }
     }
 
     fn process_receive(&mut self, selector: &mut Selector) {
         if let Err(err) = self.read(selector) {
-            error!(target: TAG, "Cannot read: {}", err);
+            error!(target: TAG, "{} Cannot read: {}", self.id, err);
             self.close(selector);
         }
     }
@@ -98,7 +98,7 @@ impl UDPConnection {
         let client_rc = self.client.upgrade().expect("expected client not found");
         match client_rc.borrow_mut().send_to_client(selector, &ipv4_packet) {
             Ok(_) => {
-                debug!(target: TAG, "Packet ({} bytes) sent to client", ipv4_packet.length());
+                debug!(target: TAG, "{} Packet ({} bytes) sent to client", self.id, ipv4_packet.length());
                 if log_enabled!(target: TAG, LogLevel::Trace) {
                     // TODO log binary
                 }
@@ -166,11 +166,12 @@ impl Connection for UDPConnection {
             Ok(_) => {
                 self.update_interests(selector);
             },
-            Err(err) => warn!(target: TAG, "Cannot send to network, drop packet: {}", err),
+            Err(err) => warn!(target: TAG, "{} Cannot send to network, drop packet: {}", self.id, err),
         }
     }
 
     fn disconnect(&mut self, selector: &mut Selector) {
+        info!(target: TAG, "{} Close", self.id);
         selector.deregister(&self.socket, self.token).unwrap();
         // socket will be closed by RAII
     }
