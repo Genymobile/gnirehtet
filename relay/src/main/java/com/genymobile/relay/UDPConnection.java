@@ -81,10 +81,6 @@ public class UDPConnection extends AbstractConnection {
 
     @Override
     public boolean isExpired() {
-        if (mayWrite()) {
-            // some writes are pending, do not expire
-            return false;
-        }
         return System.currentTimeMillis() >= idleSince + IDLE_TIMEOUT;
     }
 
