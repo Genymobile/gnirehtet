@@ -1,7 +1,5 @@
 use byteorder::{BigEndian, ByteOrder};
-use std::cmp;
 use std::io;
-use mio::net::UdpSocket;
 
 use super::datagram::{DatagramSender, MAX_DATAGRAM_LENGTH};
 

@@ -18,8 +18,7 @@ impl<F> EventHandler for F where F: Fn(&mut Selector, Event) {
 // for convenience
 impl EventHandler for Rc<RefCell<EventHandler>> {
     fn on_ready(&self, selector: &mut Selector, event: Event) {
-        let mut self_raw = self.borrow_mut();
-        self_raw.on_ready(selector, event);
+        self.borrow().on_ready(selector, event);
     }
 }
 
@@ -63,7 +62,7 @@ impl Selector {
     }
 
     pub fn run_handler(&mut self, event: Event) {
-        let mut handler = self.handlers.get_mut(event.token()).unwrap().clone();
+        let handler = self.handlers.get_mut(event.token()).unwrap().clone();
         handler.on_ready(self, event);
     }
 }

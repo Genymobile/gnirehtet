@@ -1,4 +1,3 @@
-use super::ipv4_packet::IPv4Packet;
 use super::ipv4_header::{IPv4Header, Protocol};
 use super::tcp_header::TCPHeader;
 use super::udp_header::{UDPHeader, UDP_HEADER_LENGTH};

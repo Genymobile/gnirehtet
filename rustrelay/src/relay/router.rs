@@ -38,7 +38,7 @@ impl Router {
                 binary::to_string(ipv4_packet.raw());
             }
         } else {
-            if let Ok(mut connection) = self.connection(selector, ipv4_packet) {
+            if let Ok(connection) = self.connection(selector, ipv4_packet) {
                 connection.borrow_mut().send_to_network(selector, ipv4_packet);
             } else {
                 error!(target: TAG, "Cannot create route, dropping packet");
@@ -51,7 +51,6 @@ impl Router {
         let index = match self.find_index(&id) {
             Some(index) => index,
             None => {
-                let weak = self.client.clone();
                 let connection = Router::create_connection(selector, id, self.client.clone(), reference_packet)?;
                 let index = self.connections.len();
                 self.connections.push(connection);

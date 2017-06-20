@@ -5,7 +5,7 @@ use chrono::Local;
 use mio::*;
 
 use super::udp_connection::IDLE_TIMEOUT_SECONDS;
-use super::selector::{EventHandler,Selector};
+use super::selector::Selector;
 use super::tunnel_server::TunnelServer;
 
 const TAG: &'static str = "Relay";
