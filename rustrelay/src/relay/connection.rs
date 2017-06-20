@@ -1,7 +1,7 @@
 use std::fmt;
 use std::net::{Ipv4Addr, SocketAddrV4};
 
-use super::ipv4_header::{IPv4Header, Protocol};
+use super::ipv4_header::Protocol;
 use super::ipv4_packet::IPv4Packet;
 use super::net;
 use super::selector::Selector;
@@ -45,7 +45,6 @@ impl ConnectionId {
     }
 
     pub fn from_packet(reference_packet: &IPv4Packet) -> Self {
-        let raw = reference_packet.raw();
         let ipv4_header = reference_packet.ipv4_header();
         let transport_header = reference_packet.transport_header().as_ref().expect("Packet without transport header");
         Self {

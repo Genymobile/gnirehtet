@@ -1,7 +1,5 @@
-use super::ipv4_header::{IPv4Header, Protocol};
-use super::tcp_header::TCPHeader;
+use super::ipv4_header::IPv4Header;
 use super::transport_header::TransportHeader;
-use super::udp_header::UDPHeader;
 
 pub const MAX_PACKET_LENGTH: usize = 1 << 16;
 

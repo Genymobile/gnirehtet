@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::io;
 use std::rc::{Rc, Weak};
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::{Ipv4Addr, SocketAddr};
 use std::time::Instant;
 use log::LogLevel;
 use mio::{Event, PollOpt, Ready, Token};

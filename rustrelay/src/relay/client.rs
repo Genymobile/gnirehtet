@@ -70,7 +70,9 @@ impl Client {
         self.closed = true;
         selector.deregister(&self.stream, self.token).unwrap();
         // shutdown only (there is no close), the socket will be closed on drop
-        self.stream.shutdown(Shutdown::Both);
+        if let Err(_) = self.stream.shutdown(Shutdown::Both) {
+            warn!(target: TAG, "Cannot shutdown client socket");
+        }
         self.router.clear(selector);
         self.close_listener.on_closed(self);
     }
@@ -111,7 +113,7 @@ impl Client {
 
     pub fn send_to_client(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<()> {
         if ipv4_packet.length() as usize <= self.network_to_client.remaining() {
-            self.network_to_client.read_from(ipv4_packet.raw());
+            self.network_to_client.read_from(ipv4_packet.raw())?;
             self.update_interests(selector);
             Ok(())
         } else {

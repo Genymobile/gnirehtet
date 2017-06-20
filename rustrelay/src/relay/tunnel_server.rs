@@ -1,5 +1,5 @@
 use std::cell::RefCell;
-use std::net::{IpAddr, Ipv4Addr, SocketAddr};
+use std::net::{Ipv4Addr, SocketAddr};
 use std::io;
 use std::rc::Rc;
 use mio::{Event, PollOpt, Ready};
