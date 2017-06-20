@@ -3,6 +3,7 @@ use std::io;
 use std::rc::{Rc, Weak};
 use log::LogLevel;
 
+use super::binary;
 use super::client::Client;
 use super::connection::{Connection, ConnectionId};
 use super::ipv4_header::Protocol;
@@ -34,7 +35,7 @@ impl Router {
         if !ipv4_packet.is_valid() {
             warn!(target: TAG, "Dropping invalid packet");
             if log_enabled!(target: TAG, LogLevel::Trace) {
-                // TODO log binary
+                binary::to_string(ipv4_packet.raw());
             }
         } else {
             if let Ok(mut connection) = self.connection(selector, ipv4_packet) {
