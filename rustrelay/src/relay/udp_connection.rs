@@ -7,6 +7,7 @@ use log::LogLevel;
 use mio::{Event, PollOpt, Ready, Token};
 use mio::net::UdpSocket;
 
+use super::binary;
 use super::client::Client;
 use super::connection::{self, Connection, ConnectionId};
 use super::datagram_buffer::DatagramBuffer;
@@ -100,7 +101,7 @@ impl UDPConnection {
             Ok(_) => {
                 debug!(target: TAG, "{} Packet ({} bytes) sent to client", self.id, ipv4_packet.length());
                 if log_enabled!(target: TAG, LogLevel::Trace) {
-                    // TODO log binary
+                    binary::to_string(ipv4_packet.raw());
                 }
             },
             Err(err) => {
