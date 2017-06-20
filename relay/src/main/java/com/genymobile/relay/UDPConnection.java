@@ -29,7 +29,6 @@ public class UDPConnection extends AbstractConnection {
 
     private final DatagramBuffer clientToNetwork = new DatagramBuffer(4 * IPv4Packet.MAX_PACKET_LENGTH);
     private final Packetizer networkToClient;
-    private IPv4Packet packetForClient;
 
     private final DatagramChannel channel;
     private final SelectionKey selectionKey;
@@ -97,11 +96,12 @@ public class UDPConnection extends AbstractConnection {
     }
 
     private void processReceive() {
-        if (!read()) {
+        IPv4Packet packet = read();
+        if (packet == null) {
             close();
             return;
         }
-        pushToClient();
+        pushToClient(packet);
     }
 
     private void processSend() {
@@ -110,14 +110,12 @@ public class UDPConnection extends AbstractConnection {
         }
     }
 
-    private boolean read() {
+    private IPv4Packet read() {
         try {
-            assert packetForClient == null : "The IPv4Packet shares the networkToClient buffer, it must not be corrupted";
-            packetForClient = networkToClient.packetize(channel);
-            return packetForClient != null;
+            return networkToClient.packetize(channel);
         } catch (IOException e) {
             loge(TAG, "Cannot read", e);
-            return false;
+            return null;
         }
     }
 
@@ -130,14 +128,14 @@ public class UDPConnection extends AbstractConnection {
         }
     }
 
-    private void pushToClient() {
-        assert packetForClient != null;
-        if (sendToClient(packetForClient)) {
-            logd(TAG, "Packet (" + packetForClient.getPayloadLength() + " bytes) sent to client");
-            if (Log.isVerboseEnabled()) {
-                logv(TAG, Binary.toString(packetForClient.getRaw()));
-            }
-            packetForClient = null;
+    private void pushToClient(IPv4Packet packet) {
+        if (!sendToClient(packet)) {
+            logw(TAG, "Cannot send to client, drop packet");
+            return;
+        }
+        logd(TAG, "Packet (" + packet.getPayloadLength() + " bytes) sent to client");
+        if (Log.isVerboseEnabled()) {
+            logv(TAG, Binary.toString(packet.getRaw()));
         }
     }
 
@@ -145,18 +143,11 @@ public class UDPConnection extends AbstractConnection {
         if (!selectionKey.isValid()) {
             return;
         }
-        int interestingOps = 0;
-        if (mayRead()) {
-            interestingOps |= SelectionKey.OP_READ;
-        }
+        int interestingOps = SelectionKey.OP_READ;
         if (mayWrite()) {
             interestingOps |= SelectionKey.OP_WRITE;
         }
         selectionKey.interestOps(interestingOps);
-    }
-
-    private boolean mayRead() {
-        return packetForClient == null;
     }
 
     private boolean mayWrite() {

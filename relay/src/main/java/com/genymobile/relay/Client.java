@@ -177,7 +177,7 @@ public class Client {
 
     public boolean sendToClient(IPv4Packet packet) {
         if (networkToClient.remaining() < packet.getRawLength()) {
-            Log.w(TAG, "Client buffer full, delaying packet processing");
+            Log.w(TAG, "Client buffer full");
             return false;
         }
         networkToClient.readFrom(packet.getRaw());
