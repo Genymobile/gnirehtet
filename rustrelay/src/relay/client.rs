@@ -115,7 +115,7 @@ impl Client {
             self.update_interests(selector);
             Ok(())
         } else {
-            warn!(target: TAG, "Client buffer full, delaying packet processing");
+            warn!(target: TAG, "Client buffer full");
             Err(io::Error::new(io::ErrorKind::WouldBlock, "Client buffer full"))
         }
     }
