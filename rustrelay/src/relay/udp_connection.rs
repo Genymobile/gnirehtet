@@ -26,7 +26,6 @@ pub struct UDPConnection {
     token: Token,
     client_to_network: DatagramBuffer,
     network_to_client: Packetizer,
-    pending_packet_for_client: Option<Box<[u8]>>, // used when the client buffer is full, should be rare
     closed: bool,
     idle_since: Instant,
 }
@@ -44,7 +43,6 @@ impl UDPConnection {
             token: Token(0), // default value, will be set afterwards
             client_to_network: DatagramBuffer::new(4 * MAX_PACKET_LENGTH),
             network_to_client: Packetizer::new(raw, ipv4_header, transport_header),
-            pending_packet_for_client: None,
             closed: false,
             idle_since: Instant::now(),
         }));
@@ -104,10 +102,7 @@ impl UDPConnection {
                     binary::to_string(ipv4_packet.raw());
                 }
             },
-            Err(err) => {
-                // TODO copy packet locally for further sending
-
-            }
+            Err(_) => warn!(target: TAG, "{} Cannot send to client, drop packet", self.id),
         }
         Ok(())
     }
