@@ -34,16 +34,6 @@ pub struct ConnectionId {
 }
 
 impl ConnectionId {
-    pub fn new(protocol: Protocol, source_ip: u32, source_port: u16, destination_ip: u32, destination_port: u16) -> Self {
-        Self {
-            protocol: protocol,
-            source_ip: source_ip,
-            source_port: source_port,
-            destination_ip: destination_ip,
-            destination_port: destination_port,
-        }
-    }
-
     pub fn from_packet(reference_packet: &IPv4Packet) -> Self {
         let ipv4_header = reference_packet.ipv4_header();
         let transport_header = reference_packet.transport_header().as_ref().expect("Packet without transport header");
