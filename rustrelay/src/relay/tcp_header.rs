@@ -1,4 +1,5 @@
-use byteorder::{BigEndian, ByteOrder};
+use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
+use std::io::Cursor;
 use std::mem;
 use super::ipv4_header::IPv4Header;
 
@@ -84,8 +85,43 @@ impl TCPHeader {
         self.header_length = data_offset << 2;
     }
 
-    pub fn compute_checksum(&mut self, _raw: &mut [u8], _ipv4_header: &IPv4Header) {
-        // TODO
+    pub fn compute_checksum(&mut self, packet_raw: &mut [u8], ipv4_header: &IPv4Header) {
+
+        // pseudo-header checksum (cf rfc793 section 3.1)
+        let source = ipv4_header.source();
+        let destination = ipv4_header.destination();
+        let length = ipv4_header.total_length();
+        assert_eq!(length as usize, packet_raw.len());
+
+        let mut sum = 0u32;
+        sum += source >> 16;
+        sum += source & 0xFFFF;
+        sum += destination >> 16;
+        sum += destination & 0xFFFF;
+        sum += length as u32;
+
+        let transport_range = ipv4_header.header_length() as usize..;
+
+        // reset checksum field
+        self.set_checksum(&mut packet_raw[transport_range.clone()], 0);
+
+        {
+            let mut cursor = Cursor::new(&packet_raw);
+            while length - cursor.position() as u16 > 1 {
+                sum += cursor.read_u16::<BigEndian>().unwrap() as u32;
+            }
+            // if payload length is odd, pad last short with 0
+            if cursor.position() as u16 != length {
+                sum += (cursor.read_u8().unwrap() as u32) << 8;
+            }
+        }
+
+        while (sum & !0xFFFF) != 0 {
+            sum = (sum & 0xFFFF) + (sum >> 16);
+        }
+        sum = !sum;
+
+        self.set_checksum(&mut packet_raw[transport_range], sum as u16);
     }
 
     pub fn set_checksum(&mut self, raw: &mut [u8], checksum: u16) {
