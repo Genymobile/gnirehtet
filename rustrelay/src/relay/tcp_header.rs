@@ -29,7 +29,7 @@ impl TCPHeader {
             destination_port: BigEndian::read_u16(&raw[2..4]),
             sequence_number: BigEndian::read_u32(&raw[4..8]),
             acknowledgement_number: BigEndian::read_u32(&raw[8..12]),
-            header_length: (data_offset_and_flags & 0xF000 >> 10) as u8,
+            header_length: ((data_offset_and_flags & 0xF000) >> 10) as u8,
             flags: data_offset_and_flags & 0x1FF,
             window: BigEndian::read_u16(&raw[14..16]),
         }
@@ -105,28 +105,30 @@ impl TCPHeader {
     }
 
     pub fn compute_checksum(&mut self, packet_raw: &mut [u8], ipv4_header: &IPv4Header) {
+        let transport_raw = &mut packet_raw[ipv4_header.header_length() as usize..];
 
         // pseudo-header checksum (cf rfc793 section 3.1)
         let source = ipv4_header.source();
         let destination = ipv4_header.destination();
-        let length = ipv4_header.total_length();
-        assert_eq!(length as usize, packet_raw.len());
+        let length = ipv4_header.total_length() - ipv4_header.header_length() as u16;
+        assert_eq!(transport_raw.len(), ipv4_header.total_length() as usize - ipv4_header.header_length() as usize);
 
-        let mut sum = 0u32;
+        let mut sum = 6u32; // protocol TCP = 6
         sum += source >> 16;
         sum += source & 0xFFFF;
         sum += destination >> 16;
         sum += destination & 0xFFFF;
         sum += length as u32;
 
-        let transport_range = ipv4_header.header_length() as usize..;
+        println!("=={}", sum);
 
         // reset checksum field
-        self.set_checksum(&mut packet_raw[transport_range.clone()], 0);
+        self.set_checksum(transport_raw, 0);
 
         {
-            let mut cursor = Cursor::new(&packet_raw);
+            let mut cursor = Cursor::new(&transport_raw);
             while length - cursor.position() as u16 > 1 {
+                println!("sum={}", sum);
                 sum += cursor.read_u16::<BigEndian>().unwrap() as u32;
             }
             // if payload length is odd, pad last short with 0
@@ -140,7 +142,11 @@ impl TCPHeader {
         }
         sum = !sum;
 
-        self.set_checksum(&mut packet_raw[transport_range], sum as u16);
+        self.set_checksum(transport_raw, sum as u16);
+    }
+
+    fn checksum(&self, raw: &[u8]) -> u16 {
+        BigEndian::read_u16(&raw[16..18])
     }
 
     pub fn set_checksum(&mut self, raw: &mut [u8], checksum: u16) {
@@ -152,6 +158,8 @@ impl TCPHeader {
 mod tests {
     use super::*;
     use byteorder::{BigEndian, WriteBytesExt};
+    use relay::ipv4_packet::IPv4Packet;
+    use relay::transport_header::TransportHeader;
 
     fn create_packet() -> Vec<u8> {
         let mut raw = Vec::new();
@@ -256,5 +264,45 @@ mod tests {
         assert_eq!(300, raw_sequence_number);
         assert_eq!(101, raw_acknowledgement_number);
         assert_eq!(0x5011, raw_data_offset_and_flags);
+    }
+
+    #[test]
+    fn compute_checksum() {
+        let raw = &mut create_packet()[..];
+        let mut ipv4_packet = IPv4Packet::parse(raw);
+        if let Some(TransportHeader::TCP(mut tcp_header)) = *ipv4_packet.transport_header() {
+            // set a fake checksum value to assert that it is correctly computed
+            BigEndian::write_u16(&mut ipv4_packet.raw_mut()[36..38], 0x79);
+
+            {
+                let (raw, ipv4_header, _) = ipv4_packet.destructure_mut();
+                tcp_header.compute_checksum(raw, ipv4_header);
+            }
+
+            let expected_checksum = {
+                // pseudo-header
+                let mut sum: u32 = 0x1234 + 0x5678 + 0xA2A2 + 0x4242 + 0x0006 + 0x0018;
+                println!("++{}", sum);
+
+                // header
+                sum += 0x1234 + 0x5678 + 0x0000 + 0x0111 + 0x0000 +
+                       0x0222 + 0x5000 + 0x0000 + 0x0000 + 0x0000;
+
+                // payload
+                sum += 0x1122 + 0x3344;
+
+                while (sum & !0xFFFF) != 0 {
+                    sum = (sum & 0xFFFF) + (sum >> 16);
+                }
+                !sum as u16
+            };
+
+            let transport_header_raw = ipv4_packet.transport_header_raw().unwrap();
+            let actual_checksum = tcp_header.checksum(transport_header_raw);
+
+            assert_eq!(expected_checksum, actual_checksum);
+        } else {
+            panic!("Packet is not TCP");
+        }
     }
 }

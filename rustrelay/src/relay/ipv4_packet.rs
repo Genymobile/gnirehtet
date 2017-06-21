@@ -55,6 +55,14 @@ impl<'a> IPv4Packet<'a> {
         &mut self.transport_header
     }
 
+    pub fn destructure(&self) -> (&[u8], &IPv4Header, &Option<TransportHeader>) {
+        (self.raw, &self.ipv4_header, &self.transport_header)
+    }
+
+    pub fn destructure_mut(&mut self) -> (&mut [u8], &mut IPv4Header, &mut Option<TransportHeader>) {
+        (self.raw, &mut self.ipv4_header, &mut self.transport_header)
+    }
+
     pub fn is_valid(&self) -> bool {
         self.transport_header.is_some()
     }
@@ -81,6 +89,27 @@ impl<'a> IPv4Packet<'a> {
 
     pub fn payload(&self) -> &[u8] {
         &self.raw[self.payload_index().unwrap() as usize..]
+    }
+
+    pub fn transport_header_raw(&self) -> Option<&[u8]> {
+        if let Some(ref transport_header) = self.transport_header {
+            let start = self.ipv4_header.header_length() as usize;
+            let length = transport_header.header_length() as usize;
+            println!("length={}", transport_header.header_length());
+            Some(&self.raw[start..start + length])
+        } else {
+            None
+        }
+    }
+
+    pub fn transport_header_raw_mut(&mut self) -> Option<&mut [u8]> {
+        if let Some(ref transport_header) = self.transport_header {
+            let start = self.ipv4_header.header_length() as usize;
+            let length = transport_header.header_length() as usize;
+            Some(&mut self.raw[start..start + length])
+        } else {
+            None
+        }
     }
 
     pub fn compute_checksums(&mut self) {
