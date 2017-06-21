@@ -304,4 +304,48 @@ mod tests {
             panic!("Packet is not TCP");
         }
     }
+
+    #[test]
+    fn compute_checksum_odd() {
+        let raw = &mut create_odd_packet()[..];
+        let mut ipv4_packet = IPv4Packet::parse(raw);
+        if let Some(TransportHeader::TCP(mut tcp_header)) = *ipv4_packet.transport_header() {
+            // set a fake checksum value to assert that it is correctly computed
+            BigEndian::write_u16(&mut ipv4_packet.raw_mut()[36..38], 0x79);
+
+            {
+                let (raw, ipv4_header, _) = ipv4_packet.destructure_mut();
+                let transport_raw = &mut raw[ipv4_header.header_length() as usize..];
+                tcp_header.compute_checksum(transport_raw, ipv4_header);
+            }
+
+            let expected_checksum = {
+                // pseudo-header
+                let mut sum: u32 = 0x1234 + 0x5678 + 0xA2A2 + 0x4242 + 0x0006 + 0x0019;
+
+                // header
+                sum += 0x1234 + 0x5678 + 0x0000 + 0x0111 + 0x0000 +
+                       0x0222 + 0x5000 + 0x0000 + 0x0000 + 0x0000;
+
+                // payload
+                sum += 0x1122 + 0x3344 + 0x5500;
+
+                while (sum & !0xFFFF) != 0 {
+                    sum = (sum & 0xFFFF) + (sum >> 16);
+                }
+                !sum as u16
+            };
+
+            {
+                let (raw, ipv4_header, _) = ipv4_packet.destructure();
+                let transport_header_raw = &raw[ipv4_header.header_length() as usize..];
+                let actual_checksum = tcp_header.checksum(transport_header_raw);
+
+                assert_eq!(expected_checksum, actual_checksum);
+            }
+
+        } else {
+            panic!("Packet is not TCP");
+        }
+    }
 }
