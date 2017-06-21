@@ -14,6 +14,13 @@ pub struct TCPHeader {
     window: u16,
 }
 
+pub const TCP_FLAG_FIN: u16 = 1 << 0;
+pub const TCP_FLAG_SYN: u16 = 1 << 1;
+pub const TCP_FLAG_RST: u16 = 1 << 2;
+pub const TCP_FLAG_PSH: u16 = 1 << 3;
+pub const TCP_FLAG_ACK: u16 = 1 << 4;
+pub const TCP_FLAG_URG: u16 = 1 << 5;
+
 impl TCPHeader {
     pub fn parse(raw: &[u8]) -> Self {
         let data_offset_and_flags = BigEndian::read_u16(&raw[12..14]);
@@ -40,6 +47,18 @@ impl TCPHeader {
         self.destination_port
     }
 
+    pub fn sequence_number(&self) -> u32 {
+        self.sequence_number
+    }
+
+    pub fn acknowledgement_number(&self) -> u32 {
+        self.acknowledgement_number
+    }
+
+    pub fn flags(&self) -> u16 {
+        self.flags
+    }
+
     pub fn set_source_port(&mut self, raw: &mut [u8], source_port: u16) {
         self.source_port = source_port;
         BigEndian::write_u16(&mut raw[0..2], source_port);
@@ -62,7 +81,7 @@ impl TCPHeader {
         BigEndian::write_u32(&mut raw[4..8], sequence_number);
     }
 
-    pub fn set_acknowledgment_number(&mut self, raw: &mut [u8], acknowledgement_number: u32) {
+    pub fn set_acknowledgement_number(&mut self, raw: &mut [u8], acknowledgement_number: u32) {
         self.acknowledgement_number = acknowledgement_number;
         BigEndian::write_u32(&mut raw[8..12], acknowledgement_number);
     }
@@ -126,5 +145,116 @@ impl TCPHeader {
 
     pub fn set_checksum(&mut self, raw: &mut [u8], checksum: u16) {
         BigEndian::write_u16(&mut raw[16..18], checksum);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use byteorder::{BigEndian, WriteBytesExt};
+
+    fn create_packet() -> Vec<u8> {
+        let mut raw = Vec::new();
+        raw.reserve(44);
+
+        raw.write_u8(4u8 << 4 | 5).unwrap(); // version_and_ihl
+        raw.write_u8(0).unwrap(); //ToS
+        raw.write_u16::<BigEndian>(44).unwrap(); // total length
+        raw.write_u32::<BigEndian>(0).unwrap(); // id_flags_fragment_offset
+        raw.write_u8(0).unwrap(); // TTL
+        raw.write_u8(6).unwrap(); // protocol (TCP)
+        raw.write_u16::<BigEndian>(0).unwrap(); // checksum
+        raw.write_u32::<BigEndian>(0x12345678).unwrap(); // source address
+        raw.write_u32::<BigEndian>(0xA2A24242).unwrap(); // destination address
+
+        raw.write_u16::<BigEndian>(0x1234).unwrap(); // source port
+        raw.write_u16::<BigEndian>(0x5678).unwrap(); // destination port
+        raw.write_u32::<BigEndian>(0x111).unwrap(); // sequence number
+        raw.write_u32::<BigEndian>(0x222).unwrap(); // acknowledgement number
+        raw.write_u16::<BigEndian>(5 << 12).unwrap(); // data offset + flags(0)
+        raw.write_u16::<BigEndian>(0).unwrap(); // window (don't care for these tests)
+        raw.write_u16::<BigEndian>(0).unwrap(); // checksum
+        raw.write_u16::<BigEndian>(0).unwrap(); // urgent pointer
+
+        raw.write_u32::<BigEndian>(0x11223344).unwrap(); // payload
+
+        raw
+    }
+
+    fn create_odd_packet() -> Vec<u8> {
+        let mut raw = Vec::new();
+        raw.reserve(45);
+
+        raw.write_u8(4u8 << 4 | 5).unwrap(); // version_and_ihl
+        raw.write_u8(0).unwrap(); //ToS
+        raw.write_u16::<BigEndian>(45).unwrap(); // total length
+        raw.write_u32::<BigEndian>(0).unwrap(); // id_flags_fragment_offset
+        raw.write_u8(0).unwrap(); // TTL
+        raw.write_u8(6).unwrap(); // protocol (TCP)
+        raw.write_u16::<BigEndian>(0).unwrap(); // checksum
+        raw.write_u32::<BigEndian>(0x12345678).unwrap(); // source address
+        raw.write_u32::<BigEndian>(0xA2A24242).unwrap(); // destination address
+
+        raw.write_u16::<BigEndian>(0x1234).unwrap(); // source port
+        raw.write_u16::<BigEndian>(0x5678).unwrap(); // destination port
+        raw.write_u32::<BigEndian>(0x111).unwrap(); // sequence number
+        raw.write_u32::<BigEndian>(0x222).unwrap(); // acknowledgement number
+        raw.write_u16::<BigEndian>(5 << 12).unwrap(); // data offset + flags(0)
+        raw.write_u16::<BigEndian>(0).unwrap(); // window (don't care for these tests)
+        raw.write_u16::<BigEndian>(0).unwrap(); // checksum
+        raw.write_u16::<BigEndian>(0).unwrap(); // urgent pointer
+
+        // payload
+        raw.write_u32::<BigEndian>(0x11223344).unwrap();
+        raw.write_u8(0x55).unwrap();
+
+        raw
+    }
+
+    fn create_tcp_header() -> Vec<u8> {
+        let mut raw = Vec::new();
+        raw.reserve(20);
+
+        raw.write_u16::<BigEndian>(0x1234).unwrap(); // source port
+        raw.write_u16::<BigEndian>(0x5678).unwrap(); // destination port
+        raw.write_u32::<BigEndian>(0x111).unwrap(); // sequence number
+        raw.write_u32::<BigEndian>(0x222).unwrap(); // acknowledgement number
+        raw.write_u16::<BigEndian>(5 << 12).unwrap(); // data offset + flags(0)
+        raw.write_u16::<BigEndian>(0).unwrap(); // window (don't care for these tests)
+        raw.write_u16::<BigEndian>(0).unwrap(); // checksum
+        raw.write_u16::<BigEndian>(0).unwrap(); // urgent pointer
+
+        raw
+    }
+
+    #[test]
+    fn edit_header() {
+        let raw = &mut create_tcp_header()[..];
+        let mut header = TCPHeader::parse(raw);
+
+        header.set_source_port(raw, 1111);
+        header.set_destination_port(raw, 2222);
+        header.set_sequence_number(raw, 300);
+        header.set_acknowledgement_number(raw, 101);
+        header.set_flags(raw, TCP_FLAG_FIN | TCP_FLAG_ACK);
+
+        assert_eq!(1111, header.source_port());
+        assert_eq!(2222, header.destination_port());
+        assert_eq!(300, header.sequence_number());
+        assert_eq!(101, header.acknowledgement_number());
+        assert_eq!(TCP_FLAG_FIN | TCP_FLAG_ACK, header.flags());
+
+        // assert that the buffer has been modified
+        let raw_source_port = BigEndian::read_u16(&raw[0..2]);
+        let raw_destination_port = BigEndian::read_u16(&raw[2..4]);
+        let raw_sequence_number = BigEndian::read_u32(&raw[4..8]);
+        let raw_acknowledgement_number = BigEndian::read_u32(&raw[8..12]);
+        let raw_data_offset_and_flags = BigEndian::read_u16(&raw[12..14]);
+
+        assert_eq!(1111, raw_source_port);
+        assert_eq!(2222, raw_destination_port);
+        assert_eq!(300, raw_sequence_number);
+        assert_eq!(101, raw_acknowledgement_number);
+        assert_eq!(0x5011, raw_data_offset_and_flags);
     }
 }
