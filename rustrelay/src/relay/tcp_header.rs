@@ -118,15 +118,12 @@ impl TCPHeader {
         sum += destination & 0xFFFF;
         sum += length as u32;
 
-        println!("=={}", sum);
-
         // reset checksum field
         self.set_checksum(raw, 0);
 
         {
             let mut cursor = Cursor::new(&raw);
             while length - cursor.position() as u16 > 1 {
-                println!("sum={}", sum);
                 sum += cursor.read_u16::<BigEndian>().unwrap() as u32;
             }
             // if payload length is odd, pad last short with 0
@@ -281,7 +278,6 @@ mod tests {
             let expected_checksum = {
                 // pseudo-header
                 let mut sum: u32 = 0x1234 + 0x5678 + 0xA2A2 + 0x4242 + 0x0006 + 0x0018;
-                println!("++{}", sum);
 
                 // header
                 sum += 0x1234 + 0x5678 + 0x0000 + 0x0111 + 0x0000 +
@@ -296,10 +292,14 @@ mod tests {
                 !sum as u16
             };
 
-            let transport_header_raw = ipv4_packet.transport_header_raw().unwrap();
-            let actual_checksum = tcp_header.checksum(transport_header_raw);
+            {
+                let (raw, ipv4_header, _) = ipv4_packet.destructure();
+                let transport_header_raw = &raw[ipv4_header.header_length() as usize..];
+                let actual_checksum = tcp_header.checksum(transport_header_raw);
 
-            assert_eq!(expected_checksum, actual_checksum);
+                assert_eq!(expected_checksum, actual_checksum);
+            }
+
         } else {
             panic!("Packet is not TCP");
         }
