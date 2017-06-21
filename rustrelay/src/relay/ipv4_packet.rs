@@ -95,7 +95,6 @@ impl<'a> IPv4Packet<'a> {
         if let Some(ref transport_header) = self.transport_header {
             let start = self.ipv4_header.header_length() as usize;
             let length = transport_header.header_length() as usize;
-            println!("length={}", transport_header.header_length());
             Some(&self.raw[start..start + length])
         } else {
             None
@@ -115,7 +114,8 @@ impl<'a> IPv4Packet<'a> {
     pub fn compute_checksums(&mut self) {
         self.ipv4_header.compute_checksum(self.raw);
         let mut transport = self.transport_header.as_mut().expect("No known transport header");
-        transport.compute_checksum(self.raw, &self.ipv4_header);
+        let transport_raw = &mut self.raw[self.ipv4_header.header_length() as usize..];
+        transport.compute_checksum(transport_raw, &self.ipv4_header);
     }
 
     pub fn swap_source_and_destination(&mut self) {
