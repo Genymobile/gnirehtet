@@ -44,24 +44,6 @@ public class IPv4Packet {
         raw.limit(ipv4Header.getTotalLength());
     }
 
-    public static IPv4Packet merge(IPv4Header ipv4Header, TransportHeader transportHeader, ByteBuffer payload) {
-        int ipv4HeaderLength = ipv4Header.getHeaderLength();
-        int transportHeaderLength = transportHeader.getHeaderLength();
-        int payloadLength = payload.limit();
-        int totalLength = ipv4HeaderLength + transportHeaderLength + payloadLength;
-
-        ipv4Header.setTotalLength(totalLength);
-        transportHeader.setPayloadLength(payloadLength);
-
-        ByteBuffer buffer = ByteBuffer.allocate(totalLength);
-        buffer.put(ipv4Header.getRaw());
-        buffer.put(transportHeader.getRaw());
-        buffer.put(payload);
-        buffer.flip();
-
-        return new IPv4Packet(buffer);
-    }
-
     public boolean isValid() {
         return transportHeader != null;
     }

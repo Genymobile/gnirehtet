@@ -91,23 +91,4 @@ public class IPv4PacketTest {
         ByteBuffer payload = packet.getPayload();
         Assert.assertEquals(0x11223344, payload.getInt(0));
     }
-
-    @Test
-    public void testMergeHeadersAndPayload() {
-        IPv4Packet originalPacket = new IPv4Packet(createMockPacket());
-        IPv4Header ipv4Header = originalPacket.getIpv4Header();
-        TransportHeader transportHeader = originalPacket.getTransportHeader();
-
-        ByteBuffer payload = ByteBuffer.allocate(8);
-        payload.putLong(0x1122334455667788L);
-        payload.flip();
-
-        IPv4Packet packet = IPv4Packet.merge(ipv4Header, transportHeader, payload);
-        Assert.assertEquals(36, packet.getIpv4Header().getTotalLength());
-
-        ByteBuffer packetPayload = packet.getPayload();
-        packetPayload.rewind();
-        Assert.assertEquals(8, packetPayload.remaining());
-        Assert.assertEquals(0x1122334455667788L, packetPayload.getLong());
-    }
 }
