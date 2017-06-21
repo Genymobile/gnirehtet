@@ -106,7 +106,7 @@ mod tests {
         let datagram = create_datagram(5);
         let mut datagram_buffer = DatagramBuffer::new(9);
 
-        datagram_buffer.read_from(&datagram);
+        datagram_buffer.read_from(&datagram).unwrap();
         assert_eq!(read_datagram(&mut datagram_buffer), datagram);
     }
 
@@ -138,11 +138,11 @@ mod tests {
         let mut datagram_buffer = DatagramBuffer::new(14);
 
         // write and consume 10 bytes
-        datagram_buffer.read_from(&create_datagram(10));
+        datagram_buffer.read_from(&create_datagram(10)).unwrap();
         {
             // write and forget
             let mut mock = MockDatagramSocket::new();
-            datagram_buffer.write_to(&mut mock);
+            datagram_buffer.write_to(&mut mock).unwrap();
         }
 
         // DatagramBuffer is expected to store the whole datagram (even if it exceeds its "capacity")
