@@ -92,7 +92,7 @@ impl IPv4Header {
         self.set_checksum(raw, !sum as u16);
     }
 
-    fn checksum(&mut self, raw: &[u8]) -> u16 {
+    fn checksum(&self, raw: &[u8]) -> u16 {
         BigEndian::read_u16(&raw[10..12])
     }
 
@@ -193,8 +193,8 @@ mod tests {
 
         header.compute_checksum(raw);
 
-        let mut sum: u32 = 0x4500 + 0x001C + 0x0000 + 0x0000 + 0x0011
-                         + 0x0000 + 0x1234 + 0x5678 + 0x4242 + 0x4242;
+        let mut sum: u32 = 0x4500 + 0x001C + 0x0000 + 0x0000 + 0x0011 +
+                           0x0000 + 0x1234 + 0x5678 + 0x4242 + 0x4242;
         while (sum & !0xffff) != 0 {
             sum = (sum & 0xffff) + (sum >> 16);
         }
