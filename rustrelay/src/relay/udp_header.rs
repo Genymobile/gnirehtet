@@ -48,10 +48,9 @@ impl UDPHeader {
         BigEndian::write_u16(&mut raw[4..6], total_length);
     }
 
-    pub fn compute_checksum(&mut self, packet_raw: &mut [u8], ipv4_header: &IPv4Header) {
-        let transport = &mut packet_raw[ipv4_header.header_length() as usize..];
+    pub fn compute_checksum(&mut self, raw: &mut [u8], _: &IPv4Header) {
         // disable checksum validation
-        BigEndian::write_u16(&mut transport[6..8], 0);
+        BigEndian::write_u16(&mut raw[6..8], 0);
     }
 }
 

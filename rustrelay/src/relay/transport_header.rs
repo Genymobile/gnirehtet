@@ -52,10 +52,10 @@ impl TransportHeader {
         }
     }
 
-    pub fn compute_checksum(&mut self, packet_raw: &mut [u8], ipv4_header: &IPv4Header) {
+    pub fn compute_checksum(&mut self, raw: &mut [u8], ipv4_header: &IPv4Header) {
         match *self {
-            TransportHeader::TCP(ref mut tcp_header) => tcp_header.compute_checksum(packet_raw, ipv4_header),
-            TransportHeader::UDP(ref mut udp_header) => udp_header.compute_checksum(packet_raw, ipv4_header),
+            TransportHeader::TCP(ref mut tcp_header) => tcp_header.compute_checksum(raw, ipv4_header),
+            TransportHeader::UDP(ref mut udp_header) => udp_header.compute_checksum(raw, ipv4_header),
         }
     }
 }
