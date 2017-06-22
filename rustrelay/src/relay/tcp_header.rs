@@ -104,12 +104,12 @@ impl TCPHeader {
         self.header_length = data_offset << 2;
     }
 
-    pub fn compute_checksum(&mut self, raw: &mut [u8], ipv4_header: &IPv4Header) {
+    pub fn compute_checksum(&mut self, transport_raw: &mut [u8], ipv4_header: &IPv4Header) {
         // pseudo-header checksum (cf rfc793 section 3.1)
         let source = ipv4_header.source();
         let destination = ipv4_header.destination();
         let length = ipv4_header.total_length() - ipv4_header.header_length() as u16;
-        assert_eq!(raw.len(), ipv4_header.total_length() as usize - ipv4_header.header_length() as usize);
+        assert_eq!(transport_raw.len(), ipv4_header.total_length() as usize - ipv4_header.header_length() as usize);
 
         let mut sum = 6u32; // protocol TCP = 6
         sum += source >> 16;
@@ -119,10 +119,10 @@ impl TCPHeader {
         sum += length as u32;
 
         // reset checksum field
-        self.set_checksum(raw, 0);
+        self.set_checksum(transport_raw, 0);
 
         {
-            let mut cursor = Cursor::new(&raw);
+            let mut cursor = Cursor::new(&transport_raw);
             while length - cursor.position() as u16 > 1 {
                 sum += cursor.read_u16::<BigEndian>().unwrap() as u32;
             }
@@ -137,7 +137,7 @@ impl TCPHeader {
         }
         sum = !sum;
 
-        self.set_checksum(raw, sum as u16);
+        self.set_checksum(transport_raw, sum as u16);
     }
 
     fn checksum(&self, raw: &[u8]) -> u16 {
