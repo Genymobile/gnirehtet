@@ -120,22 +120,19 @@ mod tests {
         {
             let packet = packetizer.packetize_read(&mut cursor, Some(2)).unwrap();
             assert_eq!(30, packet.ipv4_header().total_length());
-            assert_eq!(2, packet.payload_length().unwrap());
-            assert_eq!([0x11, 0x22], packet.raw()[packet.payload_index().unwrap() as usize..]);
+            assert_eq!([0x11, 0x22], packet.payload().unwrap());
         }
 
         {
             let packet = packetizer.packetize_read(&mut cursor, Some(3)).unwrap();
             assert_eq!(31, packet.ipv4_header().total_length());
-            assert_eq!(3, packet.payload_length().unwrap());
-            assert_eq!([0x33, 0x44, 0x55], packet.raw()[packet.payload_index().unwrap() as usize..]);
+            assert_eq!([0x33, 0x44, 0x55], packet.payload().unwrap());
         }
 
         {
             let packet = packetizer.packetize_read(&mut cursor, Some(1024)).unwrap();
             assert_eq!(31, packet.ipv4_header().total_length());
-            assert_eq!(3, packet.payload_length().unwrap());
-            assert_eq!([0x66, 0x77, 0x88], packet.raw()[packet.payload_index().unwrap() as usize..]);
+            assert_eq!([0x66, 0x77, 0x88], packet.payload().unwrap());
         }
     }
 }

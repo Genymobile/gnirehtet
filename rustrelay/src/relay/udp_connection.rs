@@ -147,7 +147,7 @@ impl Connection for UDPConnection {
     }
 
     fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
-        match self.client_to_network.read_from(ipv4_packet.payload()) {
+        match self.client_to_network.read_from(ipv4_packet.payload().expect("No payload")) {
             Ok(_) => {
                 self.update_interests(selector);
             },

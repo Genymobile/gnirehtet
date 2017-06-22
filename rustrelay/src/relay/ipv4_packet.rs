@@ -1,3 +1,5 @@
+use std::ops::Range;
+
 use super::ipv4_header::IPv4Header;
 use super::transport_header::TransportHeader;
 
@@ -71,24 +73,40 @@ impl<'a> IPv4Packet<'a> {
         self.ipv4_header.total_length()
     }
 
-    pub fn payload_index(&self) -> Option<u16> {
-        if let Some(ref transport_header) = self.transport_header {
-            Some(self.ipv4_header.header_length() as u16 + transport_header.header_length() as u16)
-        } else {
-            None
-        }
+    pub fn ipv4_header_range(&self) -> Range<usize> {
+        let start = 0;
+        let end = self.ipv4_header.header_length() as usize;
+        start..end
     }
 
-    pub fn payload_length(&self) -> Option<u16> {
-        if let Some(payload_index) = self.payload_index() {
-            Some(self.length() - payload_index)
-        } else {
-            None
-        }
+    pub fn transport_range(&self) -> Option<Range<usize>> {
+        self.transport_header.as_ref().map(|_| {
+            let start = self.ipv4_header.header_length() as usize;
+            let end = self.raw.len();
+            start..end
+        })
     }
 
-    pub fn payload(&self) -> &[u8] {
-        &self.raw[self.payload_index().unwrap() as usize..]
+    pub fn transport_header_range(&self) -> Option<Range<usize>> {
+        self.transport_header.as_ref().map(|transport_header| {
+            let start = self.ipv4_header.header_length() as usize;
+            let end = start + transport_header.header_length() as usize;
+            start..end
+        })
+    }
+
+    pub fn payload_range(&self) -> Option<Range<usize>> {
+        self.transport_header.as_ref().map(|transport_header| {
+            let start = self.ipv4_header.header_length() as usize + transport_header.header_length() as usize;
+            let end = self.raw.len();
+            start..end
+        })
+    }
+
+    pub fn payload(&self) -> Option<&[u8]> {
+        self.payload_range().map(|range| {
+            &self.raw[range]
+        })
     }
 
     pub fn compute_checksums(&mut self) {
@@ -194,6 +212,6 @@ mod tests {
     fn payload() {
         let raw = &mut create_packet()[..];
         let ipv4_packet = IPv4Packet::parse(raw);
-        assert_eq!([0x11, 0x22, 0x33, 0x44], ipv4_packet.payload());
+        assert_eq!([0x11, 0x22, 0x33, 0x44], ipv4_packet.payload().unwrap());
     }
 }

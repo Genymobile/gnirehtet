@@ -270,8 +270,9 @@ mod tests {
             BigEndian::write_u16(&mut ipv4_packet.raw_mut()[36..38], 0x79);
 
             {
+                let transport_range = ipv4_packet.transport_range().expect("No transport");
                 let (raw, ipv4_header, _) = ipv4_packet.destructure_mut();
-                let transport_raw = &mut raw[ipv4_header.header_length() as usize..];
+                let transport_raw = &mut raw[transport_range];
                 tcp_header.compute_checksum(transport_raw, ipv4_header);
             }
 
@@ -293,8 +294,8 @@ mod tests {
             };
 
             {
-                let (raw, ipv4_header, _) = ipv4_packet.destructure();
-                let transport_header_raw = &raw[ipv4_header.header_length() as usize..];
+                let transport_header_range = ipv4_packet.transport_header_range().expect("No transport");
+                let transport_header_raw = &ipv4_packet.raw()[transport_header_range];
                 let actual_checksum = tcp_header.checksum(transport_header_raw);
 
                 assert_eq!(expected_checksum, actual_checksum);
@@ -314,8 +315,9 @@ mod tests {
             BigEndian::write_u16(&mut ipv4_packet.raw_mut()[36..38], 0x79);
 
             {
+                let transport_range = ipv4_packet.transport_range().expect("No transport");
                 let (raw, ipv4_header, _) = ipv4_packet.destructure_mut();
-                let transport_raw = &mut raw[ipv4_header.header_length() as usize..];
+                let transport_raw = &mut raw[transport_range];
                 tcp_header.compute_checksum(transport_raw, ipv4_header);
             }
 
@@ -337,8 +339,8 @@ mod tests {
             };
 
             {
-                let (raw, ipv4_header, _) = ipv4_packet.destructure();
-                let transport_header_raw = &raw[ipv4_header.header_length() as usize..];
+                let transport_header_range = ipv4_packet.transport_header_range().expect("No transport");
+                let transport_header_raw = &ipv4_packet.raw()[transport_header_range];
                 let actual_checksum = tcp_header.checksum(transport_header_raw);
 
                 assert_eq!(expected_checksum, actual_checksum);
