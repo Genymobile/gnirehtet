@@ -15,6 +15,7 @@ mod relay;
 mod router;
 mod selector;
 mod stream_buffer;
+mod tcp_connection;
 mod tcp_header;
 mod transport_header;
 mod tunnel_server;
