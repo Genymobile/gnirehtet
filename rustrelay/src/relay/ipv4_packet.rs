@@ -1,34 +1,34 @@
 use std::ops::Range;
 
-use super::ipv4_header::IPv4Header;
+use super::ipv4_header::{IPv4Header, IPv4HeaderData};
 use super::transport_header::TransportHeader;
 
 pub const MAX_PACKET_LENGTH: usize = 1 << 16;
 
 pub struct IPv4Packet<'a> {
     raw: &'a mut [u8],
-    ipv4_header: IPv4Header,
+    ipv4_header_data: IPv4HeaderData,
     transport_header: Option<TransportHeader>,
 }
 
 impl<'a> IPv4Packet<'a> {
     pub fn parse(raw: &'a mut [u8]) -> Self {
-        let ipv4_header = IPv4Header::parse(raw);
+        let ipv4_header_data = IPv4HeaderData::parse(raw);
         let transport_header = {
-            let payload = &raw[ipv4_header.header_length() as usize..];
-            TransportHeader::parse(ipv4_header.protocol(), payload)
+            let payload = &raw[ipv4_header_data.header_length() as usize..];
+            TransportHeader::parse(ipv4_header_data.protocol(), payload)
         };
         Self {
-            raw: &mut raw[..ipv4_header.total_length() as usize],
-            ipv4_header: ipv4_header,
+            raw: &mut raw[..ipv4_header_data.total_length() as usize],
+            ipv4_header_data: ipv4_header_data,
             transport_header: transport_header,
         }
     }
 
-    pub fn new(raw: &'a mut [u8], ipv4_header: IPv4Header, transport_header: TransportHeader) -> Self {
+    pub fn new(raw: &'a mut [u8], ipv4_header_data: IPv4HeaderData, transport_header: TransportHeader) -> Self {
         Self {
             raw: raw,
-            ipv4_header: ipv4_header,
+            ipv4_header_data: ipv4_header_data,
             transport_header: Some(transport_header),
         }
     }
@@ -41,12 +41,13 @@ impl<'a> IPv4Packet<'a> {
         self.raw
     }
 
-    pub fn ipv4_header(&self) -> &IPv4Header {
-        &self.ipv4_header
+    pub fn ipv4_header(&mut self) -> IPv4Header {
+        let slice = &mut self.raw[..self.ipv4_header_data.header_length() as usize];
+        IPv4Header::new(slice, &mut self.ipv4_header_data)
     }
 
-    pub fn ipv4_header_mut(&mut self) -> &mut IPv4Header {
-        &mut self.ipv4_header
+    pub fn ipv4_header_data(&self) -> &IPv4HeaderData {
+        &self.ipv4_header_data
     }
 
     pub fn transport_header(&self) -> &Option<TransportHeader> {
@@ -57,22 +58,15 @@ impl<'a> IPv4Packet<'a> {
         &mut self.transport_header
     }
 
-    pub fn destructure(&self) -> (&[u8], &IPv4Header, &Option<TransportHeader>) {
-        (self.raw, &self.ipv4_header, &self.transport_header)
-    }
-
-    pub fn destructure_mut(&mut self) -> (&mut [u8], &mut IPv4Header, &mut Option<TransportHeader>) {
-        (self.raw, &mut self.ipv4_header, &mut self.transport_header)
-    }
-
     pub fn is_valid(&self) -> bool {
         self.transport_header.is_some()
     }
 
     pub fn length(&self) -> u16 {
-        self.ipv4_header.total_length()
+        self.ipv4_header_data.total_length()
     }
 
+/*
     pub fn ipv4_header_range(&self) -> Range<usize> {
         let start = 0;
         let end = self.ipv4_header.header_length() as usize;
@@ -102,24 +96,26 @@ impl<'a> IPv4Packet<'a> {
             start..end
         })
     }
-
+*/
+    // TODO delete function
     pub fn payload(&self) -> Option<&[u8]> {
-        self.payload_range().map(|range| {
+        self.transport_header.as_ref().map(|transport_header| {
+            let range = self.ipv4_header_data.header_length() as usize + transport_header.header_length() as usize..;
             &self.raw[range]
         })
     }
 
     pub fn compute_checksums(&mut self) {
-        self.ipv4_header.compute_checksum(self.raw);
+        self.ipv4_header().compute_checksum();
         let mut transport = self.transport_header.as_mut().expect("No known transport header");
-        let transport_raw = &mut self.raw[self.ipv4_header.header_length() as usize..];
-        transport.compute_checksum(transport_raw, &self.ipv4_header);
+        let transport_raw = &mut self.raw[self.ipv4_header_data.header_length() as usize..];
+        transport.compute_checksum(transport_raw, &self.ipv4_header_data);
     }
 
     pub fn swap_source_and_destination(&mut self) {
-        self.ipv4_header.swap_source_and_destination(&mut self.raw);
+        self.ipv4_header().swap_source_and_destination();
         if let Some(ref mut transport_header) = self.transport_header {
-            let raw_payload = &mut self.raw[self.ipv4_header.header_length() as usize..];
+            let raw_payload = &mut self.raw[self.ipv4_header_data.header_length() as usize..];
             transport_header.swap_source_and_destination(raw_payload);
         }
     }

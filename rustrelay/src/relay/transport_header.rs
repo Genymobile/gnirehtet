@@ -1,4 +1,4 @@
-use super::ipv4_header::{IPv4Header, Protocol};
+use super::ipv4_header::{IPv4HeaderData, Protocol};
 use super::tcp_header::TCPHeader;
 use super::udp_header::{UDPHeader, UDP_HEADER_LENGTH};
 
@@ -52,10 +52,10 @@ impl TransportHeader {
         }
     }
 
-    pub fn compute_checksum(&mut self, transport_raw: &mut [u8], ipv4_header: &IPv4Header) {
+    pub fn compute_checksum(&mut self, transport_raw: &mut [u8], ipv4_header_data: &IPv4HeaderData) {
         match *self {
-            TransportHeader::TCP(ref mut tcp_header) => tcp_header.compute_checksum(transport_raw, ipv4_header),
-            TransportHeader::UDP(ref mut udp_header) => udp_header.compute_checksum(transport_raw, ipv4_header),
+            TransportHeader::TCP(ref mut tcp_header) => tcp_header.compute_checksum(transport_raw, ipv4_header_data),
+            TransportHeader::UDP(ref mut udp_header) => udp_header.compute_checksum(transport_raw, ipv4_header_data),
         }
     }
 }

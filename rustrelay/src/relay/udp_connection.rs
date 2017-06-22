@@ -34,15 +34,18 @@ impl UDPConnection {
     pub fn new(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, reference_packet: &IPv4Packet) -> io::Result<Rc<RefCell<Self>>> {
         let socket = UDPConnection::create_socket(&id)?;
         let raw = reference_packet.raw();
-        let ipv4_header = reference_packet.ipv4_header().clone();
-        let transport_header = reference_packet.transport_header().as_ref().unwrap().clone();
+        let packetizer = {
+            let ipv4_header = reference_packet.ipv4_header();
+            let transport_header = reference_packet.transport_header().as_ref().unwrap().clone();
+            Packetizer::new(ipv4_header, transport_header)
+        };
         let rc = Rc::new(RefCell::new(Self {
             id: id,
             client: client,
             socket: socket,
             token: Token(0), // default value, will be set afterwards
             client_to_network: DatagramBuffer::new(4 * MAX_PACKET_LENGTH),
-            network_to_client: Packetizer::new(raw, ipv4_header, transport_header),
+            network_to_client: packetizer,
             closed: false,
             idle_since: Instant::now(),
         }));
