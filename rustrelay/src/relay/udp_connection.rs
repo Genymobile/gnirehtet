@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::io;
-use std::rc::{Rc, Weak};
 use std::net::{Ipv4Addr, SocketAddr};
+use std::rc::{Rc, Weak};
 use std::time::Instant;
 use log::LogLevel;
 use mio::{Event, PollOpt, Ready, Token};
@@ -33,7 +33,7 @@ pub struct UDPConnection {
 impl UDPConnection {
     pub fn new(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, reference_packet: &IPv4Packet) -> io::Result<Rc<RefCell<Self>>> {
         let socket = UDPConnection::create_socket(&id)?;
-        let raw: &[u8] = reference_packet.raw();
+        let raw = reference_packet.raw();
         let ipv4_header = reference_packet.ipv4_header().clone();
         let transport_header = reference_packet.transport_header().as_ref().unwrap().clone();
         let rc = Rc::new(RefCell::new(Self {
