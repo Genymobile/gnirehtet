@@ -1,6 +1,6 @@
 use std::mem;
 use byteorder::{BigEndian, ByteOrder};
-use super::ipv4_header::IPv4Header;
+use super::ipv4_header::IPv4HeaderData;
 
 pub const UDP_HEADER_LENGTH: u8 = 8;
 
@@ -48,7 +48,7 @@ impl UDPHeader {
         BigEndian::write_u16(&mut raw[4..6], total_length);
     }
 
-    pub fn compute_checksum(&mut self, transport_raw: &mut [u8], _: &IPv4Header) {
+    pub fn compute_checksum(&mut self, transport_raw: &mut [u8], _: &IPv4HeaderData) {
         // disable checksum validation
         BigEndian::write_u16(&mut transport_raw[6..8], 0);
     }

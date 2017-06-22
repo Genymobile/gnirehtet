@@ -1,7 +1,7 @@
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
 use std::io::Cursor;
 use std::mem;
-use super::ipv4_header::IPv4Header;
+use super::ipv4_header::IPv4HeaderData;
 
 #[derive(Copy, Clone)]
 pub struct TCPHeader {
@@ -104,12 +104,12 @@ impl TCPHeader {
         self.header_length = data_offset << 2;
     }
 
-    pub fn compute_checksum(&mut self, transport_raw: &mut [u8], ipv4_header: &IPv4Header) {
+    pub fn compute_checksum(&mut self, transport_raw: &mut [u8], ipv4_header_data: &IPv4HeaderData) {
         // pseudo-header checksum (cf rfc793 section 3.1)
-        let source = ipv4_header.source();
-        let destination = ipv4_header.destination();
-        let length = ipv4_header.total_length() - ipv4_header.header_length() as u16;
-        assert_eq!(transport_raw.len(), ipv4_header.total_length() as usize - ipv4_header.header_length() as usize);
+        let source = ipv4_header_data.source();
+        let destination = ipv4_header_data.destination();
+        let length = ipv4_header_data.total_length() - ipv4_header_data.header_length() as u16;
+        assert_eq!(transport_raw.len(), length as usize);
 
         let mut sum = 6u32; // protocol TCP = 6
         sum += source >> 16;

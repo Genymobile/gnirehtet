@@ -35,13 +35,13 @@ pub struct ConnectionId {
 
 impl ConnectionId {
     pub fn from_packet(reference_packet: &IPv4Packet) -> Self {
-        let ipv4_header = reference_packet.ipv4_header();
+        let ipv4_header_data = reference_packet.ipv4_header_data();
         let transport_header = reference_packet.transport_header().as_ref().expect("Packet without transport header");
         Self {
-            protocol: ipv4_header.protocol(),
-            source_ip: ipv4_header.source(),
+            protocol: ipv4_header_data.protocol(),
+            source_ip: ipv4_header_data.source(),
             source_port: transport_header.source_port(),
-            destination_ip: ipv4_header.destination(),
+            destination_ip: ipv4_header_data.destination(),
             destination_port: transport_header.destination_port(),
         }
     }
