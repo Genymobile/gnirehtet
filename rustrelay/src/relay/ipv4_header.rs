@@ -219,8 +219,8 @@ mod tests {
     #[test]
     fn edit_header() {
         let raw = &mut create_header()[..];
-        let mut data = IPv4HeaderData::parse(raw);
-        let mut header = IPv4Header::new(raw, data);
+        let data = &mut IPv4HeaderData::parse(raw);
+        let mut header = IPv4HeaderMut::new(raw, data);
 
         header.set_source(0x87654321);
         header.set_destination(0x24242424);
@@ -251,8 +251,8 @@ mod tests {
     #[test]
     fn compute_checksum() {
         let raw = &mut create_header()[..];
-        let mut data = IPv4HeaderData::parse(raw);
-        let mut header = IPv4Header::new(raw, data);
+        let data = &mut IPv4HeaderData::parse(raw);
+        let mut header = IPv4HeaderMut::new(raw, data);
 
         // set a fake checksum value to assert that it is correctly computed
         header.set_checksum(0x79);
@@ -270,7 +270,7 @@ mod tests {
 
     #[test]
     fn peek_version_length_unavailable() {
-        let raw: [u8] = [];
+        let raw: [u8; 0] = [];
         assert!(peek_version_length(&raw).is_none());
         let raw = [ 0x40, 2 ];
         assert!(peek_version_length(&raw).is_none());
