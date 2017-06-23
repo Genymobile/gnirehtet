@@ -111,9 +111,9 @@ mod tests {
         let data = [ 0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 ];
         let mut mock = MockDatagramSocket::from_data(&data);
 
-        let ipv4_header = reference_packet.ipv4_header().clone();
+        let ipv4_header = reference_packet.ipv4_header();
         let transport_header = reference_packet.transport_header().as_ref().unwrap().clone();
-        let mut packetizer = Packetizer::new(reference_packet.raw(), ipv4_header, transport_header);
+        let mut packetizer = Packetizer::new(ipv4_header, transport_header);
 
         let packet = packetizer.packetize(&mut mock).unwrap();
         assert_eq!(36, packet.ipv4_header().total_length());
@@ -127,9 +127,9 @@ mod tests {
         let data = [ 0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 ];
         let mut cursor = io::Cursor::new(&data);
 
-        let ipv4_header = reference_packet.ipv4_header().clone();
+        let ipv4_header = reference_packet.ipv4_header();
         let transport_header = reference_packet.transport_header().as_ref().unwrap().clone();
-        let mut packetizer = Packetizer::new(reference_packet.raw(), ipv4_header, transport_header);
+        let mut packetizer = Packetizer::new(ipv4_header, transport_header);
 
         {
             let packet = packetizer.packetize_read(&mut cursor, Some(2)).unwrap();
