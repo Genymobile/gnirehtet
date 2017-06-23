@@ -1,7 +1,7 @@
 use std::io;
 
 use super::datagram::{DatagramReceiver, ReadAdapter};
-use super::ipv4_header::{IPv4Header, IPv4HeaderData};
+use super::ipv4_header::{IPv4Header, IPv4HeaderData, IPv4HeaderMut};
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
 use super::transport_header::TransportHeader;
 
@@ -26,7 +26,7 @@ impl Packetizer {
             let ipv4_header_raw = &mut buffer[..reference_ipv4_header.header_length() as usize];
             ipv4_header_raw.copy_from_slice(reference_ipv4_header.raw());
 
-            let mut ipv4_header = IPv4Header::new(ipv4_header_raw, &mut ipv4_header_data);
+            let mut ipv4_header = IPv4HeaderMut::new(ipv4_header_raw, &mut ipv4_header_data);
             // TODO transport
 
             ipv4_header.swap_source_and_destination();
@@ -58,20 +58,15 @@ impl Packetizer {
         self.packetize(&mut adapter)
     }
 
-    fn ipv4_header<'a>(&'a mut self) -> IPv4Header<'a> {
+    fn ipv4_header_mut<'a>(&'a mut self) -> IPv4HeaderMut<'a> {
         let raw = &mut self.buffer[..self.ipv4_header_data.header_length() as usize];
-        IPv4Header::new(raw, &mut self.ipv4_header_data)
+        IPv4HeaderMut::new(raw, &mut self.ipv4_header_data)
     }
 
     fn inflate(&mut self, payload_length: u16) -> IPv4Packet {
         let total_length = self.payload_index as u16 + payload_length;
 
-        /*{
-            let raw_ipv4_header = &mut self.buffer[..self.ipv4_header_data.header_length() as usize];
-            let ipv4_header = IPv4Header::new(raw_ipv4_header, &mut self.ipv4_header_data);
-            ipv4_header.set_total_length(total_length);
-        }*/
-        self.ipv4_header().set_total_length(total_length);
+        self.ipv4_header_mut().set_total_length(total_length);
         self.transport_header.set_payload_length(&mut self.buffer[self.transport_index..], payload_length);
 
         let mut ipv4_packet = IPv4Packet::new(&mut self.buffer[..total_length as usize], self.ipv4_header_data.clone(), self.transport_header.clone());
