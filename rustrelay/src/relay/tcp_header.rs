@@ -45,6 +45,14 @@ impl TCPHeaderData {
         }
     }
 
+    pub fn bind<'c, 'a: 'c, 'b: 'c>(&'a self, raw: &'b [u8]) -> TCPHeader<'c> {
+        TCPHeader::new(raw, self)
+    }
+
+    pub fn bind_mut<'c, 'a: 'c, 'b: 'c>(&'a mut self, raw: &'b mut [u8]) -> TCPHeaderMut<'c> {
+        TCPHeaderMut::new(raw, self)
+    }
+
     pub fn header_length(&self) -> u8 {
         self.header_length
     }
@@ -307,8 +315,7 @@ mod tests {
     #[test]
     fn edit_header() {
         let raw = &mut create_tcp_header()[..];
-        let data = &mut TCPHeaderData::parse(raw);
-        let mut header = TCPHeaderMut::new(raw, data);
+        let mut header = TCPHeaderData::parse(raw).bind_mut(raw);
 
         header.set_source_port(1111);
         header.set_destination_port(2222);

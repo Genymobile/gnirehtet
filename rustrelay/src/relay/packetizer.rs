@@ -27,16 +27,14 @@ impl Packetizer {
         {
             let ipv4_header_raw = &mut buffer[..transport_index];
             ipv4_header_raw.copy_from_slice(reference_ipv4_header.raw());
-
-            let mut ipv4_header = IPv4HeaderMut::new(ipv4_header_raw, &mut ipv4_header_data);
+            let mut ipv4_header = ipv4_header_data.bind_mut(ipv4_header_raw);
             ipv4_header.swap_source_and_destination();
         }
 
         {
             let transport_header_raw = &mut buffer[transport_index..payload_index];
             transport_header_raw.copy_from_slice(reference_transport_header.raw());
-
-            let mut transport_header = TransportHeaderMut::new(transport_header_raw, &mut transport_header_data);
+            let mut transport_header = transport_header_data.bind_mut(transport_header_raw);
             transport_header.swap_source_and_destination();
         }
 
@@ -66,12 +64,12 @@ impl Packetizer {
 
     fn ipv4_header_mut(&mut self) -> IPv4HeaderMut {
         let raw = &mut self.buffer[..self.transport_index];
-        IPv4HeaderMut::new(raw, &mut self.ipv4_header_data)
+        self.ipv4_header_data.bind_mut(raw)
     }
 
     fn transport_header_mut(&mut self) -> TransportHeaderMut {
         let raw = &mut self.buffer[self.transport_index..self.payload_index];
-        TransportHeaderMut::new(raw, &mut self.transport_header_data)
+        self.transport_header_data.bind_mut(raw)
     }
 
     fn inflate(&mut self, payload_length: u16) -> IPv4Packet {
