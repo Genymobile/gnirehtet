@@ -83,10 +83,10 @@ pub fn peek_version_length(raw: &[u8]) -> Option<(u8, u16)> {
 
 // shared definition for IPv4Header and IPv4HeaderMut
 macro_rules! ipv4_header_common {
-    ($name:ident, $refraw:ty, $refdata:ty) => {
+    ($name:ident, $raw_type:ty, $data_type:ty) => {
         // for readability, declare structs manually outside the macro
         impl<'a> $name<'a> {
-            pub fn new(raw: $refraw, data: $refdata) -> Self {
+            pub fn new(raw: $raw_type, data: $data_type) -> Self {
                 Self {
                     raw: raw,
                     data: data,
