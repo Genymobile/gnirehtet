@@ -71,7 +71,7 @@ mod tests {
     use std::io;
     use byteorder::{BigEndian, WriteBytesExt};
     use ::relay::ipv4_header::Protocol;
-    use ::relay::transport_header::TransportHeader;
+    use ::relay::transport_header::{TransportHeader, TransportHeaderData};
 
     fn create_packet() -> Vec<u8> {
         let mut raw = Vec::new();
@@ -106,7 +106,7 @@ mod tests {
         assert_eq!(0x12345678, ipv4_header.source());
         assert_eq!(0x42424242, ipv4_header.destination());
 
-        if let Some(TransportHeader::UDP(ref udp_header)) = *ipv4_packet.transport_header() {
+        if let Some(TransportHeaderData::UDP(ref udp_header)) = *ipv4_packet.transport_header_data() {
             assert_eq!(1234, udp_header.source_port());
             assert_eq!(5678, udp_header.destination_port());
         } else {

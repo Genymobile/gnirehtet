@@ -35,8 +35,9 @@ impl UDPConnection {
         let socket = UDPConnection::create_socket(&id)?;
         let packetizer = {
             let ipv4_header = reference_packet.ipv4_header();
-            let transport_header = reference_packet.transport_header().as_ref().unwrap().clone();
-            Packetizer::new(ipv4_header, transport_header)
+            let transport_header_option = reference_packet.transport_header();
+            let transport_header = transport_header_option.as_ref().unwrap();
+            Packetizer::new(&ipv4_header, &transport_header)
         };
         let rc = Rc::new(RefCell::new(Self {
             id: id,

@@ -3,8 +3,18 @@ use std::io::Cursor;
 use std::mem;
 use super::ipv4_header::IPv4HeaderData;
 
-#[derive(Copy, Clone)]
-pub struct TCPHeader {
+pub struct TCPHeader<'a> {
+    raw: &'a [u8],
+    data: &'a TCPHeaderData,
+}
+
+pub struct TCPHeaderMut<'a> {
+    raw: &'a mut [u8],
+    data: &'a mut TCPHeaderData,
+}
+
+#[derive(Clone)]
+pub struct TCPHeaderData {
     source_port: u16,
     destination_port: u16,
     sequence_number: u32,
@@ -21,7 +31,7 @@ pub const TCP_FLAG_PSH: u16 = 1 << 3;
 pub const TCP_FLAG_ACK: u16 = 1 << 4;
 pub const TCP_FLAG_URG: u16 = 1 << 5;
 
-impl TCPHeader {
+impl TCPHeaderData {
     pub fn parse(raw: &[u8]) -> Self {
         let data_offset_and_flags = BigEndian::read_u16(&raw[12..14]);
         Self {
@@ -58,53 +68,116 @@ impl TCPHeader {
     pub fn flags(&self) -> u16 {
         self.flags
     }
+}
 
-    pub fn set_source_port(&mut self, raw: &mut [u8], source_port: u16) {
-        self.source_port = source_port;
-        BigEndian::write_u16(&mut raw[0..2], source_port);
+// shared definition for UDPHeader and UDPHeaderMut
+macro_rules! tcp_header_common {
+    ($name:ident, $raw_type:ty, $data_type:ty) => {
+        // for readability, declare structs manually outside the macro
+        impl<'a> $name<'a> {
+            pub fn new(raw: $raw_type, data: $data_type) -> Self {
+                Self {
+                    raw: raw,
+                    data: data,
+                }
+            }
+
+            pub fn raw(&self) -> &[u8] {
+                self.raw
+            }
+
+            pub fn data(&self) -> &TCPHeaderData {
+                self.data
+            }
+
+            pub fn header_length(&self) -> u8 {
+                self.data.header_length
+            }
+
+            pub fn source_port(&self) -> u16 {
+                self.data.source_port
+            }
+
+            pub fn destination_port(&self) -> u16 {
+                self.data.destination_port
+            }
+
+            pub fn sequence_number(&self) -> u32 {
+                self.data.sequence_number
+            }
+
+            pub fn acknowledgement_number(&self) -> u32 {
+                self.data.acknowledgement_number
+            }
+
+            pub fn flags(&self) -> u16 {
+                self.data.flags
+            }
+        }
+    }
+}
+
+tcp_header_common!(TCPHeader, &'a [u8], &'a TCPHeaderData);
+tcp_header_common!(TCPHeaderMut, &'a mut [u8], &'a mut TCPHeaderData);
+
+// additional methods for the mutable version
+impl<'a> TCPHeaderMut<'a> {
+    pub fn raw_mut(&mut self) -> &mut [u8] {
+        self.raw
     }
 
-    pub fn set_destination_port(&mut self, raw: &mut [u8], destination_port: u16) {
-        self.destination_port = destination_port;
-        BigEndian::write_u16(&mut raw[2..4], destination_port);
+    pub fn data_mut(&mut self) -> &mut TCPHeaderData {
+        self.data
     }
 
-    pub fn swap_source_and_destination(&mut self, raw: &mut [u8]) {
-        mem::swap(&mut self.source_port, &mut self.destination_port);
+    pub fn set_source_port(&mut self, source_port: u16) {
+        self.data.source_port = source_port;
+        BigEndian::write_u16(&mut self.raw[0..2], source_port);
+    }
+
+    pub fn set_destination_port(&mut self, destination_port: u16) {
+        self.data.destination_port = destination_port;
+        BigEndian::write_u16(&mut self.raw[2..4], destination_port);
+    }
+
+    pub fn swap_source_and_destination(&mut self) {
+        mem::swap(&mut self.data.source_port, &mut self.data.destination_port);
         for i in 0..2 {
-            raw.swap(i, i + 2);
+            self.raw.swap(i, i + 2);
         }
     }
 
-    pub fn set_sequence_number(&mut self, raw: &mut [u8], sequence_number: u32) {
-        self.sequence_number = sequence_number;
-        BigEndian::write_u32(&mut raw[4..8], sequence_number);
+    pub fn set_sequence_number(&mut self, sequence_number: u32) {
+        self.data.sequence_number = sequence_number;
+        BigEndian::write_u32(&mut self.raw[4..8], sequence_number);
     }
 
-    pub fn set_acknowledgement_number(&mut self, raw: &mut [u8], acknowledgement_number: u32) {
-        self.acknowledgement_number = acknowledgement_number;
-        BigEndian::write_u32(&mut raw[8..12], acknowledgement_number);
+    pub fn set_acknowledgement_number(&mut self, acknowledgement_number: u32) {
+        self.data.acknowledgement_number = acknowledgement_number;
+        BigEndian::write_u32(&mut self.raw[8..12], acknowledgement_number);
     }
 
-    pub fn set_flags(&mut self, raw: &mut [u8], flags: u16) {
-        self.flags = flags;
-        let mut data_offset_and_flags = BigEndian::read_u16(&mut raw[12..14]);
+    pub fn set_flags(&mut self, flags: u16) {
+        self.data.flags = flags;
+        let mut data_offset_and_flags = BigEndian::read_u16(&mut self.raw[12..14]);
         data_offset_and_flags = data_offset_and_flags & 0xFE00 | flags & 0x1FF;
-        BigEndian::write_u16(&mut raw[12..14], data_offset_and_flags);
+        BigEndian::write_u16(&mut self.raw[12..14], data_offset_and_flags);
     }
 
-    pub fn shrink_options(&mut self, raw: &mut [u8]) {
-        self.set_data_offset(raw, 5);
+    pub fn shrink_options(&mut self) {
+        self.set_data_offset(5);
     }
 
-    fn set_data_offset(&mut self, raw: &mut [u8], data_offset: u8) {
-        let mut data_offset_and_flags = BigEndian::read_u16(&mut raw[12..14]);
+    fn set_data_offset(&mut self, data_offset: u8) {
+        let mut data_offset_and_flags = BigEndian::read_u16(&mut self.raw[12..14]);
         data_offset_and_flags = data_offset_and_flags & 0x0FFF | ((data_offset as u16) << 12);
-        BigEndian::write_u16(&mut raw[12..14], data_offset_and_flags);
-        self.header_length = data_offset << 2;
+        BigEndian::write_u16(&mut self.raw[12..14], data_offset_and_flags);
+        self.data.header_length = data_offset << 2;
     }
 
-    pub fn compute_checksum(&mut self, transport_raw: &mut [u8], ipv4_header_data: &IPv4HeaderData) {
+    pub fn compute_checksum(&mut self, ipv4_header_data: &IPv4HeaderData, payload: &mut [u8]) {
+        // TODO rewrite with payload
+        /*
         // pseudo-header checksum (cf rfc793 section 3.1)
         let source = ipv4_header_data.source();
         let destination = ipv4_header_data.destination();
@@ -138,14 +211,15 @@ impl TCPHeader {
         sum = !sum;
 
         self.set_checksum(transport_raw, sum as u16);
+        */
     }
 
-    fn checksum(&self, raw: &[u8]) -> u16 {
-        BigEndian::read_u16(&raw[16..18])
+    fn checksum(&self) -> u16 {
+        BigEndian::read_u16(&self.raw[16..18])
     }
 
-    pub fn set_checksum(&mut self, raw: &mut [u8], checksum: u16) {
-        BigEndian::write_u16(&mut raw[16..18], checksum);
+    pub fn set_checksum(&mut self, checksum: u16) {
+        BigEndian::write_u16(&mut self.raw[16..18], checksum);
     }
 }
 
@@ -154,7 +228,7 @@ mod tests {
     use super::*;
     use byteorder::{BigEndian, WriteBytesExt};
     use relay::ipv4_packet::IPv4Packet;
-    use relay::transport_header::TransportHeader;
+    use relay::transport_header::{TransportHeader, TransportHeaderData};
 
     fn create_packet() -> Vec<u8> {
         let mut raw = Vec::new();
@@ -233,13 +307,14 @@ mod tests {
     #[test]
     fn edit_header() {
         let raw = &mut create_tcp_header()[..];
-        let mut header = TCPHeader::parse(raw);
+        let data = &mut TCPHeaderData::parse(raw);
+        let mut header = TCPHeaderMut::new(raw, data);
 
-        header.set_source_port(raw, 1111);
-        header.set_destination_port(raw, 2222);
-        header.set_sequence_number(raw, 300);
-        header.set_acknowledgement_number(raw, 101);
-        header.set_flags(raw, TCP_FLAG_FIN | TCP_FLAG_ACK);
+        header.set_source_port(1111);
+        header.set_destination_port(2222);
+        header.set_sequence_number(300);
+        header.set_acknowledgement_number(101);
+        header.set_flags(TCP_FLAG_FIN | TCP_FLAG_ACK);
 
         assert_eq!(1111, header.source_port());
         assert_eq!(2222, header.destination_port());
@@ -265,7 +340,7 @@ mod tests {
     fn compute_checksum() {
         let raw = &mut create_packet()[..];
         let mut ipv4_packet = IPv4Packet::parse(raw);
-        if let Some(TransportHeader::TCP(mut tcp_header)) = *ipv4_packet.transport_header() {
+        if let Some(TransportHeaderData::TCP(mut tcp_header)) = *ipv4_packet.transport_header_data() {
             // set a fake checksum value to assert that it is correctly computed
             BigEndian::write_u16(&mut ipv4_packet.raw_mut()[36..38], 0x79);
 
