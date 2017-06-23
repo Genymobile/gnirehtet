@@ -28,6 +28,14 @@ impl UDPHeaderData {
         }
     }
 
+    pub fn bind<'c, 'a: 'c, 'b: 'c>(&'a self, raw: &'b [u8]) -> UDPHeader<'c> {
+        UDPHeader::new(raw, self)
+    }
+
+    pub fn bind_mut<'c, 'a: 'c, 'b: 'c>(&'a mut self, raw: &'b mut [u8]) -> UDPHeaderMut<'c> {
+        UDPHeaderMut::new(raw, self)
+    }
+
     pub fn source_port(&self) -> u16 {
         self.source_port
     }
@@ -135,8 +143,7 @@ mod tests {
     #[test]
     fn edit_header() {
         let raw = &mut create_header()[..];
-        let data = &mut UDPHeaderData::parse(raw);
-        let mut header = UDPHeaderMut::new(raw, data);
+        let mut header = UDPHeaderData::parse(raw).bind(raw);
 
         header.set_source_port(1111);
         header.set_destination_port(2222);

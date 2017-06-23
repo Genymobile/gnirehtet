@@ -27,6 +27,14 @@ impl TransportHeaderData {
         }
     }
 
+    pub fn bind<'c, 'a: 'c, 'b: 'c>(&'a self, raw: &'b [u8]) -> TransportHeader<'c> {
+        TransportHeader::new(raw, self)
+    }
+
+    pub fn bind_mut<'c, 'a: 'c, 'b: 'c>(&'a mut self, raw: &'b mut [u8]) -> TransportHeaderMut<'c> {
+        TransportHeaderMut::new(raw, self)
+    }
+
     pub fn source_port(&self) -> u16 {
         match *self {
             TransportHeaderData::TCP(ref tcp_header_data) => tcp_header_data.source_port(),
@@ -52,8 +60,8 @@ impl TransportHeaderData {
 impl<'a> TransportHeader<'a> {
     pub fn new(raw: &'a [u8], data: &'a TransportHeaderData) -> Self {
         match *data {
-            TransportHeaderData::TCP(ref tcp_header_data) => TCPHeader::new(raw, tcp_header_data).into(),
-            TransportHeaderData::UDP(ref udp_header_data) => UDPHeader::new(raw, udp_header_data).into(),
+            TransportHeaderData::TCP(ref tcp_header_data) => tcp_header_data.bind(raw).into(),
+            TransportHeaderData::UDP(ref udp_header_data) => udp_header_data.bind(raw).into(),
         }
     }
 }
@@ -61,8 +69,8 @@ impl<'a> TransportHeader<'a> {
 impl<'a> TransportHeaderMut<'a> {
     pub fn new(raw: &'a mut [u8], data: &'a mut TransportHeaderData) -> Self {
         match *data {
-            TransportHeaderData::TCP(ref mut tcp_header_data) => TCPHeaderMut::new(raw, tcp_header_data).into(),
-            TransportHeaderData::UDP(ref mut udp_header_data) => UDPHeaderMut::new(raw, udp_header_data).into(),
+            TransportHeaderData::TCP(ref mut tcp_header_data) => tcp_header_data.bind_mut(raw).into(),
+            TransportHeaderData::UDP(ref mut udp_header_data) => udp_header_data.bind_mut(raw).into(),
         }
     }
 }

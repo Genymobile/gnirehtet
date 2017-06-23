@@ -47,12 +47,12 @@ impl<'a> IPv4Packet<'a> {
 
     pub fn ipv4_header(&self) -> IPv4Header {
         let slice = &self.raw[..self.ipv4_header_data.header_length() as usize];
-        IPv4Header::new(slice, &self.ipv4_header_data)
+        self.ipv4_header_data.bind(slice)
     }
 
     pub fn ipv4_header_mut(&mut self) -> IPv4HeaderMut {
         let slice = &mut self.raw[..self.ipv4_header_data.header_length() as usize];
-        IPv4HeaderMut::new(slice, &mut self.ipv4_header_data)
+        self.ipv4_header_data.bind_mut(slice)
     }
 
     pub fn transport_header_data(&self) -> &Option<TransportHeaderData> {
@@ -64,7 +64,7 @@ impl<'a> IPv4Packet<'a> {
             let start = self.ipv4_header_data.header_length() as usize;
             let end = start + transport_header_data.header_length() as usize;
             let slice = &self.raw[start..end];
-            Some(TransportHeader::new(slice, transport_header_data))
+            Some(transport_header_data.bind(slice))
         } else {
             None
         }
@@ -72,7 +72,7 @@ impl<'a> IPv4Packet<'a> {
             let start = self.ipv4_header_data.header_length() as usize;
             let end = start + transport_header_data.header_length() as usize;
             let slice = &self.raw[start..end];
-            TransportHeader::new(slice, &transport_header_data)
+            transport_header_data.bind(slice)
         })*/
     }
 
@@ -81,7 +81,7 @@ impl<'a> IPv4Packet<'a> {
             let start = self.ipv4_header_data.header_length() as usize;
             let end = start + transport_header_data.header_length() as usize;
             let slice = &mut self.raw[start..end];
-            Some(TransportHeaderMut::new(slice, transport_header_data))
+            Some(transport_header_data.bind_mut(slice))
         } else {
             None
         }
@@ -89,7 +89,7 @@ impl<'a> IPv4Packet<'a> {
             let start = self.ipv4_header_data.header_length() as usize;
             let end = start + transport_header_data.header_length() as usize;
             let slice = &mut self.raw[start..end];
-            TransportHeaderMut::new(slice, &mut transport_header_data)
+            transport_header_data.bind_mut(slice)
         })*/
     }
 
