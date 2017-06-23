@@ -24,16 +24,18 @@ impl IPv4PacketBuffer {
     }
 
     fn available_packet_length(&self) -> Option<u16> {
-        let length = ipv4_header::read_length(&self.buf);
-        assert!(ipv4_header::read_version(&self.buf).map_or(false, |v| v == 4),
-               "Not an ipv4 packet");
-        match length {
+        if let Some((version, length)) = ipv4_header::peek_version_length(&self.buf) {
+            assert!(version == 4, "Not an IPv4 packet");
+            if length > self.head as u16 {
+                // full packet available
+                Some(length)
+            } else {
+                // no full packet available
+                None
+            }
+        } else {
             // no packet
-            None => None,
-            // no full packet available
-            Some(len) if len > self.head as u16 => None,
-            // full packet available
-            length => length
+            None
         }
     }
 

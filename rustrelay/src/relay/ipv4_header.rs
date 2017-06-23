@@ -69,22 +69,15 @@ impl IPv4HeaderData {
     }
 }
 
-pub fn read_version(raw: &[u8]) -> Option<u8> {
-    if raw.is_empty() {
-        None
-    } else {
+pub fn peek_version_length(raw: &[u8]) -> Option<(u8, u16)> {
+    if raw.len() >= 4 {
         // version is stored in the 4 first bits
-        Some(raw[0] >> 4)
-    }
-}
-
-pub fn read_length(raw: &[u8]) -> Option<u16> {
-    if raw.len() < 4 {
-        None
-    } else {
+        let version = raw[0] >> 4;
         // packet length is 16 bits starting at offset 2
         let length = BigEndian::read_u16(&raw[2..4]);
-        Some(length)
+        Some((version, length))
+    } else {
+        None
     }
 }
 
@@ -276,31 +269,18 @@ mod tests {
     }
 
     #[test]
-    fn read_ip_version_unavailable() {
-        let empty_slice = &[][..0];
-        let version = IPv4Header::read_version(empty_slice);
-        assert!(version.is_none());
+    fn peek_version_length_unavailable() {
+        let raw: [u8] = [];
+        assert!(peek_version_length(&raw).is_none());
+        let raw = [ 0x40, 2 ];
+        assert!(peek_version_length(&raw).is_none());
     }
 
     #[test]
-    fn read_ip_version_available() {
-        let version_and_ihl: u8 = (4 << 4) | 5;
-        let raw = [ version_and_ihl, 0, 0, 0, 0, 0, 0, 0 ];
-        let version = IPv4Header::read_version(&raw);
-        assert_eq!(4, version.unwrap());
-    }
-
-    #[test]
-    fn read_ip_length_unavailable() {
-        let empty_slice = &[][..0];
-        let length = IPv4Header::read_length(empty_slice);
-        assert!(length.is_none());
-    }
-
-    #[test]
-    fn read_ip_length_available() {
+    fn peek_version_length_available() {
         let raw = [ 0u8, 0, 0x01, 0x23 ];
-        let length = IPv4Header::read_length(&raw);
-        assert_eq!(0x123, length.unwrap());
+        let (version, length) = peek_version_length(&raw).unwrap();
+        assert_eq!(4, version);
+        assert_eq!(0x123, length);
     }
 }
