@@ -184,31 +184,37 @@ impl<'a> TCPHeaderMut<'a> {
     }
 
     pub fn compute_checksum(&mut self, ipv4_header_data: &IPv4HeaderData, payload: &mut [u8]) {
-        // TODO rewrite with payload
-        /*
         // pseudo-header checksum (cf rfc793 section 3.1)
         let source = ipv4_header_data.source();
         let destination = ipv4_header_data.destination();
-        let length = ipv4_header_data.total_length() - ipv4_header_data.header_length() as u16;
-        assert_eq!(transport_raw.len(), length as usize);
+        let transport_length = ipv4_header_data.total_length() - ipv4_header_data.header_length() as u16;
 
-        let mut sum = 6u32; // protocol TCP = 6
+        let mut sum = 6u32; // protocol: TCP = 6
         sum += source >> 16;
         sum += source & 0xFFFF;
         sum += destination >> 16;
         sum += destination & 0xFFFF;
-        sum += length as u32;
+        sum += transport_length as u32;
 
         // reset checksum field
-        self.set_checksum(transport_raw, 0);
+        self.set_checksum(0);
 
         {
-            let mut cursor = Cursor::new(&transport_raw);
-            while length - cursor.position() as u16 > 1 {
+            let header_length = self.header_length();
+            assert!(header_length % 2 == 0);
+            let mut cursor = Cursor::new(&mut self.raw[..]);
+            for _ in 0..header_length / 2 {
                 sum += cursor.read_u16::<BigEndian>().unwrap() as u32;
             }
-            // if payload length is odd, pad last short with 0
-            if cursor.position() as u16 != length {
+
+            let payload_length = transport_length - header_length as u16;
+            assert_eq!(payload_length as usize, payload.len(), "Payload length does not match");
+            let mut cursor = Cursor::new(&payload);
+            for _ in 0..payload_length / 2 {
+                sum += cursor.read_u16::<BigEndian>().unwrap() as u32;
+            }
+            if payload_length % 2 != 0 {
+                // if payload length is odd, pad last u16 with 0
                 sum += (cursor.read_u8().unwrap() as u32) << 8;
             }
         }
@@ -218,8 +224,7 @@ impl<'a> TCPHeaderMut<'a> {
         }
         sum = !sum;
 
-        self.set_checksum(transport_raw, sum as u16);
-        */
+        self.set_checksum(sum as u16);
     }
 
     fn checksum(&self) -> u16 {
