@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use super::ipv4_header::{IPv4Header, IPv4HeaderData};
+use super::ipv4_header::{IPv4Header, IPv4HeaderData, IPv4HeaderMut};
 use super::transport_header::TransportHeader;
 
 pub const MAX_PACKET_LENGTH: usize = 1 << 16;
@@ -41,9 +41,14 @@ impl<'a> IPv4Packet<'a> {
         self.raw
     }
 
-    pub fn ipv4_header(&mut self) -> IPv4Header {
+    pub fn ipv4_header(&self) -> IPv4Header {
+        let slice = &self.raw[..self.ipv4_header_data.header_length() as usize];
+        IPv4Header::new(slice, &self.ipv4_header_data)
+    }
+
+    pub fn ipv4_header_mut(&mut self) -> IPv4HeaderMut {
         let slice = &mut self.raw[..self.ipv4_header_data.header_length() as usize];
-        IPv4Header::new(slice, &mut self.ipv4_header_data)
+        IPv4HeaderMut::new(slice, &mut self.ipv4_header_data)
     }
 
     pub fn ipv4_header_data(&self) -> &IPv4HeaderData {
@@ -106,14 +111,14 @@ impl<'a> IPv4Packet<'a> {
     }
 
     pub fn compute_checksums(&mut self) {
-        self.ipv4_header().compute_checksum();
+        self.ipv4_header_mut().compute_checksum();
         let mut transport = self.transport_header.as_mut().expect("No known transport header");
         let transport_raw = &mut self.raw[self.ipv4_header_data.header_length() as usize..];
         transport.compute_checksum(transport_raw, &self.ipv4_header_data);
     }
 
     pub fn swap_source_and_destination(&mut self) {
-        self.ipv4_header().swap_source_and_destination();
+        self.ipv4_header_mut().swap_source_and_destination();
         if let Some(ref mut transport_header) = self.transport_header {
             let raw_payload = &mut self.raw[self.ipv4_header_data.header_length() as usize..];
             transport_header.swap_source_and_destination(raw_payload);

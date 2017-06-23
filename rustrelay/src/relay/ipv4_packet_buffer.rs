@@ -1,6 +1,6 @@
 use std::io;
 use std::ptr;
-use super::ipv4_header::IPv4Header;
+use super::ipv4_header::{self, IPv4Header};
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
 
 pub struct IPv4PacketBuffer {
@@ -24,7 +24,9 @@ impl IPv4PacketBuffer {
     }
 
     fn available_packet_length(&self) -> Option<u16> {
-        let length = IPv4Header::read_length(&self.buf);
+        let length = ipv4_header::read_length(&self.buf);
+        assert!(ipv4_header::read_version(&self.buf).map_or(false, |v| v == 4),
+               "Not an ipv4 packet");
         match length {
             // no packet
             None => None,

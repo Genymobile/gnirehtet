@@ -33,7 +33,6 @@ pub struct UDPConnection {
 impl UDPConnection {
     pub fn new(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, reference_packet: &IPv4Packet) -> io::Result<Rc<RefCell<Self>>> {
         let socket = UDPConnection::create_socket(&id)?;
-        let raw = reference_packet.raw();
         let packetizer = {
             let ipv4_header = reference_packet.ipv4_header();
             let transport_header = reference_packet.transport_header().as_ref().unwrap().clone();

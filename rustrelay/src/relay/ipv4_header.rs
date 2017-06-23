@@ -2,6 +2,11 @@ use byteorder::{BigEndian, ByteOrder};
 use std::mem;
 
 pub struct IPv4Header<'a> {
+    raw: &'a [u8],
+    data: &'a IPv4HeaderData,
+}
+
+pub struct IPv4HeaderMut<'a> {
     raw: &'a mut [u8],
     data: &'a mut IPv4HeaderData,
 }
@@ -64,48 +69,79 @@ impl IPv4HeaderData {
     }
 }
 
-impl<'a> IPv4Header<'a> {
-    pub fn new(raw: &'a mut [u8], data: &'a mut IPv4HeaderData) -> Self {
-        Self {
-            raw: raw,
-            data: data,
+pub fn read_version(raw: &[u8]) -> Option<u8> {
+    if raw.is_empty() {
+        None
+    } else {
+        // version is stored in the 4 first bits
+        Some(raw[0] >> 4)
+    }
+}
+
+pub fn read_length(raw: &[u8]) -> Option<u16> {
+    if raw.len() < 4 {
+        None
+    } else {
+        // packet length is 16 bits starting at offset 2
+        let length = BigEndian::read_u16(&raw[2..4]);
+        Some(length)
+    }
+}
+
+// shared definition for IPv4Header and IPv4HeaderMut
+macro_rules! ipv4_header_common {
+    ($name:ident, $refraw:ty, $refdata:ty) => {
+        // for readability, declare structs manually outside the macro
+        impl<'a> $name<'a> {
+            pub fn new(raw: $refraw, data: $refdata) -> Self {
+                Self {
+                    raw: raw,
+                    data: data,
+                }
+            }
+
+            pub fn raw(&self) -> &[u8] {
+                self.raw
+            }
+
+            pub fn data(&self) -> &IPv4HeaderData {
+                self.data
+            }
+
+            pub fn header_length(&self) -> u8 {
+                self.data.header_length
+            }
+
+            pub fn total_length(&self) -> u16 {
+                self.data.total_length
+            }
+
+            pub fn protocol(&self) -> Protocol {
+                self.data.protocol
+            }
+
+            pub fn source(&self) -> u32 {
+                self.data.source
+            }
+
+            pub fn destination(&self) -> u32 {
+                self.data.destination
+            }
         }
     }
+}
 
-    pub fn raw(&self) -> &[u8] {
-        self.raw
-    }
+ipv4_header_common!(IPv4Header, &'a [u8], &'a IPv4HeaderData);
+ipv4_header_common!(IPv4HeaderMut, &'a mut [u8], &'a mut IPv4HeaderData);
 
+// additional methods for the mutable version
+impl<'a> IPv4HeaderMut<'a> {
     pub fn raw_mut(&mut self) -> &mut [u8] {
         self.raw
     }
 
-    pub fn data(&self) -> &IPv4HeaderData {
-        self.data
-    }
-
     pub fn data_mut(&mut self) -> &mut IPv4HeaderData {
         self.data
-    }
-
-    pub fn header_length(&self) -> u8 {
-        self.data.header_length
-    }
-
-    pub fn total_length(&self) -> u16 {
-        self.data.total_length
-    }
-
-    pub fn protocol(&self) -> Protocol {
-        self.data.protocol
-    }
-
-    pub fn source(&self) -> u32 {
-        self.data.source
-    }
-
-    pub fn destination(&self) -> u32 {
-        self.data.destination
     }
 
     pub fn set_total_length(&mut self, total_length: u16) {
@@ -152,25 +188,6 @@ impl<'a> IPv4Header<'a> {
 
     fn set_checksum(&mut self, checksum: u16) {
         BigEndian::write_u16(&mut self.raw[10..12], checksum);
-    }
-
-    pub fn read_version(raw: &[u8]) -> Option<u8> {
-        if raw.is_empty() {
-            None
-        } else {
-            // version is stored in the 4 first bits
-            Some(raw[0] >> 4)
-        }
-    }
-
-    pub fn read_length(raw: &[u8]) -> Option<u16> {
-        if raw.len() < 4 {
-            None
-        } else {
-            // packet length is 16 bits starting at offset 2
-            let length = BigEndian::read_u16(&raw[2..4]);
-            Some(length)
-        }
     }
 }
 
