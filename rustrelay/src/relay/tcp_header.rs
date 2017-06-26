@@ -169,6 +169,7 @@ impl<'a> TCPHeaderMut<'a> {
         self.data.flags = flags;
         let mut data_offset_and_flags = BigEndian::read_u16(&mut self.raw[12..14]);
         data_offset_and_flags = data_offset_and_flags & 0xFE00 | flags & 0x1FF;
+
         BigEndian::write_u16(&mut self.raw[12..14], data_offset_and_flags);
     }
 
@@ -183,7 +184,7 @@ impl<'a> TCPHeaderMut<'a> {
         self.data.header_length = data_offset << 2;
     }
 
-    pub fn compute_checksum(&mut self, ipv4_header_data: &IPv4HeaderData, payload: &mut [u8]) {
+    pub fn compute_checksum(&mut self, ipv4_header_data: &IPv4HeaderData, payload: &[u8]) {
         // pseudo-header checksum (cf rfc793 section 3.1)
         let source = ipv4_header_data.source();
         let destination = ipv4_header_data.destination();
@@ -400,7 +401,6 @@ mod tests {
         if let Some(TransportHeader::TCP(mut tcp_header)) = *ipv4_packet.transport_header() {
             // set a fake checksum value to assert that it is correctly computed
             BigEndian::write_u16(&mut ipv4_packet.raw_mut()[36..38], 0x79);
-
             {
                 let transport_range = ipv4_packet.transport_range().expect("No transport");
                 let (raw, ipv4_header, _) = ipv4_packet.destructure_mut();
