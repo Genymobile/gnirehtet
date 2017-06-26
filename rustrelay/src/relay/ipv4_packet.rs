@@ -186,9 +186,6 @@ impl<'a> IPv4Packet<'a> {
         if let Some((mut transport_header, payload)) = transport {
             transport_header.update_checksum(ipv4_header.data(), payload);
         }
-//        let mut transport_header = self.transport_header_data.as_mut().expect("No known transport header");
-        //let transport_raw = &mut self.raw[self.ipv4_header_data.header_length() as usize..];
-        //transport.compute_checksum(transport_raw, &self.ipv4_header_data);
     }
 
     pub fn swap_source_and_destination(&mut self) {

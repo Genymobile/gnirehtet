@@ -247,7 +247,7 @@ mod tests {
     use super::*;
     use byteorder::{BigEndian, WriteBytesExt};
     use relay::ipv4_packet::IPv4Packet;
-    use relay::transport_header::{TransportHeader, TransportHeaderData};
+    use relay::transport_header::{TransportHeader, TransportHeaderData, TransportHeaderMut};
 
     fn create_packet() -> Vec<u8> {
         let mut raw = Vec::new();
@@ -358,16 +358,12 @@ mod tests {
     fn compute_checksum() {
         let raw = &mut create_packet()[..];
         let mut ipv4_packet = IPv4Packet::parse(raw);
-        if let Some(TransportHeaderData::TCP(mut tcp_header)) = *ipv4_packet.transport_header_data() {
+        let (ipv4_header, transport) = ipv4_packet.split_mut();
+        if let Some((TransportHeaderMut::TCP(ref mut tcp_header), ref payload)) = transport {
             // set a fake checksum value to assert that it is correctly computed
-            BigEndian::write_u16(&mut ipv4_packet.raw_mut()[36..38], 0x79);
-
-            {
-                let transport_range = ipv4_packet.transport_range().expect("No transport");
-                let (raw, ipv4_header, _) = ipv4_packet.destructure_mut();
-                let transport_raw = &mut raw[transport_range];
-                tcp_header.compute_checksum(transport_raw, ipv4_header);
-            }
+            tcp_header.set_checksum(0x79);
+            tcp_header.update_checksum(ipv4_header.data(), payload);
+            let checksum = tcp_header.checksum();
 
             let expected_checksum = {
                 // pseudo-header
@@ -386,16 +382,9 @@ mod tests {
                 !sum as u16
             };
 
-            {
-                let transport_header_range = ipv4_packet.transport_header_range().expect("No transport");
-                let transport_header_raw = &ipv4_packet.raw()[transport_header_range];
-                let actual_checksum = tcp_header.checksum(transport_header_raw);
-
-                assert_eq!(expected_checksum, actual_checksum);
-            }
-
+            assert_eq!(expected_checksum, checksum);
         } else {
-            panic!("Packet is not TCP");
+            panic!("Not a TCP packet");
         }
     }
 
@@ -403,15 +392,12 @@ mod tests {
     fn compute_checksum_odd() {
         let raw = &mut create_odd_packet()[..];
         let mut ipv4_packet = IPv4Packet::parse(raw);
-        if let Some(TransportHeader::TCP(mut tcp_header)) = *ipv4_packet.transport_header() {
+        let (ipv4_header, transport) = ipv4_packet.split_mut();
+        if let Some((TransportHeaderMut::TCP(ref mut tcp_header), ref payload)) = transport {
             // set a fake checksum value to assert that it is correctly computed
-            BigEndian::write_u16(&mut ipv4_packet.raw_mut()[36..38], 0x79);
-            {
-                let transport_range = ipv4_packet.transport_range().expect("No transport");
-                let (raw, ipv4_header, _) = ipv4_packet.destructure_mut();
-                let transport_raw = &mut raw[transport_range];
-                tcp_header.compute_checksum(transport_raw, ipv4_header);
-            }
+            tcp_header.set_checksum(0x79);
+            tcp_header.update_checksum(ipv4_header.data(), payload);
+            let checksum = tcp_header.checksum();
 
             let expected_checksum = {
                 // pseudo-header
@@ -430,16 +416,9 @@ mod tests {
                 !sum as u16
             };
 
-            {
-                let transport_header_range = ipv4_packet.transport_header_range().expect("No transport");
-                let transport_header_raw = &ipv4_packet.raw()[transport_header_range];
-                let actual_checksum = tcp_header.checksum(transport_header_raw);
-
-                assert_eq!(expected_checksum, actual_checksum);
-            }
-
+            assert_eq!(expected_checksum, checksum);
         } else {
-            panic!("Packet is not TCP");
+            panic!("Not a TCP packet");
         }
     }
 }
