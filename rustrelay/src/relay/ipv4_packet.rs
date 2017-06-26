@@ -181,9 +181,10 @@ impl<'a> IPv4Packet<'a> {
     }
 
     pub fn compute_checksums(&mut self) {
-        self.ipv4_header_mut().compute_checksum();
-        if let Some(ref mut transport_header_data) = self.transport_header_data {
-
+        let (mut ipv4_header, transport) = self.split_mut();
+        ipv4_header.update_checksum();
+        if let Some((mut transport_header, payload)) = transport {
+            transport_header.update_checksum(ipv4_header.data(), payload);
         }
 //        let mut transport_header = self.transport_header_data.as_mut().expect("No known transport header");
         //let transport_raw = &mut self.raw[self.ipv4_header_data.header_length() as usize..];
