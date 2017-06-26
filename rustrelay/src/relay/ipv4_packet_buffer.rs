@@ -25,7 +25,7 @@ impl IPv4PacketBuffer {
 
     fn available_packet_length(&self) -> Option<u16> {
         if let Some((version, length)) = ipv4_header::peek_version_length(&self.buf) {
-            assert!(version == 4, "Not an IPv4 packet");
+            assert!(version == 4, "Not an IPv4 packet, version={}", version);
             if length <= self.head as u16 {
                 // full packet available
                 Some(length)

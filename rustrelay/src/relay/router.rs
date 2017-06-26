@@ -32,16 +32,16 @@ impl Router {
     }
 
     pub fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
-        if !ipv4_packet.is_valid() {
-            warn!(target: TAG, "Dropping invalid packet");
-            if log_enabled!(target: TAG, LogLevel::Trace) {
-                binary::to_string(ipv4_packet.raw());
-            }
-        } else {
+        if ipv4_packet.is_valid() {
             if let Ok(connection) = self.connection(selector, ipv4_packet) {
                 connection.borrow_mut().send_to_network(selector, ipv4_packet);
             } else {
                 error!(target: TAG, "Cannot create route, dropping packet");
+            }
+        } else {
+            warn!(target: TAG, "Dropping invalid packet");
+            if log_enabled!(target: TAG, LogLevel::Trace) {
+                binary::to_string(ipv4_packet.raw());
             }
         }
     }
