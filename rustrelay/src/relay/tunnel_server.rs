@@ -63,7 +63,7 @@ impl TunnelServer {
         info!(target: TAG, "Client #{} disconnected", client.id());
         let index = self.clients.iter().position(|item| {
             // compare pointers to find the client to remove
-            ptr_eq(client, &*item.borrow())
+            ptr_eq(client, item.as_ptr())
         }).expect("Trying to remove an unknown client");
         self.clients.swap_remove(index);
     }
