@@ -114,6 +114,7 @@ macro_rules! transport_header_common {
                     $name::UDP(_) => UDP_HEADER_LENGTH,
                 }
             }
+
             /*pub fn source_port(&self) -> u16 {
                 self.data().source_port()
             }
@@ -162,10 +163,10 @@ impl<'a> TransportHeaderMut<'a> {
         }
     }
 
-    pub fn compute_checksum(&mut self, ipv4_header_data: &IPv4HeaderData, payload: &[u8]) {
+    pub fn update_checksum(&mut self, ipv4_header_data: &IPv4HeaderData, payload: &[u8]) {
         match *self {
-            TransportHeaderMut::TCP(ref mut tcp_header) => tcp_header.compute_checksum(ipv4_header_data, payload),
-            TransportHeaderMut::UDP(ref mut udp_header) => udp_header.compute_checksum(ipv4_header_data, payload),
+            TransportHeaderMut::TCP(ref mut tcp_header) => tcp_header.update_checksum(ipv4_header_data, payload),
+            TransportHeaderMut::UDP(ref mut udp_header) => udp_header.update_checksum(ipv4_header_data, payload),
         }
     }
 }
