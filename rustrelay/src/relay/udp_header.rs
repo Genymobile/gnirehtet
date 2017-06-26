@@ -72,11 +72,6 @@ macro_rules! udp_header_common {
             pub fn destination_port(&self) -> u16 {
                 self.data.destination_port
             }
-
-            pub fn compute_checksum(&self, _ipv4_header_data: &IPv4HeaderData, _payload: &[u8]) -> u16 {
-                // disable checksum validation
-                0
-            }
         }
     }
 }
@@ -116,13 +111,13 @@ impl<'a> UDPHeaderMut<'a> {
         BigEndian::write_u16(&mut self.raw[4..6], total_length);
     }
 
-    pub fn set_checksum(&mut self, checksum: u16) {
+    fn set_checksum(&mut self, checksum: u16) {
         BigEndian::write_u16(&mut self.raw[6..8], checksum);
     }
 
-    pub fn update_checksum(&mut self, ipv4_header_data: &IPv4HeaderData, payload: &[u8]) {
-        let checksum = self.compute_checksum(ipv4_header_data, payload);
-        self.set_checksum(checksum);
+    pub fn update_checksum(&mut self, _ipv4_header_data: &IPv4HeaderData, _payload: &[u8]) {
+        // disable checksum validation
+        self.set_checksum(0);
     }
 }
 

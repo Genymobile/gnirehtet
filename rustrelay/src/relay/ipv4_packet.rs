@@ -1,5 +1,3 @@
-use std::ops::Range;
-
 use super::ipv4_header::{IPv4Header, IPv4HeaderData, IPv4HeaderMut};
 use super::transport_header::{TransportHeader, TransportHeaderData, TransportHeaderMut};
 
