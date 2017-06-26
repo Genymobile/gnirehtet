@@ -103,7 +103,11 @@ impl Client {
 
     fn process_receive(&mut self, selector: &mut Selector) {
         match self.read() {
-            Ok(_) => self.push_to_network(selector),
+            Ok(true) => self.push_to_network(selector),
+            Ok(false) => {
+                debug!(target: TAG, "EOF reached");
+                self.close(selector);
+            }
             Err(_) => {
                 error!(target: TAG, "Cannot read");
                 self.close(selector);
@@ -139,7 +143,7 @@ impl Client {
         selector.reregister(&self.stream, self.token, ready, PollOpt::level()).expect("Cannot register on poll");
     }
 
-    fn read(&mut self) -> io::Result<()> {
+    fn read(&mut self) -> io::Result<(bool)> {
         self.client_to_network.read_from(&mut self.stream)
     }
 

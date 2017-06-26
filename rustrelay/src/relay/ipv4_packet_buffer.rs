@@ -16,11 +16,11 @@ impl IPv4PacketBuffer {
         }
     }
 
-    pub fn read_from<R: io::Read>(&mut self, source: &mut R) -> io::Result<()> {
+    pub fn read_from<R: io::Read>(&mut self, source: &mut R) -> io::Result<(bool)> {
         let target_slice = &mut self.buf[self.head..];
         let r = source.read(target_slice)?;
         self.head += r;
-        Ok(())
+        Ok(r > 0)
     }
 
     fn available_packet_length(&self) -> Option<u16> {

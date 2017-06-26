@@ -58,6 +58,7 @@ impl Packetizer {
     }
 
     pub fn packetize_read<R: io::Read>(&mut self, source: &mut R, max_chunk_size: Option<usize>) -> io::Result<IPv4Packet> {
+        // FIXME handle EOF (read returning 0) for TCP stream
         let mut adapter = ReadAdapter::new(source, max_chunk_size);
         self.packetize(&mut adapter)
     }
