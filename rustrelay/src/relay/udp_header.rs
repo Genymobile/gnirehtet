@@ -152,7 +152,8 @@ mod tests {
     #[test]
     fn edit_header() {
         let raw = &mut create_header()[..];
-        let mut header = UDPHeaderData::parse(raw).bind_mut(raw);
+        let mut header_data = UDPHeaderData::parse(raw);
+        let mut header = header_data.bind_mut(raw);
 
         header.set_source_port(1111);
         header.set_destination_port(2222);
@@ -160,19 +161,23 @@ mod tests {
         assert_eq!(1111, header.source_port());
         assert_eq!(2222, header.destination_port());
 
-        // assert that the buffer has been modified
-        let raw_source_port = BigEndian::read_u16(&raw[0..2]);
-        let raw_destination_port = BigEndian::read_u16(&raw[2..4]);
-        let raw_total_length = BigEndian::read_u16(&raw[4..6]);
-        assert_eq!(1111, raw_source_port);
-        assert_eq!(2222, raw_destination_port);
-        assert_eq!(34 + 8, raw_total_length);
+        {
+            let raw = header.raw();
+            // assert that the buffer has been modified
+            let raw_source_port = BigEndian::read_u16(&raw[0..2]);
+            let raw_destination_port = BigEndian::read_u16(&raw[2..4]);
+            let raw_total_length = BigEndian::read_u16(&raw[4..6]);
+            assert_eq!(1111, raw_source_port);
+            assert_eq!(2222, raw_destination_port);
+            assert_eq!(34 + 8, raw_total_length);
+        }
 
         header.swap_source_and_destination();
 
         assert_eq!(2222, header.source_port());
         assert_eq!(1111, header.destination_port());
 
+        let raw = header.raw();
         let raw_source_port = BigEndian::read_u16(&raw[0..2]);
         let raw_destination_port = BigEndian::read_u16(&raw[2..4]);
         assert_eq!(2222, raw_source_port);
