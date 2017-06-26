@@ -121,7 +121,7 @@ mod tests {
         let mut mock = MockDatagramSocket::from_data(&data);
 
         let ipv4_header = reference_packet.ipv4_header();
-        let transport_header = reference_packet.transport_header().as_ref().unwrap().clone();
+        let transport_header = reference_packet.transport_header().unwrap();
         let mut packetizer = Packetizer::new(&ipv4_header, &transport_header);
 
         let packet = packetizer.packetize(&mut mock).unwrap();
@@ -137,7 +137,7 @@ mod tests {
         let mut cursor = io::Cursor::new(&data);
 
         let ipv4_header = reference_packet.ipv4_header();
-        let transport_header = reference_packet.transport_header().as_ref().unwrap().clone();
+        let transport_header = reference_packet.transport_header().unwrap();
         let mut packetizer = Packetizer::new(&ipv4_header, &transport_header);
 
         {

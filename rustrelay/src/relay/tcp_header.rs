@@ -326,7 +326,8 @@ mod tests {
     #[test]
     fn edit_header() {
         let raw = &mut create_tcp_header()[..];
-        let mut header = TCPHeaderData::parse(raw).bind_mut(raw);
+        let mut header_data = TCPHeaderData::parse(raw);
+        let mut header = header_data.bind_mut(raw);
 
         header.set_source_port(1111);
         header.set_destination_port(2222);
@@ -341,6 +342,7 @@ mod tests {
         assert_eq!(TCP_FLAG_FIN | TCP_FLAG_ACK, header.flags());
 
         // assert that the buffer has been modified
+        let raw = header.raw();
         let raw_source_port = BigEndian::read_u16(&raw[0..2]);
         let raw_destination_port = BigEndian::read_u16(&raw[2..4]);
         let raw_sequence_number = BigEndian::read_u32(&raw[4..8]);
@@ -358,7 +360,7 @@ mod tests {
     fn compute_checksum() {
         let raw = &mut create_packet()[..];
         let mut ipv4_packet = IPv4Packet::parse(raw);
-        let (ipv4_header, transport) = ipv4_packet.split_mut();
+        let (ipv4_header, mut transport) = ipv4_packet.split_mut();
         if let Some((TransportHeaderMut::TCP(ref mut tcp_header), ref payload)) = transport {
             // set a fake checksum value to assert that it is correctly computed
             tcp_header.set_checksum(0x79);
@@ -392,7 +394,7 @@ mod tests {
     fn compute_checksum_odd() {
         let raw = &mut create_odd_packet()[..];
         let mut ipv4_packet = IPv4Packet::parse(raw);
-        let (ipv4_header, transport) = ipv4_packet.split_mut();
+        let (ipv4_header, mut transport) = ipv4_packet.split_mut();
         if let Some((TransportHeaderMut::TCP(ref mut tcp_header), ref payload)) = transport {
             // set a fake checksum value to assert that it is correctly computed
             tcp_header.set_checksum(0x79);
