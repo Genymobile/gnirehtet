@@ -1,6 +1,6 @@
 use std::io;
 use std::ptr;
-use super::ipv4_header::{self, IPv4Header};
+use super::ipv4_header;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
 
 pub struct IPv4PacketBuffer {
@@ -71,7 +71,7 @@ mod tests {
     use std::io;
     use byteorder::{BigEndian, WriteBytesExt};
     use ::relay::ipv4_header::Protocol;
-    use ::relay::transport_header::{TransportHeader, TransportHeaderData};
+    use ::relay::transport_header::TransportHeaderData;
 
     fn create_packet() -> Vec<u8> {
         let mut raw = Vec::new();

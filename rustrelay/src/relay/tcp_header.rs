@@ -121,52 +121,8 @@ macro_rules! tcp_header_common {
             pub fn flags(&self) -> u16 {
                 self.data.flags
             }
-
-            pub fn compute_checksum(&self, ipv4_header_data: &IPv4HeaderData, payload: &[u8]) -> u16 {
-                compute_checksum_shared(ipv4_header_data, self.raw, payload)
-            }
         }
     }
-}
-
-// implement checksum computation to be available both for TCPHeader and TCPHeaderMut, without
-// duplicating source or compiled code
-fn compute_checksum_shared(ipv4_header_data: &IPv4HeaderData, tcp_header_raw: &[u8], payload: &[u8]) -> u16 {
-    // pseudo-header checksum (cf rfc793 section 3.1)
-    let source = ipv4_header_data.source();
-    let destination = ipv4_header_data.destination();
-    let transport_length = ipv4_header_data.total_length() - ipv4_header_data.header_length() as u16;
-
-    let mut sum = 6u32; // protocol: TCP = 6
-    sum += source >> 16;
-    sum += source & 0xFFFF;
-    sum += destination >> 16;
-    sum += destination & 0xFFFF;
-    sum += transport_length as u32;
-
-    let header_length = ipv4_header_data.header_length();
-    assert!(header_length % 2 == 0 && header_length >= 20);
-    let mut cursor = Cursor::new(&tcp_header_raw[..]);
-    // skip checksum field at 16..18
-    for _ in (0..8).chain(9..header_length / 2) {
-        sum += cursor.read_u16::<BigEndian>().unwrap() as u32;
-    }
-
-    let payload_length = transport_length - header_length as u16;
-    assert_eq!(payload_length as usize, payload.len(), "Payload length does not match");
-    let mut cursor = Cursor::new(&payload);
-    for _ in 0..payload_length / 2 {
-        sum += cursor.read_u16::<BigEndian>().unwrap() as u32;
-    }
-    if payload_length % 2 != 0 {
-        // if payload length is odd, pad last u16 with 0
-        sum += (cursor.read_u8().unwrap() as u32) << 8;
-    }
-
-    while (sum & !0xFFFF) != 0 {
-        sum = (sum & 0xFFFF) + (sum >> 16);
-    }
-    !sum as u16
 }
 
 tcp_header_common!(TCPHeader, &'a [u8], &'a TCPHeaderData);
@@ -232,13 +188,52 @@ impl<'a> TCPHeaderMut<'a> {
         BigEndian::read_u16(&self.raw[16..18])
     }
 
-    pub fn set_checksum(&mut self, checksum: u16) {
+    fn set_checksum(&mut self, checksum: u16) {
         BigEndian::write_u16(&mut self.raw[16..18], checksum);
     }
 
     pub fn update_checksum(&mut self, ipv4_header_data: &IPv4HeaderData, payload: &[u8]) {
-        let checksum = self.compute_checksum(ipv4_header_data, payload);
-        self.set_checksum(checksum);
+        // pseudo-header checksum (cf rfc793 section 3.1)
+        let source = ipv4_header_data.source();
+        let destination = ipv4_header_data.destination();
+        let transport_length = ipv4_header_data.total_length() - ipv4_header_data.header_length() as u16;
+
+        let mut sum = 6u32; // protocol: TCP = 6
+        sum += source >> 16;
+        sum += source & 0xFFFF;
+        sum += destination >> 16;
+        sum += destination & 0xFFFF;
+        sum += transport_length as u32;
+
+        // reset checksum field
+        self.set_checksum(0);
+
+        let header_length = ipv4_header_data.header_length();
+        assert!(header_length % 2 == 0 && header_length >= 20);
+
+        {
+            let mut cursor = Cursor::new(&self.raw[..]);
+            // skip checksum field at 16..18
+            for _ in (0..8).chain(9..header_length / 2) {
+                sum += cursor.read_u16::<BigEndian>().unwrap() as u32;
+            }
+
+            let payload_length = transport_length - header_length as u16;
+            assert_eq!(payload_length as usize, payload.len(), "Payload length does not match");
+            let mut cursor = Cursor::new(&payload);
+            for _ in 0..payload_length / 2 {
+                sum += cursor.read_u16::<BigEndian>().unwrap() as u32;
+            }
+            if payload_length % 2 != 0 {
+                // if payload length is odd, pad last u16 with 0
+                sum += (cursor.read_u8().unwrap() as u32) << 8;
+            }
+        }
+
+        while (sum & !0xFFFF) != 0 {
+            sum = (sum & 0xFFFF) + (sum >> 16);
+        }
+        self.set_checksum(!sum as u16);
     }
 }
 
@@ -247,7 +242,7 @@ mod tests {
     use super::*;
     use byteorder::{BigEndian, WriteBytesExt};
     use relay::ipv4_packet::IPv4Packet;
-    use relay::transport_header::{TransportHeader, TransportHeaderData, TransportHeaderMut};
+    use relay::transport_header::TransportHeaderMut;
 
     fn create_packet() -> Vec<u8> {
         let mut raw = Vec::new();

@@ -167,7 +167,15 @@ impl<'a> IPv4HeaderMut<'a> {
         }
     }
 
-    pub fn compute_checksum(&self) -> u16 {
+    fn checksum(&self) -> u16 {
+        BigEndian::read_u16(&self.raw[10..12])
+    }
+
+    fn set_checksum(&mut self, checksum: u16) {
+        BigEndian::write_u16(&mut self.raw[10..12], checksum);
+    }
+
+    pub fn update_checksum(&mut self) {
         let j = self.data.header_length as usize / 2;
         // skip checksum field at 10..12
         let mut sum = (0..5).chain(6..j).map(|i| {
@@ -177,20 +185,7 @@ impl<'a> IPv4HeaderMut<'a> {
         while (sum & !0xffff) != 0 {
             sum = (sum & 0xffff) + (sum >> 16);
         }
-        !sum as u16
-    }
-
-    fn checksum(&self) -> u16 {
-        BigEndian::read_u16(&self.raw[10..12])
-    }
-
-    pub fn set_checksum(&mut self, checksum: u16) {
-        BigEndian::write_u16(&mut self.raw[10..12], checksum);
-    }
-
-    pub fn update_checksum(&mut self) {
-        let checksum = self.compute_checksum();
-        self.set_checksum(checksum);
+        self.set_checksum(!sum as u16);
     }
 }
 
@@ -267,8 +262,7 @@ mod tests {
         // set a fake checksum value to assert that it is correctly computed
         header.set_checksum(0x79);
 
-        let checksum = header.compute_checksum();
-        header.set_checksum(checksum);
+        header.update_checksum();
 
         let mut sum: u32 = 0x4500 + 0x001C + 0x0000 + 0x0000 + 0x0011 +
                            0x0000 + 0x1234 + 0x5678 + 0x4242 + 0x4242;
@@ -289,7 +283,7 @@ mod tests {
 
     #[test]
     fn peek_version_length_available() {
-        let raw = [ 0u8, 0, 0x01, 0x23 ];
+        let raw = [ 4u8 << 4 | 5, 0, 0x01, 0x23 ];
         let (version, length) = peek_version_length(&raw).unwrap();
         assert_eq!(4, version);
         assert_eq!(0x123, length);
