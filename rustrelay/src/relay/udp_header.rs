@@ -111,7 +111,7 @@ impl<'a> UDPHeaderMut<'a> {
         BigEndian::write_u16(&mut self.raw[4..6], total_length);
     }
 
-    pub fn compute_checksum(&mut self, _ipv4_header_data: &IPv4HeaderData, _payload: &mut [u8]) {
+    pub fn compute_checksum(&mut self, _ipv4_header_data: &IPv4HeaderData, _payload: &[u8]) {
         // disable checksum validation
         BigEndian::write_u16(&mut self.raw[6..8], 0);
     }

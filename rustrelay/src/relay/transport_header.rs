@@ -162,7 +162,7 @@ impl<'a> TransportHeaderMut<'a> {
         }
     }
 
-    pub fn compute_checksum(&mut self, ipv4_header_data: &IPv4HeaderData, payload: &mut [u8]) {
+    pub fn compute_checksum(&mut self, ipv4_header_data: &IPv4HeaderData, payload: &[u8]) {
         match *self {
             TransportHeaderMut::TCP(ref mut tcp_header) => tcp_header.compute_checksum(ipv4_header_data, payload),
             TransportHeaderMut::UDP(ref mut udp_header) => udp_header.compute_checksum(ipv4_header_data, payload),

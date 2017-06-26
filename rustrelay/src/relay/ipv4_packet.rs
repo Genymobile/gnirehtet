@@ -93,6 +93,46 @@ impl<'a> IPv4Packet<'a> {
         })*/
     }
 
+    /// Devide the packet into parts:
+    ///  - the IPv4 header
+    ///  - the transport header (if any)
+    ///  - the payload (if there is a transport at all)
+    pub fn split(&self) -> (IPv4Header, Option<(TransportHeader, &[u8])>) {
+        let transport_index = self.ipv4_header_data.header_length() as usize;
+        if let Some(ref transport_header_data) = self.transport_header_data {
+            let payload_index = transport_header_data.header_length() as usize; // relative to transport
+            let (ipv4_header_slice, transport_slice) = self.raw.split_at(transport_index);
+            let (transport_header_slice, payload_slice) = transport_slice.split_at(payload_index);
+            let ipv4_header = self.ipv4_header_data.bind(ipv4_header_slice);
+            let transport_header = transport_header_data.bind(transport_header_slice);
+            (ipv4_header, Some((transport_header, payload_slice)))
+        } else {
+            let ipv4_header_slice = &self.raw[..transport_index];
+            let ipv4_header = self.ipv4_header_data.bind(ipv4_header_slice);
+            (ipv4_header, None)
+        }
+    }
+
+    /// Devide the packet into mutable parts:
+    ///  - the IPv4 header
+    ///  - the transport header (if any)
+    ///  - the payload (if there is a transport at all)
+    pub fn split_mut(&mut self) -> (IPv4HeaderMut, Option<(TransportHeaderMut, &mut [u8])>) {
+        let transport_index = self.ipv4_header_data.header_length() as usize;
+        if let Some(ref mut transport_header_data) = self.transport_header_data {
+            let payload_index = transport_header_data.header_length() as usize; // relative to transport
+            let (ipv4_header_slice, transport_slice) = self.raw.split_at_mut(transport_index);
+            let (transport_header_slice, payload_slice) = transport_slice.split_at_mut(payload_index);
+            let ipv4_header = self.ipv4_header_data.bind_mut(ipv4_header_slice);
+            let transport_header = transport_header_data.bind_mut(transport_header_slice);
+            (ipv4_header, Some((transport_header, payload_slice)))
+        } else {
+            let ipv4_header_slice = &mut self.raw[..transport_index];
+            let ipv4_header = self.ipv4_header_data.bind_mut(ipv4_header_slice);
+            (ipv4_header, None)
+        }
+    }
+
     pub fn is_valid(&self) -> bool {
         self.transport_header_data.is_some()
     }
@@ -142,7 +182,9 @@ impl<'a> IPv4Packet<'a> {
 
     pub fn compute_checksums(&mut self) {
         self.ipv4_header_mut().compute_checksum();
-        // TODO not so easy, we need to split transport_header and raw buffer
+        if let Some(ref mut transport_header_data) = self.transport_header_data {
+
+        }
 //        let mut transport_header = self.transport_header_data.as_mut().expect("No known transport header");
         //let transport_raw = &mut self.raw[self.ipv4_header_data.header_length() as usize..];
         //transport.compute_checksum(transport_raw, &self.ipv4_header_data);
