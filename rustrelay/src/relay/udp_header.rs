@@ -152,7 +152,7 @@ mod tests {
     #[test]
     fn edit_header() {
         let raw = &mut create_header()[..];
-        let mut header = UDPHeaderData::parse(raw).bind(raw);
+        let mut header = UDPHeaderData::parse(raw).bind_mut(raw);
 
         header.set_source_port(1111);
         header.set_destination_port(2222);
