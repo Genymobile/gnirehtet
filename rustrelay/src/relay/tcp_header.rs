@@ -237,6 +237,12 @@ impl<'a> TCPHeaderMut<'a> {
     }
 }
 
+impl<'a> From<TCPHeaderMut<'a>> for TCPHeader<'a> {
+    fn from(tcp_header: TCPHeaderMut) -> TCPHeader {
+        tcp_header.data().bind(tcp_header.raw())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
