@@ -11,9 +11,11 @@ use super::binary;
 use super::client::Client;
 use super::connection::{self, Connection, ConnectionId};
 use super::datagram_buffer::DatagramBuffer;
+use super::ipv4_header::IPv4Header;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
 use super::packetizer::Packetizer;
 use super::selector::Selector;
+use super::transport_header::TransportHeader;
 
 const TAG: &'static str = "UDPConnection";
 
@@ -31,14 +33,9 @@ pub struct UDPConnection {
 }
 
 impl UDPConnection {
-    pub fn new(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, reference_packet: &IPv4Packet) -> io::Result<Rc<RefCell<Self>>> {
+    pub fn new(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: &IPv4Header, transport_header: &TransportHeader) -> io::Result<Rc<RefCell<Self>>> {
         let socket = UDPConnection::create_socket(&id)?;
-        let packetizer = {
-            let ipv4_header = reference_packet.ipv4_header();
-            let transport_header_option = reference_packet.transport_header();
-            let transport_header = transport_header_option.as_ref().unwrap();
-            Packetizer::new(&ipv4_header, &transport_header)
-        };
+        let packetizer = Packetizer::new(&ipv4_header, &transport_header);
         let rc = Rc::new(RefCell::new(Self {
             id: id,
             client: client,

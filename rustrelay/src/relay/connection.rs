@@ -1,10 +1,11 @@
 use std::fmt;
 use std::net::{Ipv4Addr, SocketAddrV4};
 
-use super::ipv4_header::Protocol;
+use super::ipv4_header::{IPv4HeaderData, Protocol};
 use super::ipv4_packet::IPv4Packet;
 use super::net;
 use super::selector::Selector;
+use super::transport_header::TransportHeaderData;
 
 const LOCALHOST_FORWARD: u32 = 0x0A000202;
 
@@ -34,15 +35,13 @@ pub struct ConnectionId {
 }
 
 impl ConnectionId {
-    pub fn from_packet(reference_packet: &IPv4Packet) -> Self {
-        let ipv4_header_data = reference_packet.ipv4_header_data();
-        let transport_header = reference_packet.transport_header_data().as_ref().expect("Packet without transport header");
+    pub fn from_headers(ipv4_header_data: &IPv4HeaderData, transport_header_data: &TransportHeaderData) -> Self {
         Self {
             protocol: ipv4_header_data.protocol(),
             source_ip: ipv4_header_data.source(),
-            source_port: transport_header.source_port(),
+            source_port: transport_header_data.source_port(),
             destination_ip: ipv4_header_data.destination(),
-            destination_port: transport_header.destination_port(),
+            destination_port: transport_header_data.destination_port(),
         }
     }
 
