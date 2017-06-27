@@ -20,7 +20,7 @@ const TAG: &'static str = "TCPConnection";
 enum TCPState {
     Init,
     SynSent,
-    SynReceived,
+//    SynReceived,
     Established,
     CloseWait,
     LastAck,
@@ -109,7 +109,26 @@ impl TCPConnection {
     }
 
     fn update_interests(&mut self, selector: &mut Selector) {
+        if !self.closed {
+            let mut ready = Ready::empty();
+            if self.may_read() {
+                ready = ready | Ready::readable()
+            }
+            if self.may_write() {
+                ready = ready | Ready::writable()
+            }
+            selector.reregister(&self.stream, self.token, ready, PollOpt::level()).expect("Cannot register on poll");
+        }
+    }
+
+    fn may_read(&self) -> bool {
         // TODO
+        false
+    }
+
+    fn may_write(&self) -> bool {
+        // TODO
+        false
     }
 
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
