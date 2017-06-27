@@ -76,7 +76,7 @@ public class Packetizer {
         responseTransportHeader.setPayloadLength(payloadLength);
 
         // In order to avoid copies, buffer is shared with this IPv4Packet instance that is returned.
-        // Don't use it after another call to createPacket()!
+        // Don't use it after another call to packetize()!
         IPv4Packet packet = new IPv4Packet(buffer);
         packet.computeChecksums();
         return packet;
