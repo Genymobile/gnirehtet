@@ -52,10 +52,13 @@ impl TCPConnection {
             let mut shrinked_tcp_header_raw = [0u8; 20];
             shrinked_tcp_header_raw.copy_from_slice(&tcp_header.raw()[..20]);
             let mut shrinked_tcp_header_data = tcp_header.data().clone();
-            let mut shrinked_tcp_header = shrinked_tcp_header_data.bind_mut(&mut shrinked_tcp_header_raw);
-            shrinked_tcp_header.shrink_options();
-            assert_eq!(20, shrinked_tcp_header.header_length());
-            let shrinked_transport_header = TCPHeader::from(shrinked_tcp_header).into();
+            {
+                let mut shrinked_tcp_header = shrinked_tcp_header_data.bind_mut(&mut shrinked_tcp_header_raw);
+                shrinked_tcp_header.shrink_options();
+                assert_eq!(20, shrinked_tcp_header.header_length());
+            }
+
+            let shrinked_transport_header = shrinked_tcp_header_data.bind(&shrinked_tcp_header_raw).into();
 
             let packetizer = Packetizer::new(&ipv4_header, &shrinked_transport_header);
 

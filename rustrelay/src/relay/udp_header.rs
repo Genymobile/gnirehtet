@@ -121,12 +121,6 @@ impl<'a> UDPHeaderMut<'a> {
     }
 }
 
-impl<'a> From<UDPHeaderMut<'a>> for UDPHeader<'a> {
-    fn from(udp_header: UDPHeaderMut) -> UDPHeader {
-        udp_header.data().bind(udp_header.raw())
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;

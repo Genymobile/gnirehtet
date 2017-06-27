@@ -206,12 +206,3 @@ impl<'a> From<UDPHeaderMut<'a>> for TransportHeaderMut<'a> {
         TransportHeaderMut::UDP(udp_header)
     }
 }
-
-impl<'a> From<TransportHeaderMut<'a>> for TransportHeader<'a> {
-    fn from(transport_header: TransportHeaderMut) -> TransportHeader {
-        match transport_header {
-            TransportHeaderMut::TCP(tcp_header) => TCPHeader::from(tcp_header).into(),
-            TransportHeaderMut::UDP(udp_header) => UDPHeader::from(udp_header).into(),
-        }
-    }
-}
