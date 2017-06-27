@@ -18,6 +18,7 @@ use super::transport_header::TransportHeader;
 const TAG: &'static str = "TCPConnection";
 
 enum TCPState {
+    Init,
     SynSent,
     SynReceived,
     Established,
@@ -37,7 +38,7 @@ struct TCPConnection {
     syn_sequence_number: u32,
     sequence_number: u32,
     acknowledgement_number: u32,
-    their_acknowledgement_numbe: u32,
+    their_acknowledgement_number: u32,
     client_window: u16,
     remote_closed: bool,
 }
@@ -57,6 +58,35 @@ impl TCPConnection {
             let shrinked_transport_header = TCPHeader::from(shrinked_tcp_header).into();
 
             let packetizer = Packetizer::new(&ipv4_header, &shrinked_transport_header);
+
+            let rc = Rc::new(RefCell::new(Self {
+                id: id,
+                client: client,
+                stream: stream,
+                token: Token(0), // default value, will be set afterwards
+                client_to_network: StreamBuffer::new(4 * MAX_PACKET_LENGTH),
+                network_to_client: packetizer,
+                closed: false,
+                state: TCPState::Init,
+                syn_sequence_number: 0,
+                sequence_number: 0,
+                acknowledgement_number: 0,
+                their_acknowledgement_number: 0,
+                client_window: 0,
+                remote_closed: false,
+            }));
+
+            {
+                let rc_clone = rc.clone();
+                let handler = move |selector: &mut Selector, ready| {
+                    let mut self_ref = rc_clone.borrow_mut();
+                    self_ref.on_ready(selector, ready);
+                };
+                let mut self_ref = rc.borrow_mut();
+                let token = selector.register(&self_ref.stream, handler, Ready::readable(), PollOpt::level())?;
+                self_ref.token = token;
+            }
+            Ok(rc)
         } else {
             panic!("Not a TCP header");
         }
@@ -65,5 +95,31 @@ impl TCPConnection {
     fn create_stream(id: &ConnectionId) -> io::Result<TcpStream> {
         let rewritten_destination = connection::rewritten_destination(id.destination_ip(), id.destination_port()).into();
         TcpStream::connect(&rewritten_destination)
+    }
+
+    fn process_send(&mut self, selector: &mut Selector) {
+        // TODO
+    }
+
+    fn process_receive(&mut self, selector: &mut Selector) {
+        // TODO
+    }
+
+    fn update_interests(&mut self, selector: &mut Selector) {
+        // TODO
+    }
+
+    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
+        assert!(!self.closed);
+        let ready = event.readiness();
+        if ready.is_writable() {
+            self.process_send(selector);
+        }
+        if !self.closed && ready.is_readable() {
+            self.process_receive(selector);
+        }
+        if !self.closed {
+            self.update_interests(selector);
+        }
     }
 }
