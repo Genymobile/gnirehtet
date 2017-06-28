@@ -12,6 +12,7 @@ pub struct Packetizer {
     payload_index: usize,
     ipv4_header_data: IPv4HeaderData,
     transport_header_data: TransportHeaderData,
+    last_packet_length: Option<usize>,
 }
 
 impl Packetizer {
@@ -44,6 +45,7 @@ impl Packetizer {
             payload_index: payload_index,
             ipv4_header_data: ipv4_header_data,
             transport_header_data: transport_header_data,
+            last_packet_length: None,
         }
     }
 
@@ -52,6 +54,7 @@ impl Packetizer {
     }
 
     pub fn packetize<R: DatagramReceiver>(&mut self, source: &mut R) -> io::Result<IPv4Packet> {
+        self.last_packet_length = None;
         let r = source.recv(&mut self.buffer[self.payload_index..])?;
         let ipv4_packet = self.inflate(r as u16);
         Ok(ipv4_packet)
@@ -79,9 +82,19 @@ impl Packetizer {
         self.ipv4_header_mut().set_total_length(total_length);
         self.transport_header_mut().set_payload_length(payload_length);
 
+        self.last_packet_length = Some(total_length as usize);
+
         let mut ipv4_packet = IPv4Packet::new(&mut self.buffer[..total_length as usize], self.ipv4_header_data.clone(), self.transport_header_data.clone());
         ipv4_packet.compute_checksums();
         ipv4_packet
+    }
+
+    pub fn last_packet(&mut self) -> Option<IPv4Packet> {
+        if let Some(packet_length) = self.last_packet_length {
+            Some(IPv4Packet::new(&mut self.buffer[..packet_length as usize], self.ipv4_header_data.clone(), self.transport_header_data.clone()))
+        } else {
+            None
+        }
     }
 }
 
@@ -127,6 +140,25 @@ mod tests {
 
         let packet = packetizer.packetize(&mut mock).unwrap();
         assert_eq!(36, packet.ipv4_header().total_length());
+        assert_eq!(data, &packet.raw()[28..36]);
+    }
+
+    #[test]
+    fn last_packet() {
+        let mut raw = &mut create_packet()[..];
+        let reference_packet = IPv4Packet::parse(raw);
+
+        let data = [ 0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 ];
+        let mut mock = MockDatagramSocket::from_data(&data);
+
+        let ipv4_header = reference_packet.ipv4_header();
+        let transport_header = reference_packet.transport_header().unwrap();
+        let mut packetizer = Packetizer::new(&ipv4_header, &transport_header);
+
+        let _ = packetizer.packetize(&mut mock).unwrap();
+        let packet = packetizer.last_packet().unwrap();
+        assert_eq!(36, packet.ipv4_header().total_length());
+        assert_eq!(data, &packet.raw()[28..36]);
     }
 
     #[test]
