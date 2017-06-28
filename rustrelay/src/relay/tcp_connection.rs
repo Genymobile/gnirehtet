@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::cmp;
 use std::io;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::rc::{Rc, Weak};
@@ -12,10 +13,12 @@ use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
 use super::packetizer::Packetizer;
 use super::selector::Selector;
 use super::stream_buffer::StreamBuffer;
-use super::tcp_header::TCPHeader;
-use super::transport_header::TransportHeader;
+use super::tcp_header::{self, TCPHeader};
+use super::transport_header::{TransportHeader, TransportHeaderMut};
 
 const TAG: &'static str = "TCPConnection";
+
+const MAX_PAYLOAD_LENGTH: u16 = 1400;
 
 enum TCPState {
     Init,
@@ -119,7 +122,23 @@ impl TCPConnection {
     }
 
     fn process_receive(&mut self, selector: &mut Selector) {
+        assert!(self.packet_for_client_length.is_none(), "A pending packet was not sent");
+        let remaining_client_window = self.get_remaining_client_window();
+        assert!(remaining_client_window > 0, "process_received() must not be called when window == 0");
+        let max_payload_length = cmp::min(remaining_client_window, MAX_PAYLOAD_LENGTH) as usize;
+        self.update_headers(tcp_header::FLAG_ACK | tcp_header::FLAG_PSH);
+        let packet = self.network_to_client.packetize_read(&mut self.stream, Some(max_payload_length));
         // TODO
+    }
+
+    fn update_headers(&mut self, flags: u16) {
+        if let TransportHeaderMut::TCP(ref mut tcp_header) = self.network_to_client.transport_header_mut() {
+            tcp_header.set_flags(flags);
+            tcp_header.set_sequence_number(self.sequence_number);
+            tcp_header.set_acknowledgement_number(self.acknowledgement_number);
+        } else {
+            panic!("Not a TCP header");
+        }
     }
 
     fn reset_connection(&mut self, selector: &mut Selector) {
