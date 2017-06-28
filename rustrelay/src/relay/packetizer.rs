@@ -63,12 +63,12 @@ impl Packetizer {
         self.packetize(&mut adapter)
     }
 
-    fn ipv4_header_mut(&mut self) -> IPv4HeaderMut {
+    pub fn ipv4_header_mut(&mut self) -> IPv4HeaderMut {
         let raw = &mut self.buffer[..self.transport_index];
         self.ipv4_header_data.bind_mut(raw)
     }
 
-    fn transport_header_mut(&mut self) -> TransportHeaderMut {
+    pub fn transport_header_mut(&mut self) -> TransportHeaderMut {
         let raw = &mut self.buffer[self.transport_index..self.payload_index];
         self.transport_header_data.bind_mut(raw)
     }

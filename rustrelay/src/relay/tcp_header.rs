@@ -24,12 +24,12 @@ pub struct TCPHeaderData {
     window: u16,
 }
 
-pub const TCP_FLAG_FIN: u16 = 1 << 0;
-pub const TCP_FLAG_SYN: u16 = 1 << 1;
-pub const TCP_FLAG_RST: u16 = 1 << 2;
-pub const TCP_FLAG_PSH: u16 = 1 << 3;
-pub const TCP_FLAG_ACK: u16 = 1 << 4;
-pub const TCP_FLAG_URG: u16 = 1 << 5;
+pub const FLAG_FIN: u16 = 1 << 0;
+pub const FLAG_SYN: u16 = 1 << 1;
+pub const FLAG_RST: u16 = 1 << 2;
+pub const FLAG_PSH: u16 = 1 << 3;
+pub const FLAG_ACK: u16 = 1 << 4;
+pub const FLAG_URG: u16 = 1 << 5;
 
 impl TCPHeaderData {
     pub fn parse(raw: &[u8]) -> Self {
@@ -328,13 +328,13 @@ mod tests {
         header.set_destination_port(2222);
         header.set_sequence_number(300);
         header.set_acknowledgement_number(101);
-        header.set_flags(TCP_FLAG_FIN | TCP_FLAG_ACK);
+        header.set_flags(FLAG_FIN | FLAG_ACK);
 
         assert_eq!(1111, header.source_port());
         assert_eq!(2222, header.destination_port());
         assert_eq!(300, header.sequence_number());
         assert_eq!(101, header.acknowledgement_number());
-        assert_eq!(TCP_FLAG_FIN | TCP_FLAG_ACK, header.flags());
+        assert_eq!(FLAG_FIN | FLAG_ACK, header.flags());
 
         // assert that the buffer has been modified
         let raw = header.raw();
