@@ -33,6 +33,7 @@ struct TCPConnection {
     token: Token,
     client_to_network: StreamBuffer,
     network_to_client: Packetizer,
+    packet_for_client_length: Option<u16>,
     closed: bool,
     state: TCPState,
     syn_sequence_number: u32,
@@ -69,6 +70,7 @@ impl TCPConnection {
                 token: Token(0), // default value, will be set afterwards
                 client_to_network: StreamBuffer::new(4 * MAX_PACKET_LENGTH),
                 network_to_client: packetizer,
+                packet_for_client_length: None,
                 closed: false,
                 state: TCPState::Init,
                 syn_sequence_number: 0,
@@ -138,8 +140,9 @@ impl TCPConnection {
     }
 
     fn may_read(&self) -> bool {
-        // TODO
-        false
+        !self.remote_closed &&
+                self.packet_for_client_length.is_some() &&
+                self.get_remaining_client_window() > 0
     }
 
     fn may_write(&self) -> bool {
@@ -158,6 +161,11 @@ impl TCPConnection {
         if !self.closed {
             self.update_interests(selector);
         }
+    }
+
+    fn get_remaining_client_window(&self) -> u16 {
+        // TODO
+        42
     }
 }
 
