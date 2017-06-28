@@ -100,11 +100,27 @@ impl TCPConnection {
         TcpStream::connect(&rewritten_destination)
     }
 
+    fn close(&mut self, selector: &mut Selector) {
+
+    }
+
     fn process_send(&mut self, selector: &mut Selector) {
-        // TODO
+        match self.client_to_network.write_to(&mut self.stream) {
+            Ok(w) => if w == 0 {
+                self.close(selector);
+            },
+            Err(err) => {
+                error!(target: TAG, "{} Cannot write: {}", self.id, err);
+                self.reset_connection(selector);
+            }
+        }
     }
 
     fn process_receive(&mut self, selector: &mut Selector) {
+        // TODO
+    }
+
+    fn reset_connection(&mut self, selector: &mut Selector) {
         // TODO
     }
 
@@ -127,8 +143,7 @@ impl TCPConnection {
     }
 
     fn may_write(&self) -> bool {
-        // TODO
-        false
+        !self.client_to_network.is_empty()
     }
 
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
@@ -143,5 +158,26 @@ impl TCPConnection {
         if !self.closed {
             self.update_interests(selector);
         }
+    }
+}
+
+impl Connection for TCPConnection {
+    fn id(&self) -> &ConnectionId {
+        &self.id
+    }
+
+    fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+        // TODO
+    }
+
+    fn disconnect(&mut self, selector: &mut Selector) {
+        info!(target: TAG, "{} Close", self.id);
+        selector.deregister(&self.stream, self.token).unwrap();
+        // socket will be closed by RAII
+    }
+
+    fn is_expired(&self) -> bool {
+        // no external timeout expiration
+        false
     }
 }
