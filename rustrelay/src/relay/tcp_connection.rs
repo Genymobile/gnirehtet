@@ -150,7 +150,10 @@ impl TCPConnection {
         // defer the other branches in a separate match-block
         let non_lexical_lifetime_workaround = match self.network_to_client.packetize_read(&mut self.stream, Some(max_payload_length)) {
             Ok(Some(ipv4_packet)) => {
-                // TODO send packet
+                // TODO packet source pull
+                if let Err(err) = TCPConnection::send_to_client(&self.client, selector, &ipv4_packet) {
+                    warn!(target: TAG, "{} Cannot send packet to client: {}", &self.id, err);
+                }
                 Ok(Some(()))
             },
             Ok(None) => Ok(None),
@@ -164,7 +167,6 @@ impl TCPConnection {
             },
             Ok(Some(_)) => () // already handled
         }
-        // TODO
     }
 
     fn send_to_client(client: &Weak<RefCell<Client>>, selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<()> {
