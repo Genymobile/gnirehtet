@@ -167,15 +167,19 @@ impl TCPConnection {
         // TODO
     }
 
+    fn send_to_client(client: &Weak<RefCell<Client>>, selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<()> {
+        let client_rc = client.upgrade().expect("expected client not found");
+        let mut client = client_rc.borrow_mut();
+        client.send_to_client(selector, &ipv4_packet)
+    }
+
     fn eof(&mut self, selector: &mut Selector) {
         self.tcb.remote_closed = true;
         if self.tcb.state == TCPState::CloseWait {
             let ipv4_packet = TCPConnection::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_FIN);
             self.tcb.sequence_number += 1; // FIN counts for 1 byte
 
-            let client_rc = self.client.upgrade().expect("expected client not found");
-            let mut client = client_rc.borrow_mut();
-            if let Err(err) = client.send_to_client(selector, &ipv4_packet) {
+            if let Err(err) = TCPConnection::send_to_client(&self.client, selector, &ipv4_packet) {
                 warn!(target: TAG, "{} Cannot send packet to client: {}", &self.id, err);
             }
         }
