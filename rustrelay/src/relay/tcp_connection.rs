@@ -142,7 +142,7 @@ impl TCPConnection {
             Err(err) => {
                 error!(target: TAG, "{} Cannot write: {}", self.id, err);
                 self.reset_connection(selector);
-            }
+            },
         }
     }
 
@@ -169,7 +169,7 @@ impl TCPConnection {
                 error!(target: TAG, "{} Cannot read: {}", self.id, err);
                 self.reset_connection(selector);
             },
-            Ok(Some(_)) => () // already handled
+            Ok(Some(_)) => (), // already handled
         }
     }
 
