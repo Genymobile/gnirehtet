@@ -7,19 +7,19 @@ use std::time::Duration;
 use slab::Slab;
 
 pub trait EventHandler {
-    fn on_ready(&self, selector: &mut Selector, event: Event);
+    fn on_ready(&mut self, selector: &mut Selector, event: Event);
 }
 
-impl<F> EventHandler for F where F: Fn(&mut Selector, Event) {
-    fn on_ready(&self, selector: &mut Selector, event: Event) {
+impl<F> EventHandler for F where F: FnMut(&mut Selector, Event) {
+    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
         self(selector, event);
     }
 }
 
 // for convenience
 impl EventHandler for Rc<RefCell<EventHandler>> {
-    fn on_ready(&self, selector: &mut Selector, event: Event) {
-        self.borrow().on_ready(selector, event);
+    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
+        self.borrow_mut().on_ready(selector, event);
     }
 }
 
