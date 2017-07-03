@@ -1,7 +1,7 @@
 use std::cell::RefCell;
 use std::io::{self, Write};
 use std::net::Shutdown;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use mio::net::TcpStream;
 use mio::{Event, PollOpt, Ready, Token};
 
@@ -16,6 +16,7 @@ use super::stream_buffer::StreamBuffer;
 const TAG: &'static str = "Client";
 
 pub struct Client {
+    self_weak: Weak<RefCell<Client>>,
     id: u32,
     stream: TcpStream,
     token: Token,
@@ -31,6 +32,7 @@ pub struct Client {
 impl Client {
     pub fn new(id: u32, selector: &mut Selector, stream: TcpStream, close_listener: Box<CloseListener<Client>>) -> io::Result<Rc<RefCell<Self>>> {
         let rc = Rc::new(RefCell::new(Self {
+            self_weak: Weak::new(),
             id: id,
             stream: stream,
             token: Token(0), // default value, will be set afterwards
@@ -44,6 +46,8 @@ impl Client {
 
         {
             let mut self_ref = rc.borrow_mut();
+            // keep a shared reference to this client
+            self_ref.self_weak = Rc::downgrade(&rc);
             // set client as router owner
             self_ref.router.set_client(Rc::downgrade(&rc));
 
