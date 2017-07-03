@@ -49,10 +49,10 @@ impl UDPConnection {
 
         {
             let rc_clone = rc.clone();
-            let handler = move |selector: &mut Selector, ready| {
+            let handler = Box::new(move |selector: &mut Selector, ready| {
                 let mut self_ref = rc_clone.borrow_mut();
                 self_ref.on_ready(selector, ready);
-            };
+            });
             let mut self_ref = rc.borrow_mut();
             let token = selector.register(&self_ref.socket, handler, Ready::readable(), PollOpt::level())?;
             self_ref.token = token;
