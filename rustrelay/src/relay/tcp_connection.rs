@@ -3,9 +3,11 @@ use std::cmp;
 use std::io;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::rc::{Rc, Weak};
+use log::LogLevel;
 use mio::{Event, PollOpt, Ready, Token};
 use mio::net::TcpStream;
 
+use super::binary;
 use super::client::Client;
 use super::connection::{self, Connection, ConnectionId};
 use super::ipv4_header::IPv4Header;
@@ -20,6 +22,7 @@ const TAG: &'static str = "TCPConnection";
 
 const MAX_PAYLOAD_LENGTH: u16 = 1400;
 
+#[derive(PartialEq, Eq)]
 enum TCPState {
     Init,
     SynSent,
@@ -127,8 +130,39 @@ impl TCPConnection {
         assert!(remaining_client_window > 0, "process_received() must not be called when window == 0");
         let max_payload_length = cmp::min(remaining_client_window, MAX_PAYLOAD_LENGTH) as usize;
         self.update_headers(tcp_header::FLAG_ACK | tcp_header::FLAG_PSH);
-        let packet = self.network_to_client.packetize_read(&mut self.stream, Some(max_payload_length));
+        // the packet is bound to the lifetime of self, so we cannot borrow self to call methods
+        // defer the other branches in a separate match-block
+        let non_lexical_lifetime_workaround = match self.network_to_client.packetize_read(&mut self.stream, Some(max_payload_length)) {
+            Ok(Some(ipv4_packet)) => {
+                // TODO send packet
+                Ok(Some(()))
+            },
+            Ok(None) => Ok(None),
+            Err(err) => Err(err),
+        };
+        match non_lexical_lifetime_workaround {
+            Ok(None) => self.eof(selector),
+            Err(err) => {
+                error!(target: TAG, "{} Cannot read: {}", self.id, err);
+                self.reset_connection(selector);
+            },
+            Ok(Some(_)) => () // already handled
+        }
         // TODO
+    }
+
+    fn eof(&mut self, selector: &mut Selector) {
+        self.remote_closed = true;
+        if self.state == TCPState::CloseWait {
+            let id = self.id;
+            let ipv4_packet = self.create_empty_response_packet(tcp_header::FLAG_FIN);
+            self.sequence_number += 1; // FIN counts for 1 byte
+
+            let client_rc = self.client.upgrade().expect("expected client not found");
+            if let Err(err) = client_rc.borrow_mut().send_to_client(selector, &ipv4_packet) {
+                warn!(target: TAG, "{} Cannot send packet to client: {}", id, err);
+            }
+        }
     }
 
     fn update_headers(&mut self, flags: u16) {
@@ -139,6 +173,19 @@ impl TCPConnection {
         } else {
             panic!("Not a TCP header");
         }
+    }
+
+    fn create_empty_response_packet(&mut self, flags: u16) -> IPv4Packet {
+        self.update_headers(flags);
+        debug!(target: TAG, "{} Forging empty response (flags={}) {}", self.id, flags, self.numbers());
+        if (flags & tcp_header::FLAG_ACK) != 0 {
+            debug!(target: TAG, "{} Acking {}", self.id, self.numbers());
+        }
+        let ipv4_packet = self.network_to_client.packetize_empty_payload();
+        if log_enabled!(target: TAG, LogLevel::Trace) {
+            binary::to_string(ipv4_packet.raw());
+        }
+        ipv4_packet
     }
 
     fn reset_connection(&mut self, selector: &mut Selector) {
@@ -185,6 +232,10 @@ impl TCPConnection {
     fn get_remaining_client_window(&self) -> u16 {
         // TODO
         42
+    }
+
+    fn numbers(&self) -> String {
+        format!("(seq={}, ack={})", self.sequence_number, self.acknowledgement_number)
     }
 }
 

@@ -57,10 +57,21 @@ impl Packetizer {
         Ok(ipv4_packet)
     }
 
-    pub fn packetize_read<R: io::Read>(&mut self, source: &mut R, max_chunk_size: Option<usize>) -> io::Result<IPv4Packet> {
-        // FIXME handle EOF (read returning 0) for TCP stream
+    /// Packetize from stream (`Read`) source.
+    ///
+    /// `Ok(Some(_))` when packet is available
+    /// `Ok(None)` on EOF (read 0 byte)
+    /// `Err(_)` on error
+    pub fn packetize_read<R: io::Read>(&mut self, source: &mut R, max_chunk_size: Option<usize>) -> io::Result<Option<IPv4Packet>> {
         let mut adapter = ReadAdapter::new(source, max_chunk_size);
-        self.packetize(&mut adapter)
+        let r = adapter.recv(&mut self.buffer[self.payload_index..])?;
+        let option = if r > 0 {
+            let ipv4_packet = self.build(r as u16);
+            Some(ipv4_packet)
+        } else {
+            None
+        };
+        Ok(option)
     }
 
     pub fn ipv4_header_mut(&mut self) -> IPv4HeaderMut {
