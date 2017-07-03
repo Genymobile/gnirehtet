@@ -1,4 +1,4 @@
-use std::cell::RefCell;
+use std::cell::{Ref, RefCell};
 use std::cmp;
 use std::io;
 use std::net::{Ipv4Addr, SocketAddr};
@@ -29,6 +29,7 @@ pub struct TCPConnection {
     token: Token,
     client_to_network: StreamBuffer,
     network_to_client: Packetizer,
+    pending_packet_for_client: PacketStorage,
     packet_for_client_length: Option<u16>,
     closed: bool,
     tcb: TCB,
@@ -52,6 +53,32 @@ enum TCPState {
     Established,
     CloseWait,
     LastAck,
+}
+
+#[derive(Clone)]
+struct PacketStorage(Rc<RefCell<Option<Box<[u8]>>>>);
+
+impl PacketStorage {
+    fn new() -> Self {
+        PacketStorage(Rc::new(RefCell::new(None)))
+    }
+
+    fn set(&mut self, raw: &[u8]) {
+        let data = raw.to_vec().into_boxed_slice();
+        *self.0.borrow_mut() = Some(data);
+    }
+
+    //fn set_packet(&mut self, ipv4_packet: &IPv4Packet) {
+    //   self.set(ipv4_packet.raw());
+    //}
+
+    fn get(&self) -> Ref<Option<Box<[u8]>>> {
+        self.0.borrow()
+    }
+
+    fn has(&self) -> bool {
+        self.get().is_some()
+    }
 }
 
 impl TCB {
@@ -98,6 +125,7 @@ impl TCPConnection {
                 token: Token(0), // default value, will be set afterwards
                 client_to_network: StreamBuffer::new(4 * MAX_PACKET_LENGTH),
                 network_to_client: packetizer,
+                pending_packet_for_client: PacketStorage::new(),
                 packet_for_client_length: None,
                 closed: false,
                 tcb: TCB::new(),
