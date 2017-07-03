@@ -17,7 +17,7 @@ impl<F> EventHandler for F where F: FnMut(&mut Selector, Event) {
 }
 
 // for convenience
-impl EventHandler for Rc<RefCell<EventHandler>> {
+impl<T: EventHandler> EventHandler for Rc<RefCell<T>> {
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
         self.borrow_mut().on_ready(selector, event);
     }

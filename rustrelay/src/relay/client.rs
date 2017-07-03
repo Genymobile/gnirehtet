@@ -10,7 +10,7 @@ use super::close_listener::CloseListener;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
 use super::ipv4_packet_buffer::IPv4PacketBuffer;
 use super::router::Router;
-use super::selector::Selector;
+use super::selector::{EventHandler, Selector};
 use super::stream_buffer::StreamBuffer;
 
 const TAG: &'static str = "Client";
@@ -41,16 +41,14 @@ impl Client {
             close_listener: close_listener,
             pending_id_bytes: 4,
         }));
-        // set client as router owner
-        rc.borrow_mut().router.set_client(Rc::downgrade(&rc));
 
         {
-            let rc_clone = rc.clone();
-            let handler = Box::new(move |selector: &mut Selector, ready| {
-                let mut self_ref = rc_clone.borrow_mut();
-                self_ref.on_ready(selector, ready);
-            });
             let mut self_ref = rc.borrow_mut();
+            // set client as router owner
+            self_ref.router.set_client(Rc::downgrade(&rc));
+
+            // rc is an EventHandler, register() expects a Box<EventHandler>
+            let handler = Box::new(rc.clone());
             // on start, we are interested only in writing (we must first send the client id)
             let token = selector.register(&self_ref.stream, handler, Ready::writable(), PollOpt::level())?;
             self_ref.token = token;
@@ -172,6 +170,20 @@ impl Client {
         }
     }
 
+    fn process_pending(&mut self) {
+        // TODO
+    }
+
+    pub fn clean_expired_connections(&mut self, selector: &mut Selector) {
+        self.router.clean_expired_connections(selector);
+    }
+
+    fn must_send_id(&self) -> bool{
+        self.pending_id_bytes > 0
+    }
+}
+
+impl EventHandler for Client {
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
         assert!(!self.closed);
         let ready = event.readiness();
@@ -184,17 +196,5 @@ impl Client {
         if !self.closed {
             self.update_interests(selector);
         }
-    }
-
-    fn process_pending(&mut self) {
-        // TODO
-    }
-
-    pub fn clean_expired_connections(&mut self, selector: &mut Selector) {
-        self.router.clean_expired_connections(selector);
-    }
-
-    fn must_send_id(&self) -> bool{
-        self.pending_id_bytes > 0
     }
 }
