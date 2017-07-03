@@ -22,6 +22,28 @@ const TAG: &'static str = "TCPConnection";
 
 const MAX_PAYLOAD_LENGTH: u16 = 1400;
 
+pub struct TCPConnection {
+    id: ConnectionId,
+    client: Weak<RefCell<Client>>,
+    stream: TcpStream,
+    token: Token,
+    client_to_network: StreamBuffer,
+    network_to_client: Packetizer,
+    packet_for_client_length: Option<u16>,
+    closed: bool,
+    tcb: TCB,
+}
+
+struct TCB {
+    state: TCPState,
+    syn_sequence_number: u32,
+    sequence_number: u32,
+    acknowledgement_number: u32,
+    their_acknowledgement_number: u32,
+    client_window: u16,
+    remote_closed: bool,
+}
+
 #[derive(PartialEq, Eq)]
 enum TCPState {
     Init,
@@ -32,22 +54,22 @@ enum TCPState {
     LastAck,
 }
 
-struct TCPConnection {
-    id: ConnectionId,
-    client: Weak<RefCell<Client>>,
-    stream: TcpStream,
-    token: Token,
-    client_to_network: StreamBuffer,
-    network_to_client: Packetizer,
-    packet_for_client_length: Option<u16>,
-    closed: bool,
-    state: TCPState,
-    syn_sequence_number: u32,
-    sequence_number: u32,
-    acknowledgement_number: u32,
-    their_acknowledgement_number: u32,
-    client_window: u16,
-    remote_closed: bool,
+impl TCB {
+    fn new() -> Self {
+        Self {
+            state: TCPState::Init,
+            syn_sequence_number: 0,
+            sequence_number: 0,
+            acknowledgement_number: 0,
+            their_acknowledgement_number: 0,
+            client_window: 0,
+            remote_closed: false,
+        }
+    }
+
+    fn numbers(&self) -> String {
+        format!("(seq={}, ack={})", self.sequence_number, self.acknowledgement_number)
+    }
 }
 
 impl TCPConnection {
@@ -78,13 +100,7 @@ impl TCPConnection {
                 network_to_client: packetizer,
                 packet_for_client_length: None,
                 closed: false,
-                state: TCPState::Init,
-                syn_sequence_number: 0,
-                sequence_number: 0,
-                acknowledgement_number: 0,
-                their_acknowledgement_number: 0,
-                client_window: 0,
-                remote_closed: false,
+                tcb: TCB::new(),
             }));
 
             {
@@ -129,7 +145,7 @@ impl TCPConnection {
         let remaining_client_window = self.get_remaining_client_window();
         assert!(remaining_client_window > 0, "process_received() must not be called when window == 0");
         let max_payload_length = cmp::min(remaining_client_window, MAX_PAYLOAD_LENGTH) as usize;
-        TCPConnection::update_headers(&mut self.network_to_client, self.sequence_number, self.acknowledgement_number, tcp_header::FLAG_ACK | tcp_header::FLAG_PSH);
+        TCPConnection::update_headers(&mut self.network_to_client, &self.tcb, tcp_header::FLAG_ACK | tcp_header::FLAG_PSH);
         // the packet is bound to the lifetime of self, so we cannot borrow self to call methods
         // defer the other branches in a separate match-block
         let non_lexical_lifetime_workaround = match self.network_to_client.packetize_read(&mut self.stream, Some(max_payload_length)) {
@@ -152,10 +168,10 @@ impl TCPConnection {
     }
 
     fn eof(&mut self, selector: &mut Selector) {
-        self.remote_closed = true;
-        if self.state == TCPState::CloseWait {
-            let ipv4_packet = TCPConnection::create_empty_response_packet(&self.id, &mut self.network_to_client, self.sequence_number, self.acknowledgement_number, tcp_header::FLAG_FIN);
-            self.sequence_number += 1; // FIN counts for 1 byte
+        self.tcb.remote_closed = true;
+        if self.tcb.state == TCPState::CloseWait {
+            let ipv4_packet = TCPConnection::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_FIN);
+            self.tcb.sequence_number += 1; // FIN counts for 1 byte
 
             let client_rc = self.client.upgrade().expect("expected client not found");
             let mut client = client_rc.borrow_mut();
@@ -165,21 +181,21 @@ impl TCPConnection {
         }
     }
 
-    fn update_headers(packetizer: &mut Packetizer, sequence_number: u32, acknowledgement_number: u32, flags: u16) {
+    fn update_headers(packetizer: &mut Packetizer, tcb: &TCB, flags: u16) {
         if let TransportHeaderMut::TCP(ref mut tcp_header) = packetizer.transport_header_mut() {
-            tcp_header.set_sequence_number(sequence_number);
-            tcp_header.set_acknowledgement_number(acknowledgement_number);
+            tcp_header.set_sequence_number(tcb.sequence_number);
+            tcp_header.set_acknowledgement_number(tcb.acknowledgement_number);
             tcp_header.set_flags(flags);
         } else {
             panic!("Not a TCP header");
         }
     }
 
-    fn create_empty_response_packet<'a>(id: &ConnectionId, packetizer: &'a mut Packetizer, sequence_number: u32, acknowledgement_number: u32, flags: u16) -> IPv4Packet<'a> {
-        TCPConnection::update_headers(packetizer, sequence_number, acknowledgement_number, flags);
-        debug!(target: TAG, "{} Forging empty response (flags={}) {}", id, flags, "TODO");
+    fn create_empty_response_packet<'a>(id: &ConnectionId, packetizer: &'a mut Packetizer, tcb: &TCB, flags: u16) -> IPv4Packet<'a> {
+        TCPConnection::update_headers(packetizer, tcb, flags);
+        debug!(target: TAG, "{} Forging empty response (flags={}) {}", id, flags, tcb.numbers());
         if (flags & tcp_header::FLAG_ACK) != 0 {
-            debug!(target: TAG, "{} Acking {}", id, "TODO");
+            debug!(target: TAG, "{} Acking {}", id, tcb.numbers());
         }
         let ipv4_packet = packetizer.packetize_empty_payload();
         if log_enabled!(target: TAG, LogLevel::Trace) {
@@ -206,7 +222,7 @@ impl TCPConnection {
     }
 
     fn may_read(&self) -> bool {
-        !self.remote_closed &&
+        !self.tcb.remote_closed &&
                 self.packet_for_client_length.is_some() &&
                 self.get_remaining_client_window() > 0
     }
@@ -232,10 +248,6 @@ impl TCPConnection {
     fn get_remaining_client_window(&self) -> u16 {
         // TODO
         42
-    }
-
-    fn numbers(&self) -> String {
-        format!("(seq={}, ack={})", self.sequence_number, self.acknowledgement_number)
     }
 }
 
