@@ -1,16 +1,17 @@
 use std::cell::RefCell;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::io;
-use std::rc::Rc;
+use std::rc::{Rc, Weak};
 use mio::{Event, PollOpt, Ready};
 use mio::tcp::TcpListener;
 
 use super::client::Client;
-use super::selector::Selector;
+use super::selector::{EventHandler, Selector};
 
 const TAG: &'static str = "TunnelServer";
 
 pub struct TunnelServer {
+    self_weak: Weak<RefCell<TunnelServer>>,
     clients: Vec<Rc<RefCell<Client>>>,
     tcp_listener: TcpListener,
     next_client_id: u32,
@@ -20,15 +21,17 @@ impl TunnelServer {
     pub fn new(port: u16, selector: &mut Selector) -> io::Result<Rc<RefCell<Self>>> {
         let tcp_listener = TunnelServer::start_socket(port)?;
         let rc = Rc::new(RefCell::new(Self {
+            self_weak: Weak::new(),
             clients: Vec::new(),
             tcp_listener: tcp_listener,
             next_client_id: 0,
         }));
-        let rc_clone = rc.clone();
-        let handler = Box::new(move |selector: &mut Selector, ready| {
-            let mut self_ref = rc_clone.borrow_mut();
-            self_ref.on_ready(&rc_clone, selector, ready);
-        });
+
+        // keep a shared reference to this
+        rc.borrow_mut().self_weak = Rc::downgrade(&rc);
+
+        // rc is an EventHandler, register() expects a Box<EventHandler>
+        let handler = Box::new(rc.clone());
         selector.register(&rc.borrow().tcp_listener, handler, Ready::readable(), PollOpt::edge())?;
         Ok(rc)
     }
@@ -40,11 +43,11 @@ impl TunnelServer {
         Ok(server)
     }
 
-    fn accept_client(&mut self, self_rc: &Rc<RefCell<Self>>, selector: &mut Selector) -> io::Result<()> {
+    fn accept_client(&mut self, selector: &mut Selector) -> io::Result<()> {
         let (stream, _) = self.tcp_listener.accept()?;
         let client_id = self.next_client_id;
         self.next_client_id += 1;
-        let weak = Rc::downgrade(self_rc);
+        let weak = self.self_weak.clone();
         let on_client_closed = Box::new(move |client: &Client| {
             if let Some(rc) = weak.upgrade() {
                 let mut tunnel_server = rc.borrow_mut();
@@ -68,15 +71,17 @@ impl TunnelServer {
         self.clients.swap_remove(index);
     }
 
-    fn on_ready(&mut self, self_rc: &Rc<RefCell<Self>>, selector: &mut Selector, _: Event) {
-        if let Err(err) = self.accept_client(self_rc, selector) {
-            error!(target: TAG, "Cannot accept client: {}", err);
-        }
-    }
-
     pub fn clean_up(&mut self, selector: &mut Selector) {
         for client in &self.clients {
             client.borrow_mut().clean_expired_connections(selector);
+        }
+    }
+}
+
+impl EventHandler for TunnelServer {
+    fn on_ready(&mut self, selector: &mut Selector, _: Event) {
+        if let Err(err) = self.accept_client(selector) {
+            error!(target: TAG, "Cannot accept client: {}", err);
         }
     }
 }

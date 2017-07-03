@@ -46,7 +46,7 @@ impl Client {
 
         {
             let mut self_ref = rc.borrow_mut();
-            // keep a shared reference to this client
+            // keep a shared reference to this
             self_ref.self_weak = Rc::downgrade(&rc);
             // set client as router owner
             self_ref.router.set_client(Rc::downgrade(&rc));
