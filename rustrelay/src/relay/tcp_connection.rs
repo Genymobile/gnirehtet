@@ -12,6 +12,7 @@ use super::client::Client;
 use super::connection::{self, Connection, ConnectionId};
 use super::ipv4_header::IPv4Header;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
+use super::packet_storage::PacketStorage;
 use super::packetizer::Packetizer;
 use super::selector::Selector;
 use super::stream_buffer::StreamBuffer;
@@ -53,32 +54,6 @@ enum TCPState {
     Established,
     CloseWait,
     LastAck,
-}
-
-#[derive(Clone)]
-struct PacketStorage(Rc<RefCell<Option<Box<[u8]>>>>);
-
-impl PacketStorage {
-    fn new() -> Self {
-        PacketStorage(Rc::new(RefCell::new(None)))
-    }
-
-    fn set(&mut self, raw: &[u8]) {
-        let data = raw.to_vec().into_boxed_slice();
-        *self.0.borrow_mut() = Some(data);
-    }
-
-    //fn set_packet(&mut self, ipv4_packet: &IPv4Packet) {
-    //   self.set(ipv4_packet.raw());
-    //}
-
-    fn get(&self) -> Ref<Option<Box<[u8]>>> {
-        self.0.borrow()
-    }
-
-    fn has(&self) -> bool {
-        self.get().is_some()
-    }
 }
 
 impl TCB {
