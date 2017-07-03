@@ -125,7 +125,13 @@ impl TCPConnection {
     }
 
     fn close(&mut self, selector: &mut Selector) {
+        self.closed = true;
+        self.disconnect(selector);
 
+        // route is embedded in router which is embedded in client: the client necessarily exists
+        let client_rc = self.client.upgrade().expect("expected client not found");
+        let mut client = client_rc.borrow_mut();
+        client.router().remove(&self.id);
     }
 
     fn process_send(&mut self, selector: &mut Selector) {
