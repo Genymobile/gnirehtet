@@ -151,9 +151,7 @@ impl TCPConnection {
         let non_lexical_lifetime_workaround = match self.network_to_client.packetize_read(&mut self.stream, Some(max_payload_length)) {
             Ok(Some(ipv4_packet)) => {
                 // TODO packet source pull
-                if let Err(err) = TCPConnection::send_to_client(&self.client, selector, &ipv4_packet) {
-                    warn!(target: TAG, "{} Cannot send packet to client: {}", &self.id, err);
-                }
+                TCPConnection::send_to_client_ignore(&self.id, &self.client, selector, &ipv4_packet);
                 Ok(Some(()))
             },
             Ok(None) => Ok(None),
@@ -175,15 +173,18 @@ impl TCPConnection {
         client.send_to_client(selector, &ipv4_packet)
     }
 
+    fn send_to_client_ignore(id: &ConnectionId, client: &Weak<RefCell<Client>>, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+        if let Err(err) = TCPConnection::send_to_client(client, selector, ipv4_packet) {
+            warn!(target: TAG, "{} Cannot send packet to client: {}", id, err);
+        }
+    }
+
     fn eof(&mut self, selector: &mut Selector) {
         self.tcb.remote_closed = true;
         if self.tcb.state == TCPState::CloseWait {
             let ipv4_packet = TCPConnection::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_FIN);
             self.tcb.sequence_number += 1; // FIN counts for 1 byte
-
-            if let Err(err) = TCPConnection::send_to_client(&self.client, selector, &ipv4_packet) {
-                warn!(target: TAG, "{} Cannot send packet to client: {}", &self.id, err);
-            }
+            TCPConnection::send_to_client_ignore(&self. id, &self.client, selector, &ipv4_packet);
         }
     }
 
@@ -211,7 +212,11 @@ impl TCPConnection {
     }
 
     fn reset_connection(&mut self, selector: &mut Selector) {
-        // TODO
+        {
+            let ipv4_packet = TCPConnection::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_RST);
+            TCPConnection::send_to_client_ignore(&self.id, &self.client, selector, &ipv4_packet);
+        }
+        self.close(selector);
     }
 
     fn update_interests(&mut self, selector: &mut Selector) {
