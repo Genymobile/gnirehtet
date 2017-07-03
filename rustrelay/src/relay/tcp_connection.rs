@@ -129,7 +129,7 @@ impl TCPConnection {
         let remaining_client_window = self.get_remaining_client_window();
         assert!(remaining_client_window > 0, "process_received() must not be called when window == 0");
         let max_payload_length = cmp::min(remaining_client_window, MAX_PAYLOAD_LENGTH) as usize;
-        self.update_headers(tcp_header::FLAG_ACK | tcp_header::FLAG_PSH);
+        TCPConnection::update_headers(&mut self.network_to_client, self.sequence_number, self.acknowledgement_number, tcp_header::FLAG_ACK | tcp_header::FLAG_PSH);
         // the packet is bound to the lifetime of self, so we cannot borrow self to call methods
         // defer the other branches in a separate match-block
         let non_lexical_lifetime_workaround = match self.network_to_client.packetize_read(&mut self.stream, Some(max_payload_length)) {
@@ -154,34 +154,34 @@ impl TCPConnection {
     fn eof(&mut self, selector: &mut Selector) {
         self.remote_closed = true;
         if self.state == TCPState::CloseWait {
-            let id = self.id;
-            let ipv4_packet = self.create_empty_response_packet(tcp_header::FLAG_FIN);
+            let ipv4_packet = TCPConnection::create_empty_response_packet(&self.id, &mut self.network_to_client, self.sequence_number, self.acknowledgement_number, tcp_header::FLAG_FIN);
             self.sequence_number += 1; // FIN counts for 1 byte
 
             let client_rc = self.client.upgrade().expect("expected client not found");
-            if let Err(err) = client_rc.borrow_mut().send_to_client(selector, &ipv4_packet) {
-                warn!(target: TAG, "{} Cannot send packet to client: {}", id, err);
+            let mut client = client_rc.borrow_mut();
+            if let Err(err) = client.send_to_client(selector, &ipv4_packet) {
+                warn!(target: TAG, "{} Cannot send packet to client: {}", &self.id, err);
             }
         }
     }
 
-    fn update_headers(&mut self, flags: u16) {
-        if let TransportHeaderMut::TCP(ref mut tcp_header) = self.network_to_client.transport_header_mut() {
+    fn update_headers(packetizer: &mut Packetizer, sequence_number: u32, acknowledgement_number: u32, flags: u16) {
+        if let TransportHeaderMut::TCP(ref mut tcp_header) = packetizer.transport_header_mut() {
+            tcp_header.set_sequence_number(sequence_number);
+            tcp_header.set_acknowledgement_number(acknowledgement_number);
             tcp_header.set_flags(flags);
-            tcp_header.set_sequence_number(self.sequence_number);
-            tcp_header.set_acknowledgement_number(self.acknowledgement_number);
         } else {
             panic!("Not a TCP header");
         }
     }
 
-    fn create_empty_response_packet(&mut self, flags: u16) -> IPv4Packet {
-        self.update_headers(flags);
-        debug!(target: TAG, "{} Forging empty response (flags={}) {}", self.id, flags, self.numbers());
+    fn create_empty_response_packet<'a>(id: &ConnectionId, packetizer: &'a mut Packetizer, sequence_number: u32, acknowledgement_number: u32, flags: u16) -> IPv4Packet<'a> {
+        TCPConnection::update_headers(packetizer, sequence_number, acknowledgement_number, flags);
+        debug!(target: TAG, "{} Forging empty response (flags={}) {}", id, flags, "TODO");
         if (flags & tcp_header::FLAG_ACK) != 0 {
-            debug!(target: TAG, "{} Acking {}", self.id, self.numbers());
+            debug!(target: TAG, "{} Acking {}", id, "TODO");
         }
-        let ipv4_packet = self.network_to_client.packetize_empty_payload();
+        let ipv4_packet = packetizer.packetize_empty_payload();
         if log_enabled!(target: TAG, LogLevel::Trace) {
             binary::to_string(ipv4_packet.raw());
         }
