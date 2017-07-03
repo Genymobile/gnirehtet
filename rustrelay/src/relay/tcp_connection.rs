@@ -101,7 +101,7 @@ impl TCB {
 
 impl TCPConnection {
     pub fn new(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: &IPv4Header, transport_header: &TransportHeader) -> io::Result<Rc<RefCell<Self>>> {
-        let stream = TCPConnection::create_stream(&id)?;
+        let stream = Self::create_stream(&id)?;
 
         if let TransportHeader::TCP(ref tcp_header) = *transport_header {
             // shrink the TCP options to pass a minimal refrence header to the packetizer
@@ -179,13 +179,13 @@ impl TCPConnection {
         let remaining_client_window = self.get_remaining_client_window();
         assert!(remaining_client_window > 0, "process_received() must not be called when window == 0");
         let max_payload_length = cmp::min(remaining_client_window, MAX_PAYLOAD_LENGTH) as usize;
-        TCPConnection::update_headers(&mut self.network_to_client, &self.tcb, tcp_header::FLAG_ACK | tcp_header::FLAG_PSH);
+        Self::update_headers(&mut self.network_to_client, &self.tcb, tcp_header::FLAG_ACK | tcp_header::FLAG_PSH);
         // the packet is bound to the lifetime of self, so we cannot borrow self to call methods
         // defer the other branches in a separate match-block
         let non_lexical_lifetime_workaround = match self.network_to_client.packetize_read(&mut self.stream, Some(max_payload_length)) {
             Ok(Some(ipv4_packet)) => {
                 // TODO packet source pull
-                TCPConnection::send_to_client_ignore(&self.id, &self.client, selector, &ipv4_packet);
+                Self::send_to_client_ignore(&self.id, &self.client, selector, &ipv4_packet);
                 Ok(Some(()))
             },
             Ok(None) => Ok(None),
@@ -208,7 +208,7 @@ impl TCPConnection {
     }
 
     fn send_to_client_ignore(id: &ConnectionId, client: &Weak<RefCell<Client>>, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
-        if let Err(err) = TCPConnection::send_to_client(client, selector, ipv4_packet) {
+        if let Err(err) = Self::send_to_client(client, selector, ipv4_packet) {
             warn!(target: TAG, "{} Cannot send packet to client: {}", id, err);
         }
     }
@@ -216,9 +216,9 @@ impl TCPConnection {
     fn eof(&mut self, selector: &mut Selector) {
         self.tcb.remote_closed = true;
         if self.tcb.state == TCPState::CloseWait {
-            let ipv4_packet = TCPConnection::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_FIN);
+            let ipv4_packet = Self::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_FIN);
             self.tcb.sequence_number += 1; // FIN counts for 1 byte
-            TCPConnection::send_to_client_ignore(&self. id, &self.client, selector, &ipv4_packet);
+            Self::send_to_client_ignore(&self. id, &self.client, selector, &ipv4_packet);
         }
     }
 
@@ -233,7 +233,7 @@ impl TCPConnection {
     }
 
     fn create_empty_response_packet<'a>(id: &ConnectionId, packetizer: &'a mut Packetizer, tcb: &TCB, flags: u16) -> IPv4Packet<'a> {
-        TCPConnection::update_headers(packetizer, tcb, flags);
+        Self::update_headers(packetizer, tcb, flags);
         debug!(target: TAG, "{} Forging empty response (flags={}) {}", id, flags, tcb.numbers());
         if (flags & tcp_header::FLAG_ACK) != 0 {
             debug!(target: TAG, "{} Acking {}", id, tcb.numbers());
@@ -247,8 +247,8 @@ impl TCPConnection {
 
     fn reset_connection(&mut self, selector: &mut Selector) {
         {
-            let ipv4_packet = TCPConnection::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_RST);
-            TCPConnection::send_to_client_ignore(&self.id, &self.client, selector, &ipv4_packet);
+            let ipv4_packet = Self::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_RST);
+            Self::send_to_client_ignore(&self.id, &self.client, selector, &ipv4_packet);
         }
         self.close(selector);
     }
