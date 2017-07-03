@@ -1,5 +1,6 @@
 use mio::*;
 use std::cell::RefCell;
+use std::fmt::Debug;
 use std::io;
 use std::rc::Rc;
 use std::time::Duration;
@@ -24,7 +25,7 @@ impl EventHandler for Rc<RefCell<EventHandler>> {
 
 pub struct Selector {
     poll: Poll,
-    handlers: Slab<Rc<EventHandler>, Token>,
+    handlers: Slab<Box<EventHandler>, Token>,
 }
 
 impl Selector {
@@ -35,11 +36,10 @@ impl Selector {
         })
     }
 
-    pub fn register<E, H>(&mut self, handle: &E, handler: H,
+    pub fn register<E>(&mut self, handle: &E, handler: Box<EventHandler>,
                    interest: Ready, opts: PollOpt) -> io::Result<Token>
-            where E: Evented + ?Sized,
-                  H: EventHandler + 'static {
-        let token = self.handlers.insert(Rc::new(handler))
+            where E: Evented + ?Sized {
+        let token = self.handlers.insert(handler)
                         .map_err(|_| io::Error::new(io::ErrorKind::Other, "Cannot allocate slab slot"))?;
         self.poll.register(handle, token, interest, opts)?;
         Ok(token)
@@ -62,7 +62,10 @@ impl Selector {
     }
 
     pub fn run_handler(&mut self, event: Event) {
-        let handler = self.handlers.get_mut(event.token()).unwrap().clone();
+        let mut handler = self.handlers.remove(event.token()).expect("Token not found");
         handler.on_ready(self, event);
+        if let Err(_) = self.handlers.insert(handler) {
+            panic!("Cannot allocate slab slot");
+        }
     }
 }
