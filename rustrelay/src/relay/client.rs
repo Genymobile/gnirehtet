@@ -1,5 +1,6 @@
 use std::cell::RefCell;
 use std::io::{self, Write};
+use std::mem;
 use std::net::Shutdown;
 use std::rc::Rc;
 use mio::net::TcpStream;
@@ -9,6 +10,7 @@ use super::binary;
 use super::close_listener::CloseListener;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
 use super::ipv4_packet_buffer::IPv4PacketBuffer;
+use super::packet_source::PacketSource;
 use super::router::Router;
 use super::selector::{EventHandler, Selector};
 use super::stream_buffer::StreamBuffer;
@@ -24,6 +26,7 @@ pub struct Client {
     router: Router,
     close_listener: Box<CloseListener<Client>>,
     closed: bool,
+    pending_packet_sources: Vec<Rc<RefCell<PacketSource>>>,
     // number of remaining bytes of "id" to send to the client before relaying any data
     pending_id_bytes: usize,
 }
@@ -39,6 +42,7 @@ impl Client {
             router: Router::new(),
             closed: false,
             close_listener: close_listener,
+            pending_packet_sources: Vec::new(),
             pending_id_bytes: 4,
         }));
 
@@ -90,7 +94,7 @@ impl Client {
             }
         } else {
             match self.write() {
-                Ok(_) => self.process_pending(),
+                Ok(_) => self.process_pending(selector),
                 Err(_) => {
                     error!(target: TAG, "Cannot write");
                     self.close(selector);
@@ -122,6 +126,10 @@ impl Client {
             warn!(target: TAG, "Client buffer full");
             Err(io::Error::new(io::ErrorKind::WouldBlock, "Client buffer full"))
         }
+    }
+
+    pub fn register_pending_packet_source(&mut self, source: Rc<RefCell<PacketSource>>) {
+        self.pending_packet_sources.push(source);
     }
 
     fn send_id(&mut self) -> io::Result<()> {
@@ -166,8 +174,34 @@ impl Client {
         }
     }
 
-    fn process_pending(&mut self) {
-        // TODO
+    fn process_pending(&mut self, selector: &mut Selector) {
+        let mut vec = Vec::new();
+        mem::swap(&mut self.pending_packet_sources, &mut vec);
+        for pending in vec.into_iter() {
+            let consumed = {
+                let mut source = pending.borrow_mut();
+                let result = {
+                    let ipv4_packet = source.get().expect("Unexpected pending source with no packet");
+                    self.send_to_client(selector, &ipv4_packet)
+                };
+                match result {
+                    Ok(_) => {
+                        source.next(selector);
+                        true
+                    },
+                    Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
+                        false
+                    },
+                    Err(err) => {
+                        panic!("Cannot send packet to client for unknown reason");
+                    }
+                }
+            };
+            if !consumed {
+                // keep it pending
+                self.pending_packet_sources.push(pending);
+            }
+        }
     }
 
     pub fn clean_expired_connections(&mut self, selector: &mut Selector) {

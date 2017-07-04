@@ -71,7 +71,7 @@ impl UDPConnection {
         self.disconnect(selector);
 
         // route is embedded in router which is embedded in client: the client necessarily exists
-        let client_rc = self.client.upgrade().expect("expected client not found");
+        let client_rc = self.client.upgrade().expect("Expected client not found");
         let mut client = client_rc.borrow_mut();
         client.router().remove(&self.id);
     }
@@ -92,7 +92,7 @@ impl UDPConnection {
 
     fn read(&mut self, selector: &mut Selector) -> io::Result<()> {
         let ipv4_packet = self.network_to_client.packetize(&mut self.socket)?;
-        let client_rc = self.client.upgrade().expect("expected client not found");
+        let client_rc = self.client.upgrade().expect("Expected client not found");
         match client_rc.borrow_mut().send_to_client(selector, &ipv4_packet) {
             Ok(_) => {
                 debug!(target: TAG, "{} Packet ({} bytes) sent to client", self.id, ipv4_packet.length());
