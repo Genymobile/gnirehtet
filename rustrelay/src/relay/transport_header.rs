@@ -27,14 +27,17 @@ impl TransportHeaderData {
         }
     }
 
+    #[inline]
     pub fn bind<'c, 'a: 'c, 'b: 'c>(&'a self, raw: &'b [u8]) -> TransportHeader<'c> {
         TransportHeader::new(raw, self)
     }
 
+    #[inline]
     pub fn bind_mut<'c, 'a: 'c, 'b: 'c>(&'a mut self, raw: &'b mut [u8]) -> TransportHeaderMut<'c> {
         TransportHeaderMut::new(raw, self)
     }
 
+    #[inline]
     pub fn source_port(&self) -> u16 {
         match *self {
             TransportHeaderData::TCP(ref tcp_header_data) => tcp_header_data.source_port(),
@@ -42,6 +45,7 @@ impl TransportHeaderData {
         }
     }
 
+    #[inline]
     pub fn destination_port(&self) -> u16 {
         match *self {
             TransportHeaderData::TCP(ref tcp_header_data) => tcp_header_data.destination_port(),
@@ -49,6 +53,7 @@ impl TransportHeaderData {
         }
     }
 
+    #[inline]
     pub fn header_length(&self) -> u8 {
         match *self {
             TransportHeaderData::TCP(ref tcp_header_data) => tcp_header_data.header_length(),
@@ -80,6 +85,7 @@ macro_rules! transport_header_common {
     ($name:ident, $raw_type:ty, $data_type:ty) => {
         // for readability, declare structs manually outside the macro
         impl<'a> $name<'a> {
+            #[inline]
             pub fn raw(&self) -> &[u8] {
                 match *self {
                     $name::TCP(ref tcp_header) => tcp_header.raw(),
@@ -87,6 +93,7 @@ macro_rules! transport_header_common {
                 }
             }
 
+            #[inline]
             pub fn data_clone(&self) -> TransportHeaderData {
                 match *self {
                     $name::TCP(ref tcp_header) => tcp_header.data().clone().into(),
@@ -94,6 +101,7 @@ macro_rules! transport_header_common {
                 }
             }
 
+            #[inline]
             pub fn source_port(&self) -> u16 {
                 match *self {
                     $name::TCP(ref tcp_header) => tcp_header.data().source_port(),
@@ -101,6 +109,7 @@ macro_rules! transport_header_common {
                 }
             }
 
+            #[inline]
             pub fn destination_port(&self) -> u16 {
                 match *self {
                     $name::TCP(ref tcp_header) => tcp_header.data().destination_port(),
@@ -108,6 +117,7 @@ macro_rules! transport_header_common {
                 }
             }
 
+            #[inline]
             pub fn header_length(&self) -> u8 {
                 match *self {
                     $name::TCP(ref tcp_header) => tcp_header.data().header_length(),
@@ -135,6 +145,7 @@ transport_header_common!(TransportHeaderMut, &'a mut [u8], &'a mut TransportHead
 
 // additional methods for the mutable version
 impl<'a> TransportHeaderMut<'a> {
+    #[inline]
     pub fn raw_mut(&mut self) -> &mut [u8] {
         match *self {
             TransportHeaderMut::TCP(ref mut tcp_header) => tcp_header.raw_mut(),
@@ -149,6 +160,7 @@ impl<'a> TransportHeaderMut<'a> {
         }
     }*/
 
+    #[inline]
     pub fn swap_source_and_destination(&mut self) {
         match *self {
             TransportHeaderMut::TCP(ref mut tcp_header) => tcp_header.swap_source_and_destination(),
@@ -156,6 +168,7 @@ impl<'a> TransportHeaderMut<'a> {
         }
     }
 
+    #[inline]
     pub fn set_payload_length(&mut self, payload_length: u16) {
         match *self {
             TransportHeaderMut::UDP(ref mut udp_header) => udp_header.set_payload_length(payload_length),
@@ -163,6 +176,7 @@ impl<'a> TransportHeaderMut<'a> {
         }
     }
 
+    #[inline]
     pub fn update_checksum(&mut self, ipv4_header_data: &IPv4HeaderData, payload: &[u8]) {
         match *self {
             TransportHeaderMut::TCP(ref mut tcp_header) => tcp_header.update_checksum(ipv4_header_data, payload),
