@@ -203,7 +203,7 @@ impl TCPConnection {
         if self.tcb.state == TCPState::CloseWait {
             let ipv4_packet = Self::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_FIN);
             self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
-            Self::send_to_client_ignore(&self. id, &self.client, selector, &ipv4_packet);
+            Self::send_to_client_ignore(&self.id, &self.client, selector, &ipv4_packet);
         }
     }
 
@@ -215,6 +215,33 @@ impl TCPConnection {
         } else {
             panic!("Not a TCP header");
         }
+    }
+
+    fn handle_packet(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+        if let Some(TransportHeader::TCP(tcp_header)) = ipv4_packet.transport_header() {
+            if self.tcb.state == TCPState::Init {
+                self.handle_first_packet(selector, ipv4_packet);
+            } else if tcp_header.is_syn() {
+                self.handle_duplicate_syn(selector, ipv4_packet);
+            } else if tcp_header.sequence_number() != self.tcb.acknowledgement_number.0 {
+                // ignore packet already received or out-of-order, retransmission is already
+                // managed by both sides
+                Self::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_SYN);
+                Self::send_to_client_ignore(&self.id, &self.client, selector, &ipv4_packet);
+            } else {
+
+            }
+        } else {
+            panic!("Not a TCP packet");
+        }
+    }
+
+    fn handle_first_packet(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+        // TODO
+    }
+
+    fn handle_duplicate_syn(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+        // TODO
     }
 
     fn create_empty_response_packet<'a>(id: &ConnectionId, packetizer: &'a mut Packetizer, tcb: &TCB, flags: u16) -> IPv4Packet<'a> {
@@ -273,7 +300,8 @@ impl Connection for TCPConnection {
     }
 
     fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
-        // TODO
+        self.handle_packet(selector, ipv4_packet);
+        self.update_interests(selector);
     }
 
     fn disconnect(&mut self, selector: &mut Selector) {
