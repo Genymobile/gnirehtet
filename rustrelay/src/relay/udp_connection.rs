@@ -14,7 +14,7 @@ use super::datagram_buffer::DatagramBuffer;
 use super::ipv4_header::IPv4Header;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
 use super::packetizer::Packetizer;
-use super::selector::Selector;
+use super::selector::{EventHandler, Selector};
 use super::transport_header::TransportHeader;
 
 const TAG: &'static str = "UDPConnection";
@@ -48,12 +48,10 @@ impl UDPConnection {
         }));
 
         {
-            let rc_clone = rc.clone();
-            let handler = Box::new(move |selector: &mut Selector, ready| {
-                let mut self_ref = rc_clone.borrow_mut();
-                self_ref.on_ready(selector, ready);
-            });
             let mut self_ref = rc.borrow_mut();
+
+            // rc is an EventHandler, register() expects a Box<EventHandler>
+            let handler = Box::new(rc.clone());
             let token = selector.register(&self_ref.socket, handler, Ready::readable(), PollOpt::level())?;
             self_ref.token = token;
         }
@@ -123,19 +121,6 @@ impl UDPConnection {
         }
     }
 
-    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
-        assert!(!self.closed);
-        self.touch();
-        let ready = event.readiness();
-        if ready.is_writable() {
-            self.process_send(selector);
-        }
-        if !self.closed && ready.is_readable() {
-            self.process_receive(selector);
-        }
-        self.update_interests(selector);
-    }
-
     fn touch(&mut self) {
         self.idle_since = Instant::now();
     }
@@ -163,5 +148,20 @@ impl Connection for UDPConnection {
 
     fn is_expired(&self) -> bool {
         self.idle_since.elapsed().as_secs() > IDLE_TIMEOUT_SECONDS
+    }
+}
+
+impl EventHandler for UDPConnection {
+    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
+        assert!(!self.closed);
+        self.touch();
+        let ready = event.readiness();
+        if ready.is_writable() {
+            self.process_send(selector);
+        }
+        if !self.closed && ready.is_readable() {
+            self.process_receive(selector);
+        }
+        self.update_interests(selector);
     }
 }
