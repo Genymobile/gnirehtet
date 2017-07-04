@@ -81,6 +81,11 @@ impl TCPHeaderData {
     }
 
     #[inline]
+    pub fn window(&self) -> u16 {
+        self.window
+    }
+
+    #[inline]
     pub fn flags(&self) -> u16 {
         self.flags
     }
@@ -161,6 +166,11 @@ macro_rules! tcp_header_common {
             #[inline]
             pub fn acknowledgement_number(&self) -> u32 {
                 self.data.acknowledgement_number
+            }
+
+            #[inline]
+            pub fn window(&self) -> u16 {
+                self.data.window
             }
 
             #[inline]
