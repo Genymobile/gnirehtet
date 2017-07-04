@@ -31,32 +31,39 @@ impl<'a> IPv4Packet<'a> {
         }
     }
 
+    #[inline]
     pub fn raw(&self) -> &[u8] {
         self.raw
     }
 
+    #[inline]
     pub fn raw_mut(&mut self) -> &mut [u8] {
         self.raw
     }
 
+    #[inline]
     pub fn ipv4_header_data(&self) -> &IPv4HeaderData {
         &self.ipv4_header_data
     }
 
+    #[inline]
     pub fn ipv4_header(&self) -> IPv4Header {
         let slice = &self.raw[..self.ipv4_header_data.header_length() as usize];
         self.ipv4_header_data.bind(slice)
     }
 
+    #[inline]
     pub fn ipv4_header_mut(&mut self) -> IPv4HeaderMut {
         let slice = &mut self.raw[..self.ipv4_header_data.header_length() as usize];
         self.ipv4_header_data.bind_mut(slice)
     }
 
+    #[inline]
     pub fn transport_header_data(&self) -> &Option<TransportHeaderData> {
         &self.transport_header_data
     }
 
+    #[inline]
     pub fn transport_header(&self) -> Option<TransportHeader> {
         if let Some(ref transport_header_data) = self.transport_header_data {
             let start = self.ipv4_header_data.header_length() as usize;
@@ -74,6 +81,7 @@ impl<'a> IPv4Packet<'a> {
         })*/
     }
 
+    #[inline]
     pub fn transport_header_mut(&mut self) -> Option<TransportHeaderMut> {
         if let Some(ref mut transport_header_data) = self.transport_header_data {
             let start = self.ipv4_header_data.header_length() as usize;
@@ -131,10 +139,12 @@ impl<'a> IPv4Packet<'a> {
         }
     }
 
+    #[inline]
     pub fn is_valid(&self) -> bool {
         self.transport_header_data.is_some()
     }
 
+    #[inline]
     pub fn length(&self) -> u16 {
         self.ipv4_header_data.total_length()
     }
@@ -186,6 +196,7 @@ impl<'a> IPv4Packet<'a> {
         }
     }
 
+    #[inline]
     pub fn swap_source_and_destination(&mut self) {
         self.ipv4_header_mut().swap_source_and_destination();
         if let Some(mut transport_header) = self.transport_header_mut() {

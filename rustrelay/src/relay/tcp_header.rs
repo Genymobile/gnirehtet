@@ -45,58 +45,72 @@ impl TCPHeaderData {
         }
     }
 
+    #[inline]
     pub fn bind<'c, 'a: 'c, 'b: 'c>(&'a self, raw: &'b [u8]) -> TCPHeader<'c> {
         TCPHeader::new(raw, self)
     }
 
+    #[inline]
     pub fn bind_mut<'c, 'a: 'c, 'b: 'c>(&'a mut self, raw: &'b mut [u8]) -> TCPHeaderMut<'c> {
         TCPHeaderMut::new(raw, self)
     }
 
+    #[inline]
     pub fn header_length(&self) -> u8 {
         self.header_length
     }
 
+    #[inline]
     pub fn source_port(&self) -> u16 {
         self.source_port
     }
 
+    #[inline]
     pub fn destination_port(&self) -> u16 {
         self.destination_port
     }
 
+    #[inline]
     pub fn sequence_number(&self) -> u32 {
         self.sequence_number
     }
 
+    #[inline]
     pub fn acknowledgement_number(&self) -> u32 {
         self.acknowledgement_number
     }
 
+    #[inline]
     pub fn flags(&self) -> u16 {
         self.flags
     }
 
+    #[inline]
     pub fn is_fin(&self) -> bool {
         self.flags & FLAG_FIN != 0
     }
 
+    #[inline]
     pub fn is_syn(&self) -> bool {
         self.flags & FLAG_SYN != 0
     }
 
+    #[inline]
     pub fn is_rst(&self) -> bool {
         self.flags & FLAG_RST != 0
     }
 
+    #[inline]
     pub fn is_psh(&self) -> bool {
         self.flags & FLAG_PSH != 0
     }
 
+    #[inline]
     pub fn is_ack(&self) -> bool {
         self.flags & FLAG_ACK != 0
     }
 
+    #[inline]
     pub fn is_urg(&self) -> bool {
         self.flags & FLAG_URG != 0
     }
@@ -114,58 +128,72 @@ macro_rules! tcp_header_common {
                 }
             }
 
+            #[inline]
             pub fn raw(&self) -> &[u8] {
                 self.raw
             }
 
+            #[inline]
             pub fn data(&self) -> &TCPHeaderData {
                 self.data
             }
 
+            #[inline]
             pub fn header_length(&self) -> u8 {
                 self.data.header_length
             }
 
+            #[inline]
             pub fn source_port(&self) -> u16 {
                 self.data.source_port
             }
 
+            #[inline]
             pub fn destination_port(&self) -> u16 {
                 self.data.destination_port
             }
 
+            #[inline]
             pub fn sequence_number(&self) -> u32 {
                 self.data.sequence_number
             }
 
+            #[inline]
             pub fn acknowledgement_number(&self) -> u32 {
                 self.data.acknowledgement_number
             }
 
+            #[inline]
             pub fn flags(&self) -> u16 {
                 self.data.flags
             }
 
+            #[inline]
             pub fn is_fin(&self) -> bool {
                 self.data.is_fin()
             }
 
+            #[inline]
             pub fn is_syn(&self) -> bool {
                 self.data.is_syn()
             }
 
+            #[inline]
             pub fn is_rst(&self) -> bool {
                 self.data.is_rst()
             }
 
+            #[inline]
             pub fn is_psh(&self) -> bool {
                 self.data.is_psh()
             }
 
+            #[inline]
             pub fn is_ack(&self) -> bool {
                 self.data.is_ack()
             }
 
+            #[inline]
             pub fn is_urg(&self) -> bool {
                 self.data.is_urg()
             }
@@ -178,19 +206,23 @@ tcp_header_common!(TCPHeaderMut, &'a mut [u8], &'a mut TCPHeaderData);
 
 // additional methods for the mutable version
 impl<'a> TCPHeaderMut<'a> {
+    #[inline]
     pub fn raw_mut(&mut self) -> &mut [u8] {
         self.raw
     }
 
+    #[inline]
     pub fn data_mut(&mut self) -> &mut TCPHeaderData {
         self.data
     }
 
+    #[inline]
     pub fn set_source_port(&mut self, source_port: u16) {
         self.data.source_port = source_port;
         BigEndian::write_u16(&mut self.raw[0..2], source_port);
     }
 
+    #[inline]
     pub fn set_destination_port(&mut self, destination_port: u16) {
         self.data.destination_port = destination_port;
         BigEndian::write_u16(&mut self.raw[2..4], destination_port);
@@ -203,16 +235,19 @@ impl<'a> TCPHeaderMut<'a> {
         }
     }
 
+    #[inline]
     pub fn set_sequence_number(&mut self, sequence_number: u32) {
         self.data.sequence_number = sequence_number;
         BigEndian::write_u32(&mut self.raw[4..8], sequence_number);
     }
 
+    #[inline]
     pub fn set_acknowledgement_number(&mut self, acknowledgement_number: u32) {
         self.data.acknowledgement_number = acknowledgement_number;
         BigEndian::write_u32(&mut self.raw[8..12], acknowledgement_number);
     }
 
+    #[inline]
     pub fn set_flags(&mut self, flags: u16) {
         self.data.flags = flags;
         let mut data_offset_and_flags = BigEndian::read_u16(&mut self.raw[12..14]);
@@ -221,10 +256,12 @@ impl<'a> TCPHeaderMut<'a> {
         BigEndian::write_u16(&mut self.raw[12..14], data_offset_and_flags);
     }
 
+    #[inline]
     pub fn shrink_options(&mut self) {
         self.set_data_offset(5);
     }
 
+    #[inline]
     fn set_data_offset(&mut self, data_offset: u8) {
         let mut data_offset_and_flags = BigEndian::read_u16(&mut self.raw[12..14]);
         data_offset_and_flags = data_offset_and_flags & 0x0FFF | ((data_offset as u16) << 12);
@@ -232,10 +269,12 @@ impl<'a> TCPHeaderMut<'a> {
         self.data.header_length = data_offset << 2;
     }
 
+    #[inline]
     fn checksum(&self) -> u16 {
         BigEndian::read_u16(&self.raw[16..18])
     }
 
+    #[inline]
     fn set_checksum(&mut self, checksum: u16) {
         BigEndian::write_u16(&mut self.raw[16..18], checksum);
     }

@@ -28,18 +28,22 @@ impl UDPHeaderData {
         }
     }
 
+    #[inline]
     pub fn bind<'c, 'a: 'c, 'b: 'c>(&'a self, raw: &'b [u8]) -> UDPHeader<'c> {
         UDPHeader::new(raw, self)
     }
 
+    #[inline]
     pub fn bind_mut<'c, 'a: 'c, 'b: 'c>(&'a mut self, raw: &'b mut [u8]) -> UDPHeaderMut<'c> {
         UDPHeaderMut::new(raw, self)
     }
 
+    #[inline]
     pub fn source_port(&self) -> u16 {
         self.source_port
     }
 
+    #[inline]
     pub fn destination_port(&self) -> u16 {
         self.destination_port
     }
@@ -57,18 +61,22 @@ macro_rules! udp_header_common {
                 }
             }
 
+            #[inline]
             pub fn raw(&self) -> &[u8] {
                 self.raw
             }
 
+            #[inline]
             pub fn data(&self) -> &UDPHeaderData {
                 self.data
             }
 
+            #[inline]
             pub fn source_port(&self) -> u16 {
                 self.data.source_port
             }
 
+            #[inline]
             pub fn destination_port(&self) -> u16 {
                 self.data.destination_port
             }
@@ -81,19 +89,23 @@ udp_header_common!(UDPHeaderMut, &'a mut [u8], &'a mut UDPHeaderData);
 
 // additional methods for the mutable version
 impl<'a> UDPHeaderMut<'a> {
+    #[inline]
     pub fn raw_mut(&mut self) -> &mut [u8] {
         self.raw
     }
 
+    #[inline]
     pub fn data_mut(&mut self) -> &mut UDPHeaderData {
         self.data
     }
 
+    #[inline]
     pub fn set_source_port(&mut self, source_port: u16) {
         self.data.source_port = source_port;
         BigEndian::write_u16(&mut self.raw[0..2], source_port);
     }
 
+    #[inline]
     pub fn set_destination_port(&mut self, destination_port: u16) {
         self.data.destination_port = destination_port;
         BigEndian::write_u16(&mut self.raw[2..4], destination_port);
@@ -106,15 +118,18 @@ impl<'a> UDPHeaderMut<'a> {
         }
     }
 
+    #[inline]
     pub fn set_payload_length(&mut self, payload_length: u16) {
         let total_length = UDP_HEADER_LENGTH as u16 + payload_length;
         BigEndian::write_u16(&mut self.raw[4..6], total_length);
     }
 
+    #[inline]
     fn set_checksum(&mut self, checksum: u16) {
         BigEndian::write_u16(&mut self.raw[6..8], checksum);
     }
 
+    #[inline]
     pub fn update_checksum(&mut self, _ipv4_header_data: &IPv4HeaderData, _payload: &[u8]) {
         // disable checksum validation
         self.set_checksum(0);
