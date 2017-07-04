@@ -2,6 +2,7 @@ use std::cell::{Ref, RefCell};
 use std::cmp;
 use std::io;
 use std::net::{Ipv4Addr, SocketAddr};
+use std::num::Wrapping;
 use std::rc::{Rc, Weak};
 use log::LogLevel;
 use mio::{Event, PollOpt, Ready, Token};
@@ -39,8 +40,8 @@ pub struct TCPConnection {
 struct TCB {
     state: TCPState,
     syn_sequence_number: u32,
-    sequence_number: u32,
-    acknowledgement_number: u32,
+    sequence_number: Wrapping<u32>,
+    acknowledgement_number: Wrapping<u32>,
     their_acknowledgement_number: u32,
     client_window: u16,
     remote_closed: bool,
@@ -61,8 +62,8 @@ impl TCB {
         Self {
             state: TCPState::Init,
             syn_sequence_number: 0,
-            sequence_number: 0,
-            acknowledgement_number: 0,
+            sequence_number: Wrapping(0),
+            acknowledgement_number: Wrapping(0),
             their_acknowledgement_number: 0,
             client_window: 0,
             remote_closed: false,
@@ -193,15 +194,15 @@ impl TCPConnection {
         self.tcb.remote_closed = true;
         if self.tcb.state == TCPState::CloseWait {
             let ipv4_packet = Self::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_FIN);
-            self.tcb.sequence_number += 1; // FIN counts for 1 byte
+            self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
             Self::send_to_client_ignore(&self. id, &self.client, selector, &ipv4_packet);
         }
     }
 
     fn update_headers(packetizer: &mut Packetizer, tcb: &TCB, flags: u16) {
         if let TransportHeaderMut::TCP(ref mut tcp_header) = packetizer.transport_header_mut() {
-            tcp_header.set_sequence_number(tcb.sequence_number);
-            tcp_header.set_acknowledgement_number(tcb.acknowledgement_number);
+            tcp_header.set_sequence_number(tcb.sequence_number.0);
+            tcp_header.set_acknowledgement_number(tcb.acknowledgement_number.0);
             tcp_header.set_flags(flags);
         } else {
             panic!("Not a TCP header");
@@ -306,7 +307,7 @@ impl PacketSource for TCPConnection {
 
     fn next(&mut self, selector: &mut Selector) {
         let len = self.packet_for_client_length.expect("next() called on empty packet source");
-        self.tcb.sequence_number += len as u32;
+        self.tcb.sequence_number += Wrapping(len as u32);
         self.packet_for_client_length = None;
         self.update_interests(selector);
     }
