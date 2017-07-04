@@ -134,7 +134,7 @@ impl TCPConnection {
         self.disconnect(selector);
 
         // route is embedded in router which is embedded in client: the client necessarily exists
-        let client_rc = self.client.upgrade().expect("expected client not found");
+        let client_rc = self.client.upgrade().expect("Expected client not found");
         let mut client = client_rc.borrow_mut();
         client.router().remove(&self.id);
     }
@@ -161,8 +161,16 @@ impl TCPConnection {
         // defer the other branches in a separate match-block
         let non_lexical_lifetime_workaround = match self.network_to_client.packetize_read(&mut self.stream, Some(max_payload_length)) {
             Ok(Some(ipv4_packet)) => {
-                // TODO packet source pull
-                Self::send_to_client_ignore(&self.id, &self.client, selector, &ipv4_packet);
+                match Self::send_to_client(&self.client, selector, &ipv4_packet) {
+                    Ok(_) => self.packet_for_client_length = None, // packet consumed
+                    Err(_) => {
+                        // ask to the client to pull when its buffer is not full
+                        let client_rc = self.client.upgrade().expect("Expected client not found");
+                        let mut client = client_rc.borrow_mut();
+                        let self_rc = self.self_weak.upgrade().unwrap();
+                        client.register_pending_packet_source(self_rc);
+                    }
+                }
                 Ok(Some(()))
             },
             Ok(None) => Ok(None),
@@ -179,7 +187,7 @@ impl TCPConnection {
     }
 
     fn send_to_client(client: &Weak<RefCell<Client>>, selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<()> {
-        let client_rc = client.upgrade().expect("expected client not found");
+        let client_rc = client.upgrade().expect("Expected client not found");
         let mut client = client_rc.borrow_mut();
         client.send_to_client(selector, &ipv4_packet)
     }
