@@ -222,14 +222,40 @@ impl TCPConnection {
         if let Some(TransportHeader::TCP(tcp_header)) = ipv4_packet.transport_header() {
             if self.tcb.state == TCPState::Init {
                 self.handle_first_packet(selector, ipv4_packet);
-            } else if tcp_header.is_syn() {
+                return;
+            }
+
+            if tcp_header.is_syn() {
                 self.handle_duplicate_syn(selector, ipv4_packet);
-            } else if tcp_header.sequence_number() != self.tcb.acknowledgement_number.0 {
+                return;
+            }
+
+            if tcp_header.sequence_number() != self.tcb.acknowledgement_number.0 {
                 // ignore packet already received or out-of-order, retransmission is already
                 // managed by both sides
-                self.send_empty_packet_to_client(selector, tcp_header::FLAG_SYN);
-            } else {
+                warn!(target: TAG, "{} Ignoring packet {}; expecting {}; flags={}", self.id, tcp_header.sequence_number(), tcp_header.acknowledgement_number(), tcp_header.flags());
+                self.send_empty_packet_to_client(selector, tcp_header::FLAG_ACK); // re-ack
+                return;
+            }
 
+            self.tcb.client_window = tcp_header.window();
+            self.tcb.their_acknowledgement_number = tcp_header.acknowledgement_number();
+
+            debug!(target: TAG, "{} Receiving expected packet {} (flags={})", self.id, tcp_header.sequence_number(), tcp_header.flags());
+
+            if tcp_header.is_rst() {
+                self.close(selector);
+                return;
+            }
+
+            if tcp_header.is_ack() {
+                debug!(target: TAG, "{} Client acked {}", self.id, tcp_header.acknowledgement_number());
+            }
+
+            if tcp_header.is_fin() {
+                self.handle_fin(selector, ipv4_packet);
+            } else if tcp_header.is_ack() {
+                self.handle_ack(selector, ipv4_packet);
             }
         } else {
             panic!("Not a TCP packet");
@@ -241,6 +267,14 @@ impl TCPConnection {
     }
 
     fn handle_duplicate_syn(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+        // TODO
+    }
+
+    fn handle_fin(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+        // TODO
+    }
+
+    fn handle_ack(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
         // TODO
     }
 
