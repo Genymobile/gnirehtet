@@ -78,14 +78,14 @@ impl UDPConnection {
 
     fn process_send(&mut self, selector: &mut Selector) {
         if let Err(err) = self.write() {
-            error!(target: TAG, "{} Cannot write: {}", self.id, err);
+            cx_error!(target: TAG, self.id, "Cannot write: {}", err);
             self.close(selector);
         }
     }
 
     fn process_receive(&mut self, selector: &mut Selector) {
         if let Err(err) = self.read(selector) {
-            error!(target: TAG, "{} Cannot read: {}", self.id, err);
+            cx_error!(target: TAG, self.id, "Cannot read: {}", err);
             self.close(selector);
         }
     }
@@ -95,12 +95,12 @@ impl UDPConnection {
         let client_rc = self.client.upgrade().expect("Expected client not found");
         match client_rc.borrow_mut().send_to_client(selector, &ipv4_packet) {
             Ok(_) => {
-                debug!(target: TAG, "{} Packet ({} bytes) sent to client", self.id, ipv4_packet.length());
+                cx_debug!(target: TAG, self.id, "Packet ({} bytes) sent to client", ipv4_packet.length());
                 if log_enabled!(target: TAG, LogLevel::Trace) {
-                    binary::to_string(ipv4_packet.raw());
+                    cx_trace!(target: TAG, self.id, "{}", binary::to_string(ipv4_packet.raw()));
                 }
             },
-            Err(_) => warn!(target: TAG, "{} Cannot send to client, drop packet", self.id),
+            Err(_) => cx_warn!(target: TAG, self.id, "Cannot send to client, drop packet"),
         }
         Ok(())
     }
@@ -136,12 +136,12 @@ impl Connection for UDPConnection {
             Ok(_) => {
                 self.update_interests(selector);
             },
-            Err(err) => warn!(target: TAG, "{} Cannot send to network, drop packet: {}", self.id, err),
+            Err(err) => cx_warn!(target: TAG, self.id, "Cannot send to network, drop packet: {}", err),
         }
     }
 
     fn disconnect(&mut self, selector: &mut Selector) {
-        info!(target: TAG, "{} Close", self.id);
+        cx_info!(target: TAG, self.id, "Close");
         selector.deregister(&self.socket, self.token).unwrap();
         // socket will be closed by RAII
     }

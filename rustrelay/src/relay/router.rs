@@ -44,7 +44,7 @@ impl Router {
         } else {
             warn!(target: TAG, "Dropping invalid packet");
             if log_enabled!(target: TAG, LogLevel::Trace) {
-                binary::to_string(ipv4_packet.raw());
+                trace!(target:TAG, "{}", binary::to_string(ipv4_packet.raw()));
             }
         }
     }
