@@ -14,7 +14,7 @@ use super::ipv4_header::IPv4Header;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
 use super::packet_storage::PacketStorage;
 use super::packetizer::Packetizer;
-use super::selector::Selector;
+use super::selector::{EventHandler, Selector};
 use super::stream_buffer::StreamBuffer;
 use super::tcp_header::{self, TCPHeader};
 use super::transport_header::{TransportHeader, TransportHeaderMut};
@@ -107,12 +107,9 @@ impl TCPConnection {
             }));
 
             {
-                let rc_clone = rc.clone();
-                let handler = Box::new(move |selector: &mut Selector, ready| {
-                    let mut self_ref = rc_clone.borrow_mut();
-                    self_ref.on_ready(selector, ready);
-                });
                 let mut self_ref = rc.borrow_mut();
+                // rc is an EventHandler, register() expects a Box<EventHandler>
+                let handler = Box::new(rc.clone());
                 let token = selector.register(&self_ref.stream, handler, Ready::readable(), PollOpt::level())?;
                 self_ref.token = token;
             }
@@ -251,20 +248,6 @@ impl TCPConnection {
         !self.client_to_network.is_empty()
     }
 
-    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
-        assert!(!self.closed);
-        let ready = event.readiness();
-        if ready.is_writable() {
-            self.process_send(selector);
-        }
-        if !self.closed && ready.is_readable() {
-            self.process_receive(selector);
-        }
-        if !self.closed {
-            self.update_interests(selector);
-        }
-    }
-
     fn get_remaining_client_window(&self) -> u16 {
         // TODO
         42
@@ -289,5 +272,21 @@ impl Connection for TCPConnection {
     fn is_expired(&self) -> bool {
         // no external timeout expiration
         false
+    }
+}
+
+impl EventHandler for TCPConnection {
+    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
+        assert!(!self.closed);
+        let ready = event.readiness();
+        if ready.is_writable() {
+            self.process_send(selector);
+        }
+        if !self.closed && ready.is_readable() {
+            self.process_receive(selector);
+        }
+        if !self.closed {
+            self.update_interests(selector);
+        }
     }
 }
