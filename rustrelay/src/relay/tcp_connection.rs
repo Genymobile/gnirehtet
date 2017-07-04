@@ -24,6 +24,7 @@ const TAG: &'static str = "TCPConnection";
 const MAX_PAYLOAD_LENGTH: u16 = 1400;
 
 pub struct TCPConnection {
+    self_weak: Weak<RefCell<TCPConnection>>,
     id: ConnectionId,
     client: Weak<RefCell<Client>>,
     stream: TcpStream,
@@ -94,6 +95,7 @@ impl TCPConnection {
             let packetizer = Packetizer::new(&ipv4_header, &shrinked_transport_header);
 
             let rc = Rc::new(RefCell::new(Self {
+                self_weak: Weak::new(),
                 id: id,
                 client: client,
                 stream: stream,
@@ -108,6 +110,10 @@ impl TCPConnection {
 
             {
                 let mut self_ref = rc.borrow_mut();
+
+                // keep a shared reference to this
+                self_ref.self_weak = Rc::downgrade(&rc);
+
                 // rc is an EventHandler, register() expects a Box<EventHandler>
                 let handler = Box::new(rc.clone());
                 let token = selector.register(&self_ref.stream, handler, Ready::readable(), PollOpt::level())?;
