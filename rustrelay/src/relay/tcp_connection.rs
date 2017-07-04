@@ -12,7 +12,6 @@ use super::client::Client;
 use super::connection::{self, Connection, ConnectionId};
 use super::ipv4_header::IPv4Header;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
-use super::packet_storage::PacketStorage;
 use super::packetizer::Packetizer;
 use super::selector::{EventHandler, Selector};
 use super::stream_buffer::StreamBuffer;
@@ -31,7 +30,6 @@ pub struct TCPConnection {
     token: Token,
     client_to_network: StreamBuffer,
     network_to_client: Packetizer,
-    pending_packet_for_client: PacketStorage,
     packet_for_client_length: Option<u16>,
     closed: bool,
     tcb: TCB,
@@ -102,7 +100,6 @@ impl TCPConnection {
                 token: Token(0), // default value, will be set afterwards
                 client_to_network: StreamBuffer::new(4 * MAX_PACKET_LENGTH),
                 network_to_client: packetizer,
-                pending_packet_for_client: PacketStorage::new(),
                 packet_for_client_length: None,
                 closed: false,
                 tcb: TCB::new(),
