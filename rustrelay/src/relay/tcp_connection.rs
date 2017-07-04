@@ -12,6 +12,7 @@ use super::client::Client;
 use super::connection::{self, Connection, ConnectionId};
 use super::ipv4_header::IPv4Header;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
+use super::packet_source::PacketSource;
 use super::packetizer::Packetizer;
 use super::selector::{EventHandler, Selector};
 use super::stream_buffer::StreamBuffer;
@@ -291,5 +292,22 @@ impl EventHandler for TCPConnection {
         if !self.closed {
             self.update_interests(selector);
         }
+    }
+}
+
+impl PacketSource for TCPConnection {
+    fn get(&mut self) -> Option<IPv4Packet> {
+        if let Some(len) = self.packet_for_client_length {
+            Some(self.network_to_client.inflate(len))
+        } else {
+            None
+        }
+    }
+
+    fn next(&mut self, selector: &mut Selector) {
+        let len = self.packet_for_client_length.expect("next() called on empty packet source");
+        self.tcb.sequence_number += len as u32;
+        self.packet_for_client_length = None;
+        self.update_interests(selector);
     }
 }
