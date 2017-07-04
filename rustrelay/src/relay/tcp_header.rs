@@ -76,6 +76,30 @@ impl TCPHeaderData {
     pub fn flags(&self) -> u16 {
         self.flags
     }
+
+    pub fn is_fin(&self) -> bool {
+        self.flags & FLAG_FIN != 0
+    }
+
+    pub fn is_syn(&self) -> bool {
+        self.flags & FLAG_SYN != 0
+    }
+
+    pub fn is_rst(&self) -> bool {
+        self.flags & FLAG_RST != 0
+    }
+
+    pub fn is_psh(&self) -> bool {
+        self.flags & FLAG_PSH != 0
+    }
+
+    pub fn is_ack(&self) -> bool {
+        self.flags & FLAG_ACK != 0
+    }
+
+    pub fn is_urg(&self) -> bool {
+        self.flags & FLAG_URG != 0
+    }
 }
 
 // shared definition for UDPHeader and UDPHeaderMut
@@ -120,6 +144,30 @@ macro_rules! tcp_header_common {
 
             pub fn flags(&self) -> u16 {
                 self.data.flags
+            }
+
+            pub fn is_fin(&self) -> bool {
+                self.data.is_fin()
+            }
+
+            pub fn is_syn(&self) -> bool {
+                self.data.is_syn()
+            }
+
+            pub fn is_rst(&self) -> bool {
+                self.data.is_rst()
+            }
+
+            pub fn is_psh(&self) -> bool {
+                self.data.is_psh()
+            }
+
+            pub fn is_ack(&self) -> bool {
+                self.data.is_ack()
+            }
+
+            pub fn is_urg(&self) -> bool {
+                self.data.is_urg()
             }
         }
     }
