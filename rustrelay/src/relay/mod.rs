@@ -3,6 +3,7 @@ pub use self::relay::*;
 mod binary;
 mod client;
 mod close_listener;
+#[macro_use]
 mod connection;
 mod datagram;
 mod datagram_buffer;

@@ -145,7 +145,7 @@ impl TCPConnection {
                 self.close(selector);
             },
             Err(err) => {
-                error!(target: TAG, "{} Cannot write: {}", self.id, err);
+                cx_error!(target: TAG, self.id, "Cannot write: {}", err);
                 self.reset_connection(selector);
             },
         }
@@ -179,7 +179,7 @@ impl TCPConnection {
         match non_lexical_lifetime_workaround {
             Ok(None) => self.eof(selector),
             Err(err) => {
-                error!(target: TAG, "{} Cannot read: {}", self.id, err);
+                cx_error!(target: TAG, self.id, "Cannot read: {}", err);
                 self.reset_connection(selector);
             },
             Ok(Some(_)) => (), // already handled
@@ -196,7 +196,7 @@ impl TCPConnection {
         let ipv4_packet = Self::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_SYN);
         if let Err(err) = Self::send_to_client(&self.client, selector, &ipv4_packet) {
             // losing such an empty packet will not break the TCP connection
-            warn!(target: TAG, "{} Cannot send packet to client: {}", self.id, err);
+            cx_warn!(target: TAG, self.id, "Cannot send packet to client: {}", err);
         }
     }
 
@@ -233,7 +233,7 @@ impl TCPConnection {
             if tcp_header.sequence_number() != self.tcb.acknowledgement_number.0 {
                 // ignore packet already received or out-of-order, retransmission is already
                 // managed by both sides
-                warn!(target: TAG, "{} Ignoring packet {}; expecting {}; flags={}", self.id, tcp_header.sequence_number(), tcp_header.acknowledgement_number(), tcp_header.flags());
+                cx_warn!(target: TAG, self.id, "Ignoring packet {}; expecting {}; flags={}", tcp_header.sequence_number(), tcp_header.acknowledgement_number(), tcp_header.flags());
                 self.send_empty_packet_to_client(selector, tcp_header::FLAG_ACK); // re-ack
                 return;
             }
@@ -241,7 +241,7 @@ impl TCPConnection {
             self.tcb.client_window = tcp_header.window();
             self.tcb.their_acknowledgement_number = tcp_header.acknowledgement_number();
 
-            debug!(target: TAG, "{} Receiving expected packet {} (flags={})", self.id, tcp_header.sequence_number(), tcp_header.flags());
+            cx_debug!(target: TAG, self.id, "Receiving expected packet {} (flags={})", tcp_header.sequence_number(), tcp_header.flags());
 
             if tcp_header.is_rst() {
                 self.close(selector);
@@ -249,7 +249,7 @@ impl TCPConnection {
             }
 
             if tcp_header.is_ack() {
-                debug!(target: TAG, "{} Client acked {}", self.id, tcp_header.acknowledgement_number());
+                cx_debug!(target: TAG, self.id, "Client acked {}", tcp_header.acknowledgement_number());
             }
 
             if tcp_header.is_fin() {
@@ -280,13 +280,13 @@ impl TCPConnection {
 
     fn create_empty_response_packet<'a>(id: &ConnectionId, packetizer: &'a mut Packetizer, tcb: &TCB, flags: u16) -> IPv4Packet<'a> {
         Self::update_headers(packetizer, tcb, flags);
-        debug!(target: TAG, "{} Forging empty response (flags={}) {}", id, flags, tcb.numbers());
+        cx_debug!(target: TAG, id, "Forging empty response (flags={}) {}", flags, tcb.numbers());
         if (flags & tcp_header::FLAG_ACK) != 0 {
-            debug!(target: TAG, "{} Acking {}", id, tcb.numbers());
+            cx_debug!(target: TAG, id, "Acking {}", tcb.numbers());
         }
         let ipv4_packet = packetizer.packetize_empty_payload();
         if log_enabled!(target: TAG, LogLevel::Trace) {
-            binary::to_string(ipv4_packet.raw());
+            cx_trace!(target: TAG, id, "{}", binary::to_string(ipv4_packet.raw()));
         }
         ipv4_packet
     }
@@ -336,7 +336,7 @@ impl Connection for TCPConnection {
     }
 
     fn disconnect(&mut self, selector: &mut Selector) {
-        info!(target: TAG, "{} Close", self.id);
+        cx_info!(target: TAG, self.id, "Close");
         selector.deregister(&self.stream, self.token).unwrap();
         // socket will be closed by RAII
     }

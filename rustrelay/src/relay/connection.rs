@@ -79,3 +79,44 @@ impl fmt::Display for ConnectionId {
         write!(f, "{} -> {}", self.source(), self.destination())
     }
 }
+
+// macros to log connection id along with the message
+
+macro_rules! cx_format {
+    ($id:tt, $str:tt, $($arg:tt)+) => {
+        format!(concat!("{} ", $str), $id, $($arg)+)
+    };
+    ($id:tt, $str:tt) => {
+        format!(concat!("{} ", $str), $id)
+    };
+}
+
+macro_rules! cx_trace {
+    (target: $target:expr, $id:expr, $($arg:tt)*) => {
+        trace!(target: $target, "{}", cx_format!($id, $($arg)+));
+    }
+}
+
+macro_rules! cx_debug {
+    (target: $target:expr, $id:expr, $($arg:tt)*) => {
+        debug!(target: $target, "{}", cx_format!($id, $($arg)+));
+    }
+}
+
+macro_rules! cx_info {
+    (target: $target:expr, $id:expr, $($arg:tt)*) => {
+        info!(target: $target, "{}", cx_format!($id, $($arg)+));
+    }
+}
+
+macro_rules! cx_warn {
+    (target: $target:expr, $id:expr, $($arg:tt)*) => {
+        warn!(target: $target, "{}", cx_format!($id, $($arg)+));
+    }
+}
+
+macro_rules! cx_error {
+    (target: $target:expr, $id:expr, $($arg:tt)*) => {
+        error!(target: $target, "{}", cx_format!($id, $($arg)+));
+    }
+}
