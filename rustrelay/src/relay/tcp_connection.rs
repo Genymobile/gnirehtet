@@ -192,18 +192,19 @@ impl TCPConnection {
         client.send_to_client(selector, &ipv4_packet)
     }
 
-    fn send_to_client_ignore(id: &ConnectionId, client: &Weak<RefCell<Client>>, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
-        if let Err(err) = Self::send_to_client(client, selector, ipv4_packet) {
-            warn!(target: TAG, "{} Cannot send packet to client: {}", id, err);
+    fn send_empty_packet_to_client(&mut self, selector: &mut Selector, flags: u16) {
+        let ipv4_packet = Self::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_SYN);
+        if let Err(err) = Self::send_to_client(&self.client, selector, &ipv4_packet) {
+            // losing such an empty packet will not break the TCP connection
+            warn!(target: TAG, "{} Cannot send packet to client: {}", self.id, err);
         }
     }
 
     fn eof(&mut self, selector: &mut Selector) {
         self.tcb.remote_closed = true;
         if self.tcb.state == TCPState::CloseWait {
-            let ipv4_packet = Self::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_FIN);
+            self.send_empty_packet_to_client(selector, tcp_header::FLAG_FIN);
             self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
-            Self::send_to_client_ignore(&self.id, &self.client, selector, &ipv4_packet);
         }
     }
 
@@ -226,8 +227,7 @@ impl TCPConnection {
             } else if tcp_header.sequence_number() != self.tcb.acknowledgement_number.0 {
                 // ignore packet already received or out-of-order, retransmission is already
                 // managed by both sides
-                Self::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_SYN);
-                Self::send_to_client_ignore(&self.id, &self.client, selector, &ipv4_packet);
+                self.send_empty_packet_to_client(selector, tcp_header::FLAG_SYN);
             } else {
 
             }
@@ -258,10 +258,7 @@ impl TCPConnection {
     }
 
     fn reset_connection(&mut self, selector: &mut Selector) {
-        {
-            let ipv4_packet = Self::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_RST);
-            Self::send_to_client_ignore(&self.id, &self.client, selector, &ipv4_packet);
-        }
+        self.send_empty_packet_to_client(selector, tcp_header::FLAG_RST);
         self.close(selector);
     }
 
