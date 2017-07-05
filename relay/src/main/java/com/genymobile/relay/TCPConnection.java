@@ -292,7 +292,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         }
 
         if (clientToNetwork.remaining() < payloadLength) {
-            logw(TAG, "Not enough space, drop packet");
+            logw(TAG, "Not enough space, dropping packet");
             return;
         }
 
