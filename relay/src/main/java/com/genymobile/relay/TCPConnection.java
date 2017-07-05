@@ -221,8 +221,6 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     private void handleFirstPacket(IPv4Packet packet) {
         logd(TAG, "handleFirstPacket()");
         TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
-        int receivedSequenceNumber = tcpHeader.getSequenceNumber();
-        acknowledgementNumber = receivedSequenceNumber + 1;
         if (!tcpHeader.isSyn()) {
             logw(TAG, "Unexpected first packet " + tcpHeader.getSequenceNumber() + "; acking " + tcpHeader.getAcknowledgementNumber()
                     + "; flags=" + tcpHeader.getFlags());
@@ -230,7 +228,10 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
             resetConnection();
             return;
         }
-        synSequenceNumber = receivedSequenceNumber;
+
+        int theirSequenceNumber = tcpHeader.getSequenceNumber();
+        acknowledgementNumber = theirSequenceNumber + 1;
+        synSequenceNumber = theirSequenceNumber;
 
         sequenceNumber = RANDOM.nextInt();
         logd(TAG, "initialized seqNum=" + sequenceNumber + "; ackNum=" + acknowledgementNumber);
@@ -240,12 +241,12 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
     private void handleDuplicateSyn(IPv4Packet packet) {
         TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
-        int receivedSequenceNumber = tcpHeader.getSequenceNumber();
+        int theirSequenceNumber = tcpHeader.getSequenceNumber();
         if (state == State.SYN_SENT) {
             // we didn't call finishConnect() yet, we can accept this packet as if it were the first SYN
-            synSequenceNumber = receivedSequenceNumber;
-            acknowledgementNumber = receivedSequenceNumber + 1;
-        } else if (receivedSequenceNumber != synSequenceNumber) {
+            synSequenceNumber = theirSequenceNumber;
+            acknowledgementNumber = theirSequenceNumber + 1;
+        } else if (theirSequenceNumber != synSequenceNumber) {
             // duplicate SYN with different sequence number
             resetConnection();
         }
