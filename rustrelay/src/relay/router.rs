@@ -16,6 +16,7 @@ const TAG: &'static str = "Router";
 
 pub struct Router {
     client: Weak<RefCell<Client>>,
+    // there are typically only few connections per client, HashMap would be less efficient
     connections: Vec<Rc<RefCell<Connection>>>,
 }
 
@@ -73,11 +74,14 @@ impl Router {
     }
 
     fn find_index(&self, id: &ConnectionId) -> Option<usize> {
-        self.connections.iter().position(|connection| connection.borrow_mut().id() == id)
+        self.connections.iter().position(|connection| connection.borrow().id() == id)
     }
 
-    pub fn remove(&mut self, id: &ConnectionId) {
-        let index = self.find_index(id).expect("Removing an unknown connection");
+    pub fn remove(&mut self, connection: &Connection) {
+        let index = self.connections.iter().position(|item| {
+            // compare pointers to find the connection to remove
+            binary::ptr_eq(connection, item.as_ptr())
+        }).expect("Removing an unknown connection");
         self.connections.swap_remove(index);
     }
 
