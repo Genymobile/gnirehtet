@@ -73,22 +73,13 @@ public class Router {
         throw new UnsupportedOperationException("Unsupported protocol: " + protocol);
     }
 
-    private int findIndex(ConnectionId id) {
-        for (int i = 0; i < connections.size(); ++i) {
-            Connection connection = connections.get(i);
+    private Connection find(ConnectionId id) {
+        for (Connection connection : connections) {
             if (id.equals(connection.getId())) {
-                return i;
+                return connection;
             }
         }
-        return -1;
-    }
-
-    private Connection find(ConnectionId id) {
-        int connectionIndex = findIndex(id);
-        if (connectionIndex == -1) {
-            return null;
-        }
-        return connections.get(connectionIndex);
+        return null;
     }
 
     public void clear() {
@@ -98,13 +89,10 @@ public class Router {
         connections.clear();
     }
 
-    public boolean remove(ConnectionId connectionId) {
-        int connectionIndex = findIndex(connectionId);
-        if (connectionIndex == -1) {
-            return false;
+    public void remove(Connection connection) {
+        if (!connections.remove(connection)) {
+            throw new AssertionError("Removed a connection unknown from the router");
         }
-        connections.remove(connectionIndex);
-        return true;
     }
 
     public void cleanExpiredConnections() {

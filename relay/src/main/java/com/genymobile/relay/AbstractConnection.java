@@ -38,7 +38,7 @@ public abstract class AbstractConnection implements Connection {
 
     protected void close() {
         disconnect();
-        client.getRouter().remove(id);
+        client.getRouter().remove(this);
     }
 
     protected void consume(PacketSource source) {
