@@ -141,7 +141,7 @@ mod tests {
         let mut packetizer = Packetizer::new(&ipv4_header, &transport_header);
 
         let packet = packetizer.packetize(&mut mock).unwrap();
-        assert_eq!(36, packet.ipv4_header().total_length());
+        assert_eq!(36, packet.ipv4_header_data().total_length());
         assert_eq!(data, &packet.raw()[28..36]);
     }
 
@@ -159,7 +159,7 @@ mod tests {
 
         let packet_length = packetizer.packetize(&mut mock).unwrap().length();
         let packet = packetizer.inflate(packet_length);
-        assert_eq!(36, packet.ipv4_header().total_length());
+        assert_eq!(36, packet.ipv4_header_data().total_length());
         assert_eq!(data, &packet.raw()[28..36]);
     }
 
@@ -176,20 +176,20 @@ mod tests {
         let mut packetizer = Packetizer::new(&ipv4_header, &transport_header);
 
         {
-            let packet = packetizer.packetize_read(&mut cursor, Some(2)).unwrap();
-            assert_eq!(30, packet.ipv4_header().total_length());
+            let packet = packetizer.packetize_read(&mut cursor, Some(2)).unwrap().unwrap();
+            assert_eq!(30, packet.ipv4_header_data().total_length());
             assert_eq!([0x11, 0x22], packet.payload().unwrap());
         }
 
         {
-            let packet = packetizer.packetize_read(&mut cursor, Some(3)).unwrap();
-            assert_eq!(31, packet.ipv4_header().total_length());
+            let packet = packetizer.packetize_read(&mut cursor, Some(3)).unwrap().unwrap();
+            assert_eq!(31, packet.ipv4_header_data().total_length());
             assert_eq!([0x33, 0x44, 0x55], packet.payload().unwrap());
         }
 
         {
-            let packet = packetizer.packetize_read(&mut cursor, Some(1024)).unwrap();
-            assert_eq!(31, packet.ipv4_header().total_length());
+            let packet = packetizer.packetize_read(&mut cursor, Some(1024)).unwrap().unwrap();
+            assert_eq!(31, packet.ipv4_header_data().total_length());
             assert_eq!([0x66, 0x77, 0x88], packet.payload().unwrap());
         }
     }
