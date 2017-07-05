@@ -5,6 +5,7 @@ use std::rc::{Rc, Weak};
 use mio::{Event, PollOpt, Ready};
 use mio::tcp::TcpListener;
 
+use super::binary;
 use super::client::Client;
 use super::selector::{EventHandler, Selector};
 
@@ -66,7 +67,7 @@ impl TunnelServer {
         info!(target: TAG, "Client #{} disconnected", client.id());
         let index = self.clients.iter().position(|item| {
             // compare pointers to find the client to remove
-            ptr_eq(client, item.as_ptr())
+            binary::ptr_eq(client, item.as_ptr())
         }).expect("Trying to remove an unknown client");
         self.clients.swap_remove(index);
     }
@@ -84,10 +85,4 @@ impl EventHandler for TunnelServer {
             error!(target: TAG, "Cannot accept client: {}", err);
         }
     }
-}
-
-// std::ptr::eq is too recent:
-// <https://doc.rust-lang.org/std/ptr/fn.eq.html>
-fn ptr_eq<T: ?Sized>(lhs: *const T, rhs: *const T) -> bool {
-    lhs == rhs
 }

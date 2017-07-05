@@ -73,7 +73,7 @@ impl UDPConnection {
         // route is embedded in router which is embedded in client: the client necessarily exists
         let client_rc = self.client.upgrade().expect("Expected client not found");
         let mut client = client_rc.borrow_mut();
-        client.router().remove(&self.id);
+        client.router().remove(self);
     }
 
     fn process_send(&mut self, selector: &mut Selector) {
