@@ -26,6 +26,8 @@ impl<T: EventHandler> EventHandler for Rc<RefCell<T>> {
 pub struct Selector {
     poll: Poll,
     handlers: Slab<Box<EventHandler>, Token>,
+    current_running: Option<Token>,
+    current_removed: bool,
 }
 
 impl Selector {
@@ -33,6 +35,8 @@ impl Selector {
         Ok(Self {
             poll: Poll::new()?,
             handlers: Slab::with_capacity(1024),
+            current_running: None,
+            current_removed: false,
         })
     }
 
@@ -45,15 +49,25 @@ impl Selector {
         Ok(token)
     }
 
-    pub fn reregister<E>(&self, handle: &E, token: Token,
+    pub fn reregister<E>(&mut self, handle: &E, token: Token,
                    interest: Ready, opts: PollOpt) -> io::Result<()>
             where E: Evented + ?Sized {
+        let is_current = self.current_running.map_or(false, |current_token| { current_token == token });
+        if is_current {
+            self.current_removed = false;
+        }
         self.poll.reregister(handle, token, interest, opts)
     }
 
     pub fn deregister<E>(&mut self, handle: &E, token: Token) -> io::Result<()>
             where E: Evented + ?Sized {
-        self.handlers.remove(token).expect("Unknown token removed");
+        let is_current = self.current_running.map_or(false, |current_token| { current_token == token });
+        if is_current {
+            // only mark as removed to not reinsert it after its execution
+            self.current_removed = true;
+        } else {
+            self.handlers.remove(token).expect("Unknown token removed");
+        }
         self.poll.deregister(handle)
     }
 
@@ -63,9 +77,16 @@ impl Selector {
 
     pub fn run_handler(&mut self, event: Event) {
         let mut handler = self.handlers.remove(event.token()).expect("Token not found");
+
+        self.current_running = Some(event.token());
+
         handler.on_ready(self, event);
-        if let Err(_) = self.handlers.insert(handler) {
-            panic!("Cannot allocate slab slot");
+        if !self.current_removed {
+            if let Err(_) = self.handlers.insert(handler) {
+                panic!("Cannot allocate slab slot");
+            }
         }
+
+        self.current_running = None;
     }
 }
