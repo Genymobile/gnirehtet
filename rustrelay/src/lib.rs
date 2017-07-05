@@ -3,6 +3,7 @@ extern crate chrono;
 #[macro_use]
 extern crate log;
 extern crate mio;
+extern crate rand;
 extern crate slab;
 
 mod relay;
