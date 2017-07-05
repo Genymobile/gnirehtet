@@ -296,7 +296,17 @@ impl TCPConnection {
     }
 
     fn handle_duplicate_syn(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
-        // TODO
+        let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
+        let their_sequence_number = tcp_header.sequence_number();
+        if self.tcb.state == TCPState::SynSent {
+            // the connection is not established yet, we can accept this packet as if it were the
+            // first SYN
+            self.tcb.syn_sequence_number = their_sequence_number;
+            self.tcb.acknowledgement_number = Wrapping(their_sequence_number) + Wrapping(1);
+        } else if their_sequence_number != self.tcb.syn_sequence_number {
+            // duplicate SYN with different sequence number
+            self.reset_connection(selector);
+        }
     }
 
     fn handle_fin(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
