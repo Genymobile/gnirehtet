@@ -310,7 +310,17 @@ impl TCPConnection {
     }
 
     fn handle_fin(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
-        // TODO
+        let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
+        self.tcb.acknowledgement_number = Wrapping(tcp_header.sequence_number()) + Wrapping(1);
+        if self.tcb.remote_closed {
+            self.tcb.state = TCPState::LastAck;
+            cx_debug!(target: TAG, self.id, "Received a FIN from the client, sending ACK+FIN {}", self.tcb.numbers());
+            self.send_empty_packet_to_client(selector, tcp_header::FLAG_FIN | tcp_header::FLAG_ACK);
+            self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
+        } else {
+            self.tcb.state = TCPState::CloseWait;
+            self.send_empty_packet_to_client(selector, tcp_header::FLAG_ACK);
+        }
     }
 
     fn handle_ack(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
