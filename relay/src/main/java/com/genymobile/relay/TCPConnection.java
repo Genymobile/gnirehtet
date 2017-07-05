@@ -282,7 +282,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         }
 
         if (Log.isVerboseEnabled()) {
-            System.out.println(Binary.toString(packet.getRaw()));
+            logv(TAG, Binary.toString(packet.getRaw()));
         }
 
         int payloadLength = packet.getPayloadLength();
