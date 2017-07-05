@@ -17,7 +17,7 @@ use super::packet_source::PacketSource;
 use super::packetizer::Packetizer;
 use super::selector::{EventHandler, Selector};
 use super::stream_buffer::StreamBuffer;
-use super::tcp_header::{self, TCPHeader};
+use super::tcp_header::{self, TCPHeader, TCPHeaderMut};
 use super::transport_header::{TransportHeader, TransportHeaderMut};
 
 const TAG: &'static str = "TCPConnection";
@@ -208,57 +208,69 @@ impl TCPConnection {
         }
     }
 
-    fn update_headers(packetizer: &mut Packetizer, tcb: &TCB, flags: u16) {
-        if let TransportHeaderMut::TCP(ref mut tcp_header) = packetizer.transport_header_mut() {
-            tcp_header.set_sequence_number(tcb.sequence_number.0);
-            tcp_header.set_acknowledgement_number(tcb.acknowledgement_number.0);
-            tcp_header.set_flags(flags);
+    #[inline]
+    fn tcp_header_of_transport_mut<'a>(transport_header: TransportHeaderMut<'a>) -> TCPHeaderMut<'a> {
+        if let TransportHeaderMut::TCP(tcp_header) = transport_header {
+            tcp_header
         } else {
             panic!("Not a TCP header");
         }
     }
 
-    fn handle_packet(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+    #[inline]
+    fn tcp_header_of_packet<'a>(ipv4_packet: &'a IPv4Packet) -> TCPHeader<'a> {
         if let Some(TransportHeader::TCP(tcp_header)) = ipv4_packet.transport_header() {
-            if self.tcb.state == TCPState::Init {
-                self.handle_first_packet(selector, ipv4_packet);
-                return;
-            }
-
-            if tcp_header.is_syn() {
-                self.handle_duplicate_syn(selector, ipv4_packet);
-                return;
-            }
-
-            if tcp_header.sequence_number() != self.tcb.acknowledgement_number.0 {
-                // ignore packet already received or out-of-order, retransmission is already
-                // managed by both sides
-                cx_warn!(target: TAG, self.id, "Ignoring packet {}; expecting {}; flags={}", tcp_header.sequence_number(), tcp_header.acknowledgement_number(), tcp_header.flags());
-                self.send_empty_packet_to_client(selector, tcp_header::FLAG_ACK); // re-ack
-                return;
-            }
-
-            self.tcb.client_window = tcp_header.window();
-            self.tcb.their_acknowledgement_number = tcp_header.acknowledgement_number();
-
-            cx_debug!(target: TAG, self.id, "Receiving expected packet {} (flags={})", tcp_header.sequence_number(), tcp_header.flags());
-
-            if tcp_header.is_rst() {
-                self.close(selector);
-                return;
-            }
-
-            if tcp_header.is_ack() {
-                cx_debug!(target: TAG, self.id, "Client acked {}", tcp_header.acknowledgement_number());
-            }
-
-            if tcp_header.is_fin() {
-                self.handle_fin(selector, ipv4_packet);
-            } else if tcp_header.is_ack() {
-                self.handle_ack(selector, ipv4_packet);
-            }
+            tcp_header
         } else {
             panic!("Not a TCP packet");
+        }
+    }
+
+    fn update_headers(packetizer: &mut Packetizer, tcb: &TCB, flags: u16) {
+        let mut tcp_header = Self::tcp_header_of_transport_mut(packetizer.transport_header_mut());
+        tcp_header.set_sequence_number(tcb.sequence_number.0);
+        tcp_header.set_acknowledgement_number(tcb.acknowledgement_number.0);
+        tcp_header.set_flags(flags);
+    }
+
+    fn handle_packet(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+        let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
+        if self.tcb.state == TCPState::Init {
+            self.handle_first_packet(selector, ipv4_packet);
+            return;
+        }
+
+        if tcp_header.is_syn() {
+            self.handle_duplicate_syn(selector, ipv4_packet);
+            return;
+        }
+
+        if tcp_header.sequence_number() != self.tcb.acknowledgement_number.0 {
+            // ignore packet already received or out-of-order, retransmission is already
+            // managed by both sides
+            cx_warn!(target: TAG, self.id, "Ignoring packet {}; expecting {}; flags={}", tcp_header.sequence_number(), tcp_header.acknowledgement_number(), tcp_header.flags());
+            self.send_empty_packet_to_client(selector, tcp_header::FLAG_ACK); // re-ack
+            return;
+        }
+
+        self.tcb.client_window = tcp_header.window();
+        self.tcb.their_acknowledgement_number = tcp_header.acknowledgement_number();
+
+        cx_debug!(target: TAG, self.id, "Receiving expected packet {} (flags={})", tcp_header.sequence_number(), tcp_header.flags());
+
+        if tcp_header.is_rst() {
+            self.close(selector);
+            return;
+        }
+
+        if tcp_header.is_ack() {
+            cx_debug!(target: TAG, self.id, "Client acked {}", tcp_header.acknowledgement_number());
+        }
+
+        if tcp_header.is_fin() {
+            self.handle_fin(selector, ipv4_packet);
+        } else if tcp_header.is_ack() {
+            self.handle_ack(selector, ipv4_packet);
         }
     }
 
