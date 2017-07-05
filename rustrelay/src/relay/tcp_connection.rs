@@ -324,7 +324,39 @@ impl TCPConnection {
     }
 
     fn handle_ack(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
-        // TODO
+        cx_debug!(target: TAG, self.id, "handle_ack()");
+        if self.tcb.state == TCPState::SynReceived {
+            self.tcb.state == TCPState::Established;
+            return;
+        }
+        if self.tcb.state == TCPState::LastAck {
+            cx_debug!(target: TAG, self.id, "LAST_ACK");
+            self.close(selector);
+            return;
+        }
+
+        if log_enabled!(target: TAG, LogLevel::Trace) {
+            cx_trace!(target: TAG, self.id, "{}", binary::to_string(ipv4_packet.raw()));
+        }
+
+        let payload = ipv4_packet.payload().expect("No payload");
+        if payload.is_empty() {
+            // no data to transmit
+            return;
+        }
+
+        if self.client_to_network.remaining() < payload.len() {
+            cx_warn!(target: TAG, self.id, "Not enough space, dropping packet");
+            return;
+        }
+
+        self.client_to_network.read_from(payload);
+        self.tcb.acknowledgement_number += Wrapping(payload.len() as u32);
+
+        // send ACK to client
+        cx_debug!(target: TAG, self.id, "Received a payload from the client ({} bytes), sending ACK {}",
+                  payload.len(), self.tcb.numbers());
+        self.send_empty_packet_to_client(selector, tcp_header::FLAG_ACK);
     }
 
     fn create_empty_response_packet<'a>(id: &ConnectionId, packetizer: &'a mut Packetizer, tcb: &TCB, flags: u16) -> IPv4Packet<'a> {
