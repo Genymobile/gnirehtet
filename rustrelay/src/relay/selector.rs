@@ -26,8 +26,41 @@ impl<T: EventHandler> EventHandler for Rc<RefCell<T>> {
 pub struct Selector {
     poll: Poll,
     handlers: Slab<Box<EventHandler>, Token>,
-    current_running: Option<Token>,
-    current_removed: bool,
+    running_state: RunningState,
+}
+
+struct RunningState {
+    token: Option<Token>,
+    removed: bool,
+}
+
+impl RunningState {
+    fn new() -> Self {
+        Self {
+            token: None,
+            removed: false,
+        }
+    }
+
+    fn running(&mut self, token: Token) {
+        self.token = Some(token);
+    }
+
+    fn stopping(&mut self) {
+        self.token = None;
+    }
+
+    fn is_running(&self, token: Token) -> bool {
+        self.token.map_or(false, |current_token| current_token == token)
+    }
+
+    fn set_removed(&mut self, removed: bool) {
+        self.removed = removed;
+    }
+
+    fn is_removed(&self) -> bool {
+        self.removed
+    }
 }
 
 impl Selector {
@@ -35,8 +68,7 @@ impl Selector {
         Ok(Self {
             poll: Poll::new()?,
             handlers: Slab::with_capacity(1024),
-            current_running: None,
-            current_removed: false,
+            running_state: RunningState::new(),
         })
     }
 
@@ -52,19 +84,17 @@ impl Selector {
     pub fn reregister<E>(&mut self, handle: &E, token: Token,
                    interest: Ready, opts: PollOpt) -> io::Result<()>
             where E: Evented + ?Sized {
-        let is_current = self.current_running.map_or(false, |current_token| { current_token == token });
-        if is_current {
-            self.current_removed = false;
+        if self.running_state.is_running(token) {
+            self.running_state.set_removed(false);
         }
         self.poll.reregister(handle, token, interest, opts)
     }
 
     pub fn deregister<E>(&mut self, handle: &E, token: Token) -> io::Result<()>
             where E: Evented + ?Sized {
-        let is_current = self.current_running.map_or(false, |current_token| { current_token == token });
-        if is_current {
+        if self.running_state.is_running(token) {
             // only mark as removed to not reinsert it after its execution
-            self.current_removed = true;
+            self.running_state.set_removed(true);
         } else {
             self.handlers.remove(token).expect("Unknown token removed");
         }
@@ -78,15 +108,16 @@ impl Selector {
     pub fn run_handler(&mut self, event: Event) {
         let mut handler = self.handlers.remove(event.token()).expect("Token not found");
 
-        self.current_running = Some(event.token());
+        self.running_state.running(event.token());
 
         handler.on_ready(self, event);
-        if !self.current_removed {
+
+        if !self.running_state.is_removed() {
             if let Err(_) = self.handlers.insert(handler) {
                 panic!("Cannot allocate slab slot");
             }
         }
 
-        self.current_running = None;
+        self.running_state.stopping();
     }
 }
