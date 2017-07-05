@@ -119,7 +119,7 @@ impl Client {
 
     pub fn send_to_client(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<()> {
         if ipv4_packet.length() as usize <= self.network_to_client.remaining() {
-            self.network_to_client.read_from(ipv4_packet.raw())?;
+            self.network_to_client.read_from(ipv4_packet.raw());
             self.update_interests(selector);
             Ok(())
         } else {

@@ -56,10 +56,8 @@ impl StreamBuffer {
         }
     }
 
-    pub fn read_from(&mut self, source: &[u8]) -> io::Result<()> {
-        if self.remaining() < source.len() {
-            return Err(io::Error::new(io::ErrorKind::Other, "StreamBuffer is full"));
-        }
+    pub fn read_from(&mut self, source: &[u8]) {
+        assert!(self.remaining() < source.len(), "StreamBuffer is full, check remaining() before calling read_from()");
         let source_len = source.len();
         let buf_len = self.buf.len();
         if source_len <= buf_len - self.head {
@@ -78,7 +76,6 @@ impl StreamBuffer {
             target_slice.copy_from_slice(source_slice);
         }
         self.head = (self.head + source_len) % buf_len;
-        Ok(())
     }
 
     /// To avoid unnecessary copies, StreamBuffer writes at most until the "end" of the circular
