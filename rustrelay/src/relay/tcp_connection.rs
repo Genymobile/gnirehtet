@@ -275,7 +275,23 @@ impl TCPConnection {
     }
 
     fn handle_first_packet(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
-        // TODO
+        cx_debug!(target: TAG, self.id, "handle_first_packet()");
+        let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
+        if tcp_header.is_syn() {
+            let their_sequence_number = tcp_header.sequence_number();
+            let acknowledgement_number = their_sequence_number + 1;
+            self.tcb.syn_sequence_number = their_sequence_number;
+
+            self.tcb.sequence_number = Wrapping(0); // TODO rand();
+            cx_debug!(target: TAG, self.id, "Initialized seq={}; ack={}", self.tcb.sequence_number, self.tcb.acknowledgement_number);
+            self.tcb.client_window = tcp_header.window();
+            self.tcb.state = TCPState::SynSent;
+        } else {
+            cx_warn!(target: TAG, self.id, "Unexpected first packet {}; acking {}; flags={}",
+                     tcp_header.sequence_number(), tcp_header.acknowledgement_number(), tcp_header.flags());
+            self.tcb.sequence_number = Wrapping(tcp_header.acknowledgement_number()); // make a RST in the window client
+            self.reset_connection(selector);
+        }
     }
 
     fn handle_duplicate_syn(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
