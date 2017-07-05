@@ -51,6 +51,7 @@ impl DatagramBuffer {
     }
 
     pub fn write_to<S: DatagramSender>(&mut self, destination: &mut S) -> io::Result<()> {
+        assert!(!self.is_empty(), "DatagramBuffer.write_to() called while empty");
         let length = self.read_length() as usize;
         let source_slice = &self.buf[self.tail..self.tail + length];
         self.tail += length;
