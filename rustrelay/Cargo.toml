@@ -13,6 +13,7 @@ slab = "0.3"      # helper for mio Tokens
 log = "0.3"       # for logs
 chrono = "0.3"    # for formatting timestamp in logs
 byteorder = "1.0" # for reading/writing binary
+rand = "0.3"      # for random TCP sequence number
 
 [profile.release]
 lto = true     # link-time optimization

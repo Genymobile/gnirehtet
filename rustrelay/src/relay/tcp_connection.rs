@@ -7,6 +7,7 @@ use std::rc::{Rc, Weak};
 use log::LogLevel;
 use mio::{Event, PollOpt, Ready, Token};
 use mio::net::TcpStream;
+use rand::random;
 
 use super::binary;
 use super::client::Client;
@@ -282,7 +283,7 @@ impl TCPConnection {
             let acknowledgement_number = their_sequence_number + 1;
             self.tcb.syn_sequence_number = their_sequence_number;
 
-            self.tcb.sequence_number = Wrapping(0); // TODO rand();
+            self.tcb.sequence_number = Wrapping(random::<u32>());
             cx_debug!(target: TAG, self.id, "Initialized seq={}; ack={}", self.tcb.sequence_number, self.tcb.acknowledgement_number);
             self.tcb.client_window = tcp_header.window();
             self.tcb.state = TCPState::SynSent;
