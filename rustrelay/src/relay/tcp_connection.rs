@@ -1,7 +1,6 @@
-use std::cell::{Ref, RefCell};
+use std::cell::RefCell;
 use std::cmp;
 use std::io;
-use std::net::{Ipv4Addr, SocketAddr};
 use std::num::Wrapping;
 use std::rc::{Rc, Weak};
 use log::LogLevel;
@@ -48,11 +47,11 @@ struct TCB {
     remote_closed: bool,
 }
 
-#[derive(PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq)]
 enum TCPState {
     Init,
     SynSent,
-//    SynReceived,
+    SynReceived,
     Established,
     CloseWait,
     LastAck,
@@ -116,7 +115,8 @@ impl TCPConnection {
 
                 // rc is an EventHandler, register() expects a Box<EventHandler>
                 let handler = Box::new(rc.clone());
-                let token = selector.register(&self_ref.stream, handler, Ready::readable(), PollOpt::level())?;
+                // writable to detect when the stream is connected
+                let token = selector.register(&self_ref.stream, handler, Ready::writable(), PollOpt::level())?;
                 self_ref.token = token;
             }
             Ok(rc)
@@ -187,6 +187,13 @@ impl TCPConnection {
         }
     }
 
+    fn process_connect(&mut self, selector: &mut Selector) {
+        assert_eq!(self.tcb.state, TCPState::SynSent);
+        self.tcb.state = TCPState::SynReceived;
+        self.send_empty_packet_to_client(selector, tcp_header::FLAG_SYN |tcp_header::FLAG_ACK);
+        self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
+    }
+
     fn send_to_client(client: &Weak<RefCell<Client>>, selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<()> {
         let client_rc = client.upgrade().expect("Expected client not found");
         let mut client = client_rc.borrow_mut();
@@ -194,7 +201,7 @@ impl TCPConnection {
     }
 
     fn send_empty_packet_to_client(&mut self, selector: &mut Selector, flags: u16) {
-        let ipv4_packet = Self::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, tcp_header::FLAG_SYN);
+        let ipv4_packet = Self::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, flags);
         if let Err(err) = Self::send_to_client(&self.client, selector, &ipv4_packet) {
             // losing such an empty packet will not break the TCP connection
             cx_warn!(target: TAG, self.id, "Cannot send packet to client: {}", err);
@@ -280,7 +287,7 @@ impl TCPConnection {
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         if tcp_header.is_syn() {
             let their_sequence_number = tcp_header.sequence_number();
-            let acknowledgement_number = their_sequence_number + 1;
+            self.tcb.acknowledgement_number = Wrapping(their_sequence_number) + Wrapping(1);
             self.tcb.syn_sequence_number = their_sequence_number;
 
             self.tcb.sequence_number = Wrapping(random::<u32>());
@@ -433,7 +440,12 @@ impl EventHandler for TCPConnection {
         assert!(!self.closed);
         let ready = event.readiness();
         if ready.is_writable() {
-            self.process_send(selector);
+            if self.tcb.state == TCPState::SynSent {
+                // writable is first triggered when the stream is connected
+                self.process_connect(selector);
+            } else {
+                self.process_send(selector);
+            }
         }
         if !self.closed && ready.is_readable() {
             self.process_receive(selector);

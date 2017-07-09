@@ -192,7 +192,7 @@ impl Client {
                     Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
                         false
                     },
-                    Err(err) => {
+                    Err(_) => {
                         panic!("Cannot send packet to client for unknown reason");
                     }
                 }
