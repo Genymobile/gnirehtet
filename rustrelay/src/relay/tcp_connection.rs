@@ -392,7 +392,7 @@ impl TCPConnection {
 
     fn may_read(&self) -> bool {
         !self.tcb.remote_closed &&
-                self.packet_for_client_length.is_some() &&
+                self.packet_for_client_length.is_none() &&
                 self.get_remaining_client_window() > 0
     }
 
