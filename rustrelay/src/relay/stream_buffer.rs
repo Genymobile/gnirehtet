@@ -57,7 +57,7 @@ impl StreamBuffer {
     }
 
     pub fn read_from(&mut self, source: &[u8]) {
-        assert!(self.remaining() < source.len(), "StreamBuffer is full, check remaining() before calling read_from()");
+        assert!(source.len() <= self.remaining(), "StreamBuffer is full, check remaining() before calling read_from()");
         let source_len = source.len();
         let buf_len = self.buf.len();
         if source_len <= buf_len - self.head {
