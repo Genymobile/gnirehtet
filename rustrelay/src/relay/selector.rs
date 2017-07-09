@@ -1,6 +1,5 @@
 use mio::*;
 use std::cell::RefCell;
-use std::fmt::Debug;
 use std::io;
 use std::rc::Rc;
 use std::time::Duration;
@@ -67,7 +66,7 @@ impl Selector {
     }
 
     pub fn run_handler(&mut self, event: Event) {
-        let mut handler = self.handlers.get_mut(event.token()).expect("Token not found").clone();
+        let handler = self.handlers.get_mut(event.token()).expect("Token not found").clone();
         handler.borrow_mut().on_ready(self, event);
     }
 }
