@@ -69,7 +69,9 @@ impl UDPConnection {
     fn close(&mut self, selector: &mut Selector) {
         self.closed = true;
         self.disconnect(selector);
+    }
 
+    fn remove_from_router(&self) {
         // route is embedded in router which is embedded in client: the client necessarily exists
         let client_rc = self.client.upgrade().expect("Expected client not found");
         let mut client = client_rc.borrow_mut();
@@ -166,6 +168,11 @@ impl EventHandler for UDPConnection {
         if !self.closed && ready.is_readable() {
             self.process_receive(selector);
         }
-        self.update_interests(selector);
+        if !self.closed {
+            self.update_interests(selector);
+        } else {
+            // on_ready is not called from the router, so the connection must remove itself
+            self.remove_from_router();
+        }
     }
 }
