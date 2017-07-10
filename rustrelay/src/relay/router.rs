@@ -9,6 +9,7 @@ use super::connection::{Connection, ConnectionId};
 use super::ipv4_header::{IPv4Header, Protocol};
 use super::ipv4_packet::IPv4Packet;
 use super::selector::Selector;
+use super::tcp_connection::TCPConnection;
 use super::transport_header::TransportHeader;
 use super::udp_connection::UDPConnection;
 
@@ -37,10 +38,9 @@ impl Router {
         if ipv4_packet.is_valid() {
             let (ipv4_header, transport) = ipv4_packet.split();
             let (transport_header, _) = transport.expect("No transport");
-            if let Ok(connection) = self.connection(selector, &ipv4_header, &transport_header) {
-                connection.borrow_mut().send_to_network(selector, ipv4_packet);
-            } else {
-                error!(target: TAG, "Cannot create route, dropping packet");
+            match self.connection(selector, &ipv4_header, &transport_header) {
+                Ok(connection) => connection.borrow_mut().send_to_network(selector, ipv4_packet),
+                Err(err) => error!(target: TAG, "Cannot create route, dropping packet: {}", err),
             }
         } else {
             warn!(target: TAG, "Dropping invalid packet");
@@ -67,7 +67,7 @@ impl Router {
 
     fn create_connection(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: &IPv4Header, transport_header: &TransportHeader) -> io::Result<Rc<RefCell<Connection>>> {
         match id.protocol() {
-            Protocol::TCP => Err(io::Error::new(io::ErrorKind::Other, "Not implemented yet")),
+            Protocol::TCP => Ok(TCPConnection::new(selector, id, client, ipv4_header, transport_header)?),
             Protocol::UDP => Ok(UDPConnection::new(selector, id, client, ipv4_header, transport_header)?),
             p => Err(io::Error::new(io::ErrorKind::Other, format!("Unsupported protocol: {:?}", p))),
         }
