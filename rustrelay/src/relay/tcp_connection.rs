@@ -387,12 +387,18 @@ impl TCPConnection {
     fn update_interests(&mut self, selector: &mut Selector) {
         if !self.closed {
             let mut ready = Ready::empty();
-            if self.may_read() {
-                ready = ready | Ready::readable()
+            if self.tcb.state == TCPState::SynSent {
+                // waiting for connectable
+                ready = Ready::writable()
+            } else {
+                if self.may_read() {
+                    ready = ready | Ready::readable()
+                }
+                if self.may_write() {
+                    ready = ready | Ready::writable()
+                }
             }
-            if self.may_write() {
-                ready = ready | Ready::writable()
-            }
+            debug!(target: TAG, "interests: {:?}", ready);
             selector.reregister(&self.stream, self.token, ready, PollOpt::level()).expect("Cannot register on poll");
         }
     }
