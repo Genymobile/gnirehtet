@@ -9,7 +9,7 @@ use mio::net::TcpStream;
 use rand::random;
 
 use super::binary;
-use super::client::Client;
+use super::client::{Client, ClientChannel};
 use super::connection::{self, Connection, ConnectionId};
 use super::ipv4_header::IPv4Header;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
@@ -238,7 +238,7 @@ impl TCPConnection {
         tcp_header.set_flags(flags);
     }
 
-    fn handle_packet(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+    fn handle_packet(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         if self.tcb.state == TCPState::Init {
             self.handle_first_packet(selector, ipv4_packet);
@@ -420,8 +420,8 @@ impl Connection for TCPConnection {
         &self.id
     }
 
-    fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
-        self.handle_packet(selector, ipv4_packet);
+    fn send_to_network(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
+        self.handle_packet(selector, client_channel, ipv4_packet);
         if !self.closed {
             self.update_interests(selector);
         }

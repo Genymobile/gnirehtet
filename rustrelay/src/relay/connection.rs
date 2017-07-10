@@ -1,6 +1,7 @@
 use std::fmt;
 use std::net::{Ipv4Addr, SocketAddrV4};
 
+use super::client::ClientChannel;
 use super::ipv4_header::{IPv4HeaderData, Protocol};
 use super::ipv4_packet::IPv4Packet;
 use super::net;
@@ -11,7 +12,7 @@ const LOCALHOST_FORWARD: u32 = 0x0A000202;
 
 pub trait Connection {
     fn id(&self) -> &ConnectionId;
-    fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet);
+    fn send_to_network(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet);
     fn close(&mut self, selector: &mut Selector);
     fn is_expired(&self) -> bool;
     fn is_closed(&self) -> bool;

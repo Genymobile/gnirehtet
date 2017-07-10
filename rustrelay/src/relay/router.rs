@@ -4,7 +4,7 @@ use std::rc::{Rc, Weak};
 use log::LogLevel;
 
 use super::binary;
-use super::client::Client;
+use super::client::{Client, ClientChannel};
 use super::connection::{Connection, ConnectionId};
 use super::ipv4_header::{IPv4Header, Protocol};
 use super::ipv4_packet::IPv4Packet;
@@ -34,7 +34,7 @@ impl Router {
         self.client = client;
     }
 
-    pub fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+    pub fn send_to_network(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
         if ipv4_packet.is_valid() {
             let (ipv4_header, transport) = ipv4_packet.split();
             let (transport_header, _) = transport.expect("No transport");
@@ -43,7 +43,7 @@ impl Router {
                     let closed = {
                         let connection_ref = self.connections.get_mut(index).unwrap();
                         let mut connection = connection_ref.borrow_mut();
-                        connection.send_to_network(selector, ipv4_packet);
+                        connection.send_to_network(selector, client_channel, ipv4_packet);
                         connection.is_closed()
                     };
                     if closed {

@@ -8,7 +8,7 @@ use mio::{Event, PollOpt, Ready, Token};
 use mio::net::UdpSocket;
 
 use super::binary;
-use super::client::Client;
+use super::client::{Client, ClientChannel};
 use super::connection::{self, Connection, ConnectionId};
 use super::datagram_buffer::DatagramBuffer;
 use super::ipv4_header::IPv4Header;
@@ -126,7 +126,7 @@ impl Connection for UDPConnection {
         &self.id
     }
 
-    fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+    fn send_to_network(&mut self, selector: &mut Selector, _: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
         match self.client_to_network.read_from(ipv4_packet.payload().expect("No payload")) {
             Ok(_) => {
                 self.update_interests(selector);
