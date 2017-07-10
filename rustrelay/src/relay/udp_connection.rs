@@ -113,14 +113,12 @@ impl UDPConnection {
     }
 
     fn update_interests(&mut self, selector: &mut Selector) {
-        if !self.closed {
-            let ready = if self.client_to_network.is_empty() {
-                Ready::readable()
-            } else {
-                Ready::readable() | Ready::writable()
-            };
-            selector.reregister(&self.socket, self.token, ready, PollOpt::level()).expect("Cannot register on poll");
-        }
+        let ready = if self.client_to_network.is_empty() {
+            Ready::readable()
+        } else {
+            Ready::readable() | Ready::writable()
+        };
+        selector.reregister(&self.socket, self.token, ready, PollOpt::level()).expect("Cannot register on poll");
     }
 
     fn touch(&mut self) {
