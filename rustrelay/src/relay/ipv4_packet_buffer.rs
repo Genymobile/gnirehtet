@@ -58,8 +58,25 @@ impl IPv4PacketBuffer {
             // some data remaining, move them to the front of the buffer
             unsafe {
                 let buf_ptr = self.buf.as_mut_ptr();
+
+                // Before:
+                //
+                //  consumed                  old_head
+                // |        |....................|
+                //  <------>
+                //   length
+                //
+                // After:
+                //
+                //                  new_head (= old_head - length)
+                // |....................|
+                //                       <------>
+                //                        length
+                //
+                // move from [length..old_head] to [0..new_head]
+                //
                 // semantically equivalent to memmove()
-                ptr::copy(buf_ptr.offset(length as isize), buf_ptr, length);
+                ptr::copy(buf_ptr.offset(length as isize), buf_ptr, self.head);
             }
         }
     }
