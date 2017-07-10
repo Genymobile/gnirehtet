@@ -31,6 +31,46 @@ pub struct Client {
     pending_id_bytes: usize,
 }
 
+/// Channel for connections to send back data immediately to the client
+pub struct ClientChannel<'a> {
+    network_to_client: &'a mut StreamBuffer,
+    stream: &'a TcpStream,
+    token: Token,
+}
+
+impl<'a> ClientChannel<'a> {
+    fn new(network_to_client: &'a mut StreamBuffer, stream: &'a TcpStream, token: Token) -> Self {
+        Self {
+            network_to_client: network_to_client,
+            stream: stream,
+            token: token,
+        }
+    }
+
+    // Functionally equivalent to Client::send_to_client, except that it does not require to
+    // mutably borrow the whole client. As a drawback, it does not update interests, so the client
+    // must call update_interests() afterwards if necessary.
+    pub fn send_to_client(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<()> {
+        if ipv4_packet.length() as usize <= self.network_to_client.remaining() {
+            self.network_to_client.read_from(ipv4_packet.raw());
+            self.update_interests(selector);
+            Ok(())
+        } else {
+            warn!(target: TAG, "Client buffer full");
+            Err(io::Error::new(io::ErrorKind::WouldBlock, "Client buffer full"))
+        }
+    }
+
+    fn update_interests(&mut self, selector: &mut Selector) {
+        let ready = if self.network_to_client.is_empty() {
+            Ready::readable()
+        } else {
+            Ready::readable() | Ready::writable()
+        };
+        selector.reregister(self.stream, self.token, ready, PollOpt::level()).expect("Cannot register on poll");
+    }
+}
+
 impl Client {
     pub fn new(id: u32, selector: &mut Selector, stream: TcpStream, close_listener: Box<CloseListener<Client>>) -> io::Result<Rc<RefCell<Self>>> {
         let rc = Rc::new(RefCell::new(Self {
@@ -66,6 +106,10 @@ impl Client {
 
     pub fn router(&mut self) -> &mut Router {
         &mut self.router
+    }
+
+    pub fn channel(&mut self) -> ClientChannel {
+        ClientChannel::new(&mut self.network_to_client, &self.stream, self.token)
     }
 
     fn close(&mut self, selector: &mut Selector) {
@@ -141,12 +185,7 @@ impl Client {
     }
 
     fn update_interests(&mut self, selector: &mut Selector) {
-        let ready = if self.network_to_client.is_empty() {
-            Ready::readable()
-        } else {
-            Ready::readable() | Ready::writable()
-        };
-        selector.reregister(&self.stream, self.token, ready, PollOpt::level()).expect("Cannot register on poll");
+        self.channel().update_interests(selector);
     }
 
     fn read(&mut self) -> io::Result<(bool)> {
@@ -167,7 +206,8 @@ impl Client {
     fn push_one_packet_to_network(&mut self, selector: &mut Selector) -> bool {
         match self.client_to_network.as_ipv4_packet() {
             Some(ref packet) => {
-                self.router.send_to_network(selector, packet);
+                let mut client_channel = ClientChannel::new(&mut self.network_to_client, &self.stream, self.token);
+                self.router.send_to_network(selector, &mut client_channel, packet);
                 true
             }
             None => false
