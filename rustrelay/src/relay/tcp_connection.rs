@@ -133,7 +133,9 @@ impl TCPConnection {
     fn close(&mut self, selector: &mut Selector) {
         self.closed = true;
         self.disconnect(selector);
+    }
 
+    fn remove_from_router(&self) {
         // route is embedded in router which is embedded in client: the client necessarily exists
         let client_rc = self.client.upgrade().expect("Expected client not found");
         let mut client = client_rc.borrow_mut();
@@ -439,6 +441,10 @@ impl Connection for TCPConnection {
         // no external timeout expiration
         false
     }
+
+    fn is_closed(&self) -> bool {
+        self.closed
+    }
 }
 
 impl EventHandler for TCPConnection {
@@ -458,6 +464,8 @@ impl EventHandler for TCPConnection {
         }
         if !self.closed {
             self.update_interests(selector);
+        } else {
+            self.remove_from_router();
         }
     }
 }

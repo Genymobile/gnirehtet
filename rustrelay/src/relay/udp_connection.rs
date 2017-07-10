@@ -149,6 +149,10 @@ impl Connection for UDPConnection {
     fn is_expired(&self) -> bool {
         self.idle_since.elapsed().as_secs() > IDLE_TIMEOUT_SECONDS
     }
+
+    fn is_closed(&self) -> bool {
+        self.closed
+    }
 }
 
 impl EventHandler for UDPConnection {
