@@ -108,7 +108,7 @@ mod tests {
         let mut stream_buffer = StreamBuffer::new(9);
 
         let mut cursor = io::Cursor::new(Vec::new());
-        stream_buffer.read_from(&data).unwrap();
+        stream_buffer.read_from(&data);
         stream_buffer.write_to(&mut cursor).unwrap();
 
         assert_eq!(cursor.get_ref(), &data);
@@ -120,12 +120,12 @@ mod tests {
         let mut stream_buffer = StreamBuffer::new(9);
 
         // put 6 bytes
-        stream_buffer.read_from(&data).unwrap();
+        stream_buffer.read_from(&data);
         // consume 3 bytes
         read_some(&mut stream_buffer, 3);
 
         // put test data
-        stream_buffer.read_from(&data).unwrap();
+        stream_buffer.read_from(&data);
         // consume 3 bytes (so that the first 6 bytes are totally consumed, and the "tail" position is 6)
         read_some(&mut stream_buffer, 3);
 
@@ -142,19 +142,17 @@ mod tests {
     }
 
     #[test]
-    fn not_enough_space() {
+    fn just_enough_space() {
         let data = create_data();
         let mut stream_buffer = StreamBuffer::new(9);
 
         // fill the buffer twice
-        stream_buffer.read_from(&data).unwrap();
+        stream_buffer.read_from(&data);
         assert_eq!(3, stream_buffer.remaining());
+        stream_buffer.read_from(&[0, 1, 2]);
 
-        // not enough space for another packet of 6 bytes
-        assert!(stream_buffer.read_from(&data).is_err());
-
-        // but enough space for a smaller one
-        stream_buffer.read_from(&[0, 1, 2]).unwrap();
+        let result = read(&mut stream_buffer);
+        assert_eq!([0, 1, 2, 3, 4, 5, 0, 1, 2], &result[..]);
     }
 
     fn read_some(stream_buffer: &mut StreamBuffer, bytes: usize) -> Vec<u8> {
