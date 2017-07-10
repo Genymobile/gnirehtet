@@ -98,7 +98,7 @@ impl Router {
 
     pub fn clear(&mut self, selector: &mut Selector) {
         for connection in &mut self.connections {
-            connection.borrow_mut().disconnect(selector);
+            connection.borrow_mut().close(selector);
         }
         self.connections.clear();
     }
@@ -109,7 +109,7 @@ impl Router {
                 let mut connection = self.connections[i].borrow_mut();
                 if connection.is_expired() {
                     debug!(target: TAG, "Removed expired connection: {}", connection.id());
-                    connection.disconnect(selector);
+                    connection.close(selector);
                     true
                 } else {
                     false
