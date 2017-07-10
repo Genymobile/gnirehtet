@@ -197,9 +197,13 @@ impl TCPConnection {
         client.send_to_client(selector, &ipv4_packet)
     }
 
-    fn send_empty_packet_to_client(&mut self, selector: &mut Selector, flags: u16) {
+    fn send_empty_packet_to_client(selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<()> {
+        // todo remove send_to_client on the client (force to use channel())
+    }
+
+    fn reply_empty_packet_to_client(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, flags: u16) {
         let ipv4_packet = Self::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, flags);
-        if let Err(err) = Self::send_to_client(&self.client, selector, &ipv4_packet) {
+        if let Err(err) = client_channel.send_to_client(selector, &ipv4_packet) {
             // losing such an empty packet will not break the TCP connection
             cx_warn!(target: TAG, self.id, "Cannot send packet to client: {}", err);
         }
@@ -241,12 +245,12 @@ impl TCPConnection {
     fn handle_packet(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         if self.tcb.state == TCPState::Init {
-            self.handle_first_packet(selector, ipv4_packet);
+            self.handle_first_packet(selector, client_channel, ipv4_packet);
             return;
         }
 
         if tcp_header.is_syn() {
-            self.handle_duplicate_syn(selector, ipv4_packet);
+            self.handle_duplicate_syn(selector, client_channel, ipv4_packet);
             return;
         }
 
@@ -254,7 +258,7 @@ impl TCPConnection {
             // ignore packet already received or out-of-order, retransmission is already
             // managed by both sides
             cx_warn!(target: TAG, self.id, "Ignoring packet {}; expecting {}; flags={}", tcp_header.sequence_number(), tcp_header.acknowledgement_number(), tcp_header.flags());
-            self.send_empty_packet_to_client(selector, tcp_header::FLAG_ACK); // re-ack
+            self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_ACK); // re-ack
             return;
         }
 
@@ -273,13 +277,13 @@ impl TCPConnection {
         }
 
         if tcp_header.is_fin() {
-            self.handle_fin(selector, ipv4_packet);
+            self.handle_fin(selector, client_channel, ipv4_packet);
         } else if tcp_header.is_ack() {
-            self.handle_ack(selector, ipv4_packet);
+            self.handle_ack(selector, client_channel, ipv4_packet);
         }
     }
 
-    fn handle_first_packet(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+    fn handle_first_packet(&mut self, selector: &mut Selector, _: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
         cx_debug!(target: TAG, self.id, "handle_first_packet()");
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         if tcp_header.is_syn() {
@@ -299,7 +303,7 @@ impl TCPConnection {
         }
     }
 
-    fn handle_duplicate_syn(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+    fn handle_duplicate_syn(&mut self, selector: &mut Selector, _: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         let their_sequence_number = tcp_header.sequence_number();
         if self.tcb.state == TCPState::SynSent {
@@ -313,21 +317,21 @@ impl TCPConnection {
         }
     }
 
-    fn handle_fin(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+    fn handle_fin(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         self.tcb.acknowledgement_number = Wrapping(tcp_header.sequence_number()) + Wrapping(1);
         if self.tcb.remote_closed {
             self.tcb.state = TCPState::LastAck;
             cx_debug!(target: TAG, self.id, "Received a FIN from the client, sending ACK+FIN {}", self.tcb.numbers());
-            self.send_empty_packet_to_client(selector, tcp_header::FLAG_FIN | tcp_header::FLAG_ACK);
+            self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_FIN | tcp_header::FLAG_ACK);
             self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
         } else {
             self.tcb.state = TCPState::CloseWait;
-            self.send_empty_packet_to_client(selector, tcp_header::FLAG_ACK);
+            self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_ACK);
         }
     }
 
-    fn handle_ack(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
+    fn handle_ack(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
         cx_debug!(target: TAG, self.id, "handle_ack()");
         if self.tcb.state == TCPState::SynReceived {
             self.tcb.state == TCPState::Established;
@@ -360,7 +364,7 @@ impl TCPConnection {
         // send ACK to client
         cx_debug!(target: TAG, self.id, "Received a payload from the client ({} bytes), sending ACK {}",
                   payload.len(), self.tcb.numbers());
-        self.send_empty_packet_to_client(selector, tcp_header::FLAG_ACK);
+        self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_ACK);
     }
 
     fn create_empty_response_packet<'a>(id: &ConnectionId, packetizer: &'a mut Packetizer, tcb: &TCB, flags: u16) -> IPv4Packet<'a> {
