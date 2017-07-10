@@ -47,6 +47,7 @@ impl Router {
                         connection.is_closed()
                     };
                     if closed {
+                        // the connection is closed, remove it
                         self.connections.swap_remove(index);
                     }
                 },
