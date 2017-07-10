@@ -387,22 +387,21 @@ impl TCPConnection {
     }
 
     fn update_interests(&mut self, selector: &mut Selector) {
-        if !self.closed {
-            let mut ready = Ready::empty();
-            if self.tcb.state == TCPState::SynSent {
-                // waiting for connectable
-                ready = Ready::writable()
-            } else {
-                if self.may_read() {
-                    ready = ready | Ready::readable()
-                }
-                if self.may_write() {
-                    ready = ready | Ready::writable()
-                }
+        assert!(!self.closed);
+        let mut ready = Ready::empty();
+        if self.tcb.state == TCPState::SynSent {
+            // waiting for connectable
+            ready = Ready::writable()
+        } else {
+            if self.may_read() {
+                ready = ready | Ready::readable()
             }
-            debug!(target: TAG, "interests: {:?}", ready);
-            selector.reregister(&self.stream, self.token, ready, PollOpt::level()).expect("Cannot register on poll");
+            if self.may_write() {
+                ready = ready | Ready::writable()
+            }
         }
+        debug!(target: TAG, "interests: {:?}", ready);
+        selector.reregister(&self.stream, self.token, ready, PollOpt::level()).expect("Cannot register on poll");
     }
 
     fn may_read(&self) -> bool {
@@ -428,7 +427,9 @@ impl Connection for TCPConnection {
 
     fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) {
         self.handle_packet(selector, ipv4_packet);
-        self.update_interests(selector);
+        if !self.closed {
+            self.update_interests(selector);
+        }
     }
 
     fn disconnect(&mut self, selector: &mut Selector) {
