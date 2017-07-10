@@ -14,6 +14,7 @@ pub trait Connection {
     fn send_to_network(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet);
     fn disconnect(&mut self, selector: &mut Selector);
     fn is_expired(&self) -> bool;
+    fn is_closed(&self) -> bool;
 }
 
 pub fn rewritten_destination(ipv4: u32, port: u16) -> SocketAddrV4  {

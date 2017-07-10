@@ -39,7 +39,17 @@ impl Router {
             let (ipv4_header, transport) = ipv4_packet.split();
             let (transport_header, _) = transport.expect("No transport");
             match self.connection(selector, &ipv4_header, &transport_header) {
-                Ok(connection) => connection.borrow_mut().send_to_network(selector, ipv4_packet),
+                Ok(index) => {
+                    let closed = {
+                        let connection_ref = self.connections.get_mut(index).unwrap();
+                        let mut connection = connection_ref.borrow_mut();
+                        connection.send_to_network(selector, ipv4_packet);
+                        connection.is_closed()
+                    };
+                    if closed {
+                        self.connections.swap_remove(index);
+                    }
+                },
                 Err(err) => error!(target: TAG, "Cannot create route, dropping packet: {}", err),
             }
         } else {
@@ -50,7 +60,7 @@ impl Router {
         }
     }
 
-    fn connection(&mut self, selector: &mut Selector, ipv4_header: &IPv4Header, transport_header: &TransportHeader) -> io::Result<&Rc<RefCell<Connection>>> {
+    fn connection(&mut self, selector: &mut Selector, ipv4_header: &IPv4Header, transport_header: &TransportHeader) -> io::Result<usize> {
         // TODO avoid cloning transport_header
         let id = ConnectionId::from_headers(ipv4_header.data(), &transport_header.data_clone());
         let index = match self.find_index(&id) {
@@ -62,7 +72,7 @@ impl Router {
                 index
             }
         };
-        Ok(self.connections.get_mut(index).unwrap())
+        Ok(index)
     }
 
     fn create_connection(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: &IPv4Header, transport_header: &TransportHeader) -> io::Result<Rc<RefCell<Connection>>> {
