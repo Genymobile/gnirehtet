@@ -47,9 +47,8 @@ impl<'a> ClientChannel<'a> {
         }
     }
 
-    // Functionally equivalent to Client::send_to_client, except that it does not require to
-    // mutably borrow the whole client. As a drawback, it does not update interests, so the client
-    // must call update_interests() afterwards if necessary.
+    // Functionally equivalent to Client::send_to_client(), except that it does not require to
+    // mutably borrow the whole client.
     pub fn send_to_client(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<()> {
         if ipv4_packet.length() as usize <= self.network_to_client.remaining() {
             self.network_to_client.read_from(ipv4_packet.raw());
