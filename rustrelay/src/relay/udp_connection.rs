@@ -61,8 +61,7 @@ impl UDPConnection {
     fn create_socket(id: &ConnectionId) -> io::Result<UdpSocket> {
         let autobind_addr = SocketAddr::new(Ipv4Addr::new(0, 0, 0, 0).into(), 0);
         let udp_socket = UdpSocket::bind(&autobind_addr)?;
-        let rewritten_destination = connection::rewritten_destination(id.destination_ip(), id.destination_port()).into();
-        udp_socket.connect(rewritten_destination)?;
+        udp_socket.connect(id.rewritten_destination().into())?;
         Ok(udp_socket)
     }
 

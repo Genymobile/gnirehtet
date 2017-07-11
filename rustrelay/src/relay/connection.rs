@@ -1,5 +1,5 @@
 use std::fmt;
-use std::net::{Ipv4Addr, SocketAddrV4};
+use std::net::SocketAddrV4;
 
 use super::client::ClientChannel;
 use super::ipv4_header::{IPv4HeaderData, Protocol};
@@ -8,7 +8,8 @@ use super::net;
 use super::selector::Selector;
 use super::transport_header::TransportHeaderData;
 
-const LOCALHOST_FORWARD: u32 = 0x0A000202;
+const LOCALHOST_FORWARD: u32 = 0x0A000202; // 10.0.2.2
+const LOCALHOST: u32 = 0x7F000001; // 127.0.0.1
 
 pub trait Connection {
     fn id(&self) -> &ConnectionId;
@@ -16,15 +17,6 @@ pub trait Connection {
     fn close(&mut self, selector: &mut Selector);
     fn is_expired(&self) -> bool;
     fn is_closed(&self) -> bool;
-}
-
-pub fn rewritten_destination(ipv4: u32, port: u16) -> SocketAddrV4  {
-    let addr = if ipv4 == LOCALHOST_FORWARD {
-        Ipv4Addr::new(127, 0, 0, 1)
-    } else {
-        net::to_addr(ipv4)
-    };
-    SocketAddrV4::new(addr, port)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -51,28 +43,21 @@ impl ConnectionId {
         self.protocol
     }
 
-    pub fn source_ip(&self) -> u32 {
-        self.source_ip
-    }
-
-    pub fn source_port(&self) -> u16 {
-        self.source_port
-    }
-
-    pub fn destination_ip(&self) -> u32 {
-        self.destination_ip
-    }
-
-    pub fn destination_port(&self) -> u16 {
-        self.destination_port
-    }
-
     pub fn source(&self) -> SocketAddrV4 {
         net::to_socket_addr(self.source_ip, self.source_port)
     }
 
-    pub fn destination(&self) -> SocketAddrV4 {
+    fn destination(&self) -> SocketAddrV4 {
         net::to_socket_addr(self.destination_ip, self.destination_port)
+    }
+
+    pub fn rewritten_destination(&self) -> SocketAddrV4 {
+        let ip = if self.destination_ip == LOCALHOST_FORWARD {
+            LOCALHOST
+        } else {
+            self.destination_ip
+        };
+        net::to_socket_addr(ip, self.destination_port)
     }
 }
 

@@ -136,8 +136,7 @@ impl TCPConnection {
     }
 
     fn create_stream(id: &ConnectionId) -> io::Result<TcpStream> {
-        let rewritten_destination = connection::rewritten_destination(id.destination_ip(), id.destination_port()).into();
-        TcpStream::connect(&rewritten_destination)
+        TcpStream::connect(&id.rewritten_destination().into())
     }
 
     fn remove_from_router(&self) {
