@@ -149,38 +149,6 @@ impl<'a> IPv4Packet<'a> {
         self.ipv4_header_data.total_length()
     }
 
-/*
-    pub fn ipv4_header_range(&self) -> Range<usize> {
-        let start = 0;
-        let end = self.ipv4_header.header_length() as usize;
-        start..end
-    }
-
-    pub fn transport_range(&self) -> Option<Range<usize>> {
-        self.transport_header.as_ref().map(|_| {
-            let start = self.ipv4_header.header_length() as usize;
-            let end = self.raw.len();
-            start..end
-        })
-    }
-
-    pub fn transport_header_range(&self) -> Option<Range<usize>> {
-        self.transport_header.as_ref().map(|transport_header| {
-            let start = self.ipv4_header.header_length() as usize;
-            let end = start + transport_header.header_length() as usize;
-            start..end
-        })
-    }
-
-    pub fn payload_range(&self) -> Option<Range<usize>> {
-        self.transport_header.as_ref().map(|transport_header| {
-            let start = self.ipv4_header.header_length() as usize + transport_header.header_length() as usize;
-            let end = self.raw.len();
-            start..end
-        })
-    }
-*/
-    // TODO delete function
     pub fn payload(&self) -> Option<&[u8]> {
         self.transport_header_data.as_ref().map(|transport_header_data| {
             let range = self.ipv4_header_data.header_length() as usize + transport_header_data.header_length() as usize..;
