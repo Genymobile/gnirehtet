@@ -407,7 +407,7 @@ impl TCPConnection {
                 ready = ready | Ready::writable()
             }
         }
-        debug!(target: TAG, "interests: {:?}", ready);
+        cx_debug!(target: TAG, self.id, "interests: {:?}", ready);
         selector.reregister(&self.stream, self.token, ready, PollOpt::level()).expect("Cannot register on poll");
     }
 
