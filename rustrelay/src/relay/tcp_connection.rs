@@ -171,7 +171,7 @@ impl TCPConnection {
         let non_lexical_lifetime_workaround = match self.network_to_client.packetize_read(&mut self.stream, Some(max_payload_length)) {
             Ok(Some(ipv4_packet)) => {
                 match Self::send_to_client(&self.client, selector, &ipv4_packet) {
-                    Ok(_) => self.packet_for_client_length = None, // packet consumed
+                    Ok(_) => self.tcb.sequence_number += Wrapping(ipv4_packet.payload().unwrap().len() as u32),
                     Err(_) => {
                         // ask to the client to pull when its buffer is not full
                         let client_rc = self.client.upgrade().expect("Expected client not found");
