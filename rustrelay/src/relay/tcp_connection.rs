@@ -197,10 +197,19 @@ impl TCPConnection {
         client.send_to_client(selector, &ipv4_packet)
     }
 
-    fn send_empty_packet_to_client(selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<()> {
-        // todo remove send_to_client on the client (force to use channel())
+    /// Borrow self.client and send empty packet to it
+    ///
+    /// To be used if called by on_ready() (so the client is not borrowed yet).
+    fn send_empty_packet_to_client(&mut self, selector: &mut Selector, flags: u16) {
+        let client_rc = self.client.upgrade().expect("Expected client not found");
+        let mut client = client_rc.borrow_mut();
+        self.reply_empty_packet_to_client(selector, &mut client.channel(), flags)
     }
 
+    /// Send empty packet to the client channel (that already borrows the client)
+    ///
+    /// To be used if called by send_to_network() (called by the client, so it is already
+    /// borrowed).
     fn reply_empty_packet_to_client(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, flags: u16) {
         let ipv4_packet = Self::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, flags);
         if let Err(err) = client_channel.send_to_client(selector, &ipv4_packet) {
