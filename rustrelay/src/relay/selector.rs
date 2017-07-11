@@ -24,7 +24,21 @@ impl<T: EventHandler> EventHandler for Rc<RefCell<T>> {
 
 pub struct Selector {
     poll: Poll,
-    handlers: Slab<Rc<RefCell<Box<EventHandler>>>, Token>,
+    handlers: Slab<SelectionHandler, Token>,
+}
+
+struct SelectionHandler {
+    handler: Rc<RefCell<Box<EventHandler>>>,
+    registered: bool,
+}
+
+impl SelectionHandler {
+    fn new(handler: Box<EventHandler>) -> Self {
+        Self {
+            handler: Rc::new(RefCell::new(handler)),
+            registered: true,
+        }
+    }
 }
 
 impl Selector {
@@ -38,7 +52,7 @@ impl Selector {
     pub fn register<E>(&mut self, handle: &E, handler: Box<EventHandler>,
                    interest: Ready, opts: PollOpt) -> io::Result<Token>
             where E: Evented + ?Sized {
-        let token = self.handlers.insert(Rc::new(RefCell::new(handler)))
+        let token = self.handlers.insert(SelectionHandler::new(handler))
                         .map_err(|_| io::Error::new(io::ErrorKind::Other, "Cannot allocate slab slot"))?;
         self.poll.register(handle, token, interest, opts)?;
         Ok(token)
@@ -47,13 +61,31 @@ impl Selector {
     pub fn reregister<E>(&mut self, handle: &E, token: Token,
                    interest: Ready, opts: PollOpt) -> io::Result<()>
             where E: Evented + ?Sized {
-        self.poll.reregister(handle, token, interest, opts)
+        // a Poll does not accept to register an empty Ready
+        // for simplifying its usage, expose an API that does
+        let selection_handler = self.handlers.get_mut(token).expect("Token not found");
+        if interest.is_empty() {
+            if selection_handler.registered {
+                selection_handler.registered = false;
+                self.poll.deregister(handle)?;
+            }
+            Ok(())
+        } else {
+            if !selection_handler.registered {
+                selection_handler.registered = true;
+                self.poll.register(handle, token, interest, opts)?;
+            }
+            self.poll.reregister(handle, token, interest, opts)
+        }
     }
 
     pub fn deregister<E>(&mut self, handle: &E, token: Token) -> io::Result<()>
             where E: Evented + ?Sized {
-        self.handlers.remove(token).expect("Unknown token removed");
-        self.poll.deregister(handle)
+        let selection_handler = self.handlers.remove(token).expect("Unknown token removed");
+        if selection_handler.registered {
+            self.poll.deregister(handle)?;
+        }
+        Ok(())
     }
 
     pub fn poll(&mut self, events: &mut Events, timeout: Option<Duration>) -> io::Result<usize> {
@@ -61,7 +93,7 @@ impl Selector {
     }
 
     pub fn run_handler(&mut self, event: Event) {
-        let handler = self.handlers.get_mut(event.token()).expect("Token not found").clone();
+        let handler = self.handlers.get_mut(event.token()).expect("Token not found").handler.clone();
         handler.borrow_mut().on_ready(self, event);
     }
 }
