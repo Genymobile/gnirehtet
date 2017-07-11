@@ -190,7 +190,7 @@ impl TCPConnection {
         assert_eq!(self.tcb.state, TCPState::SynSent);
         self.tcb.state = TCPState::SynReceived;
         self.send_empty_packet_to_client(selector, tcp_header::FLAG_SYN |tcp_header::FLAG_ACK);
-        self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
+        self.tcb.sequence_number += Wrapping(1); // SYN counts for 1 byte
     }
 
     fn send_to_client(client: &Weak<RefCell<Client>>, selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<()> {
