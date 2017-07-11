@@ -70,6 +70,16 @@ impl TCB {
         }
     }
 
+    fn get_remaining_client_window(&self) -> u16 {
+        let wrapped_remaining = Wrapping(self.their_acknowledgement_number) + Wrapping(self.client_window as u32) - self.sequence_number;
+        let remaining = wrapped_remaining.0;
+        if remaining < self.client_window as u32 {
+            remaining as u16
+        } else {
+            0
+        }
+    }
+
     fn numbers(&self) -> String {
         format!("(seq={}, ack={})", self.sequence_number, self.acknowledgement_number)
     }
@@ -152,7 +162,7 @@ impl TCPConnection {
 
     fn process_receive(&mut self, selector: &mut Selector) {
         assert!(self.packet_for_client_length.is_none(), "A pending packet was not sent");
-        let remaining_client_window = self.get_remaining_client_window();
+        let remaining_client_window = self.tcb.get_remaining_client_window();
         assert!(remaining_client_window > 0, "process_received() must not be called when window == 0");
         let max_payload_length = cmp::min(remaining_client_window, MAX_PAYLOAD_LENGTH) as usize;
         Self::update_headers(&mut self.network_to_client, &self.tcb, tcp_header::FLAG_ACK | tcp_header::FLAG_PSH);
@@ -414,16 +424,11 @@ impl TCPConnection {
     fn may_read(&self) -> bool {
         !self.tcb.remote_closed &&
                 self.packet_for_client_length.is_none() &&
-                self.get_remaining_client_window() > 0
+                self.tcb.get_remaining_client_window() > 0
     }
 
     fn may_write(&self) -> bool {
         !self.client_to_network.is_empty()
-    }
-
-    fn get_remaining_client_window(&self) -> u16 {
-        // TODO
-        42
     }
 }
 
