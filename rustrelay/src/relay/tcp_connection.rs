@@ -347,7 +347,7 @@ impl TCPConnection {
     fn handle_ack(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
         cx_debug!(target: TAG, self.id, "handle_ack()");
         if self.tcb.state == TCPState::SynReceived {
-            self.tcb.state == TCPState::Established;
+            self.tcb.state = TCPState::Established;
             return;
         }
         if self.tcb.state == TCPState::LastAck {
