@@ -268,7 +268,7 @@ impl TCPConnection {
         if tcp_header.sequence_number() != self.tcb.acknowledgement_number.0 {
             // ignore packet already received or out-of-order, retransmission is already
             // managed by both sides
-            cx_warn!(target: TAG, self.id, "Ignoring packet {}; expecting {}; flags={}", tcp_header.sequence_number(), tcp_header.acknowledgement_number(), tcp_header.flags());
+            cx_warn!(target: TAG, self.id, "Ignoring packet {}; expecting {}; flags={}", tcp_header.sequence_number(), self.tcb.acknowledgement_number.0, tcp_header.flags());
             self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_ACK); // re-ack
             return;
         }
