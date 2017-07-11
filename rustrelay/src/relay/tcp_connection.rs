@@ -73,7 +73,7 @@ impl TCB {
     fn get_remaining_client_window(&self) -> u16 {
         let wrapped_remaining = Wrapping(self.their_acknowledgement_number) + Wrapping(self.client_window as u32) - self.sequence_number;
         let remaining = wrapped_remaining.0;
-        if remaining < self.client_window as u32 {
+        if remaining <= self.client_window as u32 {
             remaining as u16
         } else {
             0
