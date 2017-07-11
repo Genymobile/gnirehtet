@@ -18,6 +18,7 @@ pub enum TransportHeaderData {
     UDP(UDPHeaderData),
 }
 
+#[allow(dead_code)]
 impl TransportHeaderData {
     pub fn parse(protocol: Protocol, raw: &[u8]) -> Option<Self> {
         match protocol {
@@ -84,6 +85,7 @@ impl<'a> TransportHeaderMut<'a> {
 macro_rules! transport_header_common {
     ($name:ident, $raw_type:ty, $data_type:ty) => {
         // for readability, declare structs manually outside the macro
+        #[allow(dead_code)]
         impl<'a> $name<'a> {
             #[inline]
             pub fn raw(&self) -> &[u8] {
@@ -124,18 +126,6 @@ macro_rules! transport_header_common {
                     $name::UDP(_) => UDP_HEADER_LENGTH,
                 }
             }
-
-            /*pub fn source_port(&self) -> u16 {
-                self.data().source_port()
-            }
-
-            pub fn destination_port(&self) -> u16 {
-                self.data().destination_port()
-            }
-
-            pub fn header_length(&self) -> u16 {
-                self.data().header_length()
-            }*/
         }
     }
 }
@@ -144,6 +134,7 @@ transport_header_common!(TransportHeader, &'a [u8], &'a TransportHeaderData);
 transport_header_common!(TransportHeaderMut, &'a mut [u8], &'a mut TransportHeaderData);
 
 // additional methods for the mutable version
+#[allow(dead_code)]
 impl<'a> TransportHeaderMut<'a> {
     #[inline]
     pub fn raw_mut(&mut self) -> &mut [u8] {
@@ -152,13 +143,6 @@ impl<'a> TransportHeaderMut<'a> {
             TransportHeaderMut::UDP(ref mut udp_header) => udp_header.raw_mut(),
         }
     }
-
-    /*pub fn data_mut(&mut self) -> &mut TransportHeaderData {
-        match *self {
-            TransportHeaderMut::TCP(ref mut tcp_header) => tcp_header.data_mut().into(),
-            TransportHeaderMut::UDP(ref mut udp_header) => udp_header.data_mut().into(),
-        }
-    }*/
 
     #[inline]
     pub fn swap_source_and_destination(&mut self) {

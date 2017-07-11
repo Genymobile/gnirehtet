@@ -37,28 +37,27 @@ impl<'a> IPv4Packet<'a> {
     }
 
     #[inline]
-    pub fn raw_mut(&mut self) -> &mut [u8] {
-        self.raw
-    }
-
-    #[inline]
+    #[allow(dead_code)]
     pub fn ipv4_header_data(&self) -> &IPv4HeaderData {
         &self.ipv4_header_data
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub fn ipv4_header(&self) -> IPv4Header {
         let slice = &self.raw[..self.ipv4_header_data.header_length() as usize];
         self.ipv4_header_data.bind(slice)
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub fn ipv4_header_mut(&mut self) -> IPv4HeaderMut {
         let slice = &mut self.raw[..self.ipv4_header_data.header_length() as usize];
         self.ipv4_header_data.bind_mut(slice)
     }
 
     #[inline]
+    #[allow(dead_code)]
     pub fn transport_header_data(&self) -> &Option<TransportHeaderData> {
         &self.transport_header_data
     }
@@ -82,7 +81,8 @@ impl<'a> IPv4Packet<'a> {
     }
 
     #[inline]
-    pub fn transport_header_mut(&mut self) -> Option<TransportHeaderMut> {
+    #[allow(dead_code)]
+    fn transport_header_mut(&mut self) -> Option<TransportHeaderMut> {
         if let Some(ref mut transport_header_data) = self.transport_header_data {
             let start = self.ipv4_header_data.header_length() as usize;
             let end = start + transport_header_data.header_length() as usize;
@@ -164,13 +164,13 @@ impl<'a> IPv4Packet<'a> {
         }
     }
 
-    #[inline]
+    /*#[inline]
     pub fn swap_source_and_destination(&mut self) {
         self.ipv4_header_mut().swap_source_and_destination();
         if let Some(mut transport_header) = self.transport_header_mut() {
             transport_header.swap_source_and_destination();
         }
-    }
+    }*/
 }
 
 #[cfg(test)]
@@ -219,37 +219,6 @@ mod tests {
             if let Some(TransportHeaderData::UDP(ref udp_header)) = *ipv4_packet.transport_header_data() {
                 assert_eq!(1234, udp_header.source_port());
                 assert_eq!(5678, udp_header.destination_port());
-            } else {
-                panic!("No UDP transport header");
-            }
-        }
-
-        ipv4_packet.swap_source_and_destination();
-
-        {
-            let ipv4_header = ipv4_packet.ipv4_header();
-            assert_eq!(0x42424242, ipv4_header.source());
-            assert_eq!(0x12345678, ipv4_header.destination());
-
-            if let Some(TransportHeaderData::UDP(ref udp_header)) = *ipv4_packet.transport_header_data() {
-                assert_eq!(5678, udp_header.source_port());
-                assert_eq!(1234, udp_header.destination_port());
-            } else {
-                panic!("No UDP transport header");
-            }
-        }
-
-        {
-            let raw = ipv4_packet.raw();
-            // assert that the buffer has been modified
-            let raw_source = BigEndian::read_u32(&raw[12..16]);
-            let raw_destination = BigEndian::read_u32(&raw[16..20]);
-            assert_eq!(0x42424242, raw_source);
-            assert_eq!(0x12345678, raw_destination);
-
-            if let Some(TransportHeaderData::UDP(ref udp_header)) = *ipv4_packet.transport_header_data() {
-                assert_eq!(5678, udp_header.source_port());
-                assert_eq!(1234, udp_header.destination_port());
             } else {
                 panic!("No UDP transport header");
             }

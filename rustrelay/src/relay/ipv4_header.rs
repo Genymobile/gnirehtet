@@ -28,6 +28,7 @@ pub enum Protocol {
     OTHER,
 }
 
+#[allow(dead_code)]
 impl IPv4HeaderData {
     pub fn parse(raw: &[u8]) -> Self {
         Self {
@@ -50,10 +51,6 @@ impl IPv4HeaderData {
 
     pub fn bind_mut<'c, 'a: 'c, 'b: 'c>(&'a mut self, raw: &'b mut [u8]) -> IPv4HeaderMut<'c> {
         IPv4HeaderMut::new(raw, self)
-    }
-
-    pub fn version(&self) -> u8 {
-        self.version
     }
 
     pub fn header_length(&self) -> u8 {
@@ -93,6 +90,7 @@ pub fn peek_version_length(raw: &[u8]) -> Option<(u8, u16)> {
 macro_rules! ipv4_header_common {
     ($name:ident, $raw_type:ty, $data_type:ty) => {
         // for readability, declare structs manually outside the macro
+        #[allow(dead_code)]
         impl<'a> $name<'a> {
             pub fn new(raw: $raw_type, data: $data_type) -> Self {
                 Self {
@@ -136,6 +134,7 @@ ipv4_header_common!(IPv4Header, &'a [u8], &'a IPv4HeaderData);
 ipv4_header_common!(IPv4HeaderMut, &'a mut [u8], &'a mut IPv4HeaderData);
 
 // additional methods for the mutable version
+#[allow(dead_code)]
 impl<'a> IPv4HeaderMut<'a> {
     pub fn raw_mut(&mut self) -> &mut [u8] {
         self.raw

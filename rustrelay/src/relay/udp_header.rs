@@ -20,6 +20,7 @@ pub struct UDPHeaderData {
     destination_port: u16,
 }
 
+#[allow(dead_code)]
 impl UDPHeaderData {
     pub fn parse(raw: &[u8]) -> Self {
         Self {
@@ -53,6 +54,7 @@ impl UDPHeaderData {
 macro_rules! udp_header_common {
     ($name:ident, $raw_type:ty, $data_type:ty) => {
         // for readability, declare structs manually outside the macro
+        #[allow(dead_code)]
         impl<'a> $name<'a> {
             pub fn new(raw: $raw_type, data: $data_type) -> Self {
                 Self {
@@ -88,6 +90,7 @@ udp_header_common!(UDPHeader, &'a [u8], &'a UDPHeaderData);
 udp_header_common!(UDPHeaderMut, &'a mut [u8], &'a mut UDPHeaderData);
 
 // additional methods for the mutable version
+#[allow(dead_code)]
 impl<'a> UDPHeaderMut<'a> {
     #[inline]
     pub fn raw_mut(&mut self) -> &mut [u8] {

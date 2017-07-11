@@ -29,8 +29,8 @@ pub const FLAG_SYN: u16 = 1 << 1;
 pub const FLAG_RST: u16 = 1 << 2;
 pub const FLAG_PSH: u16 = 1 << 3;
 pub const FLAG_ACK: u16 = 1 << 4;
-pub const FLAG_URG: u16 = 1 << 5;
 
+#[allow(dead_code)]
 impl TCPHeaderData {
     pub fn parse(raw: &[u8]) -> Self {
         let data_offset_and_flags = BigEndian::read_u16(&raw[12..14]);
@@ -114,17 +114,13 @@ impl TCPHeaderData {
     pub fn is_ack(&self) -> bool {
         self.flags & FLAG_ACK != 0
     }
-
-    #[inline]
-    pub fn is_urg(&self) -> bool {
-        self.flags & FLAG_URG != 0
-    }
 }
 
 // shared definition for UDPHeader and UDPHeaderMut
 macro_rules! tcp_header_common {
     ($name:ident, $raw_type:ty, $data_type:ty) => {
         // for readability, declare structs manually outside the macro
+        #[allow(dead_code)]
         impl<'a> $name<'a> {
             pub fn new(raw: $raw_type, data: $data_type) -> Self {
                 Self {
@@ -202,11 +198,6 @@ macro_rules! tcp_header_common {
             pub fn is_ack(&self) -> bool {
                 self.data.is_ack()
             }
-
-            #[inline]
-            pub fn is_urg(&self) -> bool {
-                self.data.is_urg()
-            }
         }
     }
 }
@@ -215,6 +206,7 @@ tcp_header_common!(TCPHeader, &'a [u8], &'a TCPHeaderData);
 tcp_header_common!(TCPHeaderMut, &'a mut [u8], &'a mut TCPHeaderData);
 
 // additional methods for the mutable version
+#[allow(dead_code)]
 impl<'a> TCPHeaderMut<'a> {
     #[inline]
     pub fn raw_mut(&mut self) -> &mut [u8] {
@@ -433,19 +425,32 @@ mod tests {
         assert_eq!(101, header.acknowledgement_number());
         assert_eq!(FLAG_FIN | FLAG_ACK, header.flags());
 
-        // assert that the buffer has been modified
+        {
+            let raw = header.raw();
+            // assert that the buffer has been modified
+            let raw_source_port = BigEndian::read_u16(&raw[0..2]);
+            let raw_destination_port = BigEndian::read_u16(&raw[2..4]);
+            let raw_sequence_number = BigEndian::read_u32(&raw[4..8]);
+            let raw_acknowledgement_number = BigEndian::read_u32(&raw[8..12]);
+            let raw_data_offset_and_flags = BigEndian::read_u16(&raw[12..14]);
+
+            assert_eq!(1111, raw_source_port);
+            assert_eq!(2222, raw_destination_port);
+            assert_eq!(300, raw_sequence_number);
+            assert_eq!(101, raw_acknowledgement_number);
+            assert_eq!(0x5011, raw_data_offset_and_flags);
+        }
+
+        header.swap_source_and_destination();
+
+        assert_eq!(2222, header.source_port());
+        assert_eq!(1111, header.destination_port());
+
         let raw = header.raw();
         let raw_source_port = BigEndian::read_u16(&raw[0..2]);
         let raw_destination_port = BigEndian::read_u16(&raw[2..4]);
-        let raw_sequence_number = BigEndian::read_u32(&raw[4..8]);
-        let raw_acknowledgement_number = BigEndian::read_u32(&raw[8..12]);
-        let raw_data_offset_and_flags = BigEndian::read_u16(&raw[12..14]);
-
-        assert_eq!(1111, raw_source_port);
-        assert_eq!(2222, raw_destination_port);
-        assert_eq!(300, raw_sequence_number);
-        assert_eq!(101, raw_acknowledgement_number);
-        assert_eq!(0x5011, raw_data_offset_and_flags);
+        assert_eq!(2222, raw_source_port);
+        assert_eq!(1111, raw_destination_port);
     }
 
     #[test]
