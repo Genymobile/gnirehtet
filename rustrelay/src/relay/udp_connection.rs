@@ -9,7 +9,7 @@ use mio::net::UdpSocket;
 
 use super::binary;
 use super::client::{Client, ClientChannel};
-use super::connection::{self, Connection, ConnectionId};
+use super::connection::{Connection, ConnectionId};
 use super::datagram_buffer::DatagramBuffer;
 use super::ipv4_header::IPv4Header;
 use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};

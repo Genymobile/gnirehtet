@@ -41,10 +41,6 @@ impl<'a, R> ReadAdapter<'a, R> where R: io::Read + 'a {
             max_chunk_size: max_chunk_size,
         }
     }
-
-    pub fn set_max_chunk_size(&mut self, max_chunk_size: Option<usize>) {
-        self.max_chunk_size = max_chunk_size;
-    }
 }
 
 impl<'a, R> DatagramReceiver for ReadAdapter<'a, R> where R: io::Read + 'a {
@@ -136,19 +132,26 @@ pub mod tests {
     fn read_adapter_chunks() {
         let mut cursor = io::Cursor::new([1, 2, 3, 4, 5]);
         let mut buf = [0u8; 10];
-        let mut adapter = ReadAdapter::new(&mut cursor, Some(2));
-        let recved = adapter.recv(&mut buf).unwrap();
-        assert_eq!(2, recved);
-        assert_eq!([1, 2], &buf[..2]);
 
-        adapter.set_max_chunk_size(Some(1));
-        let recved = adapter.recv(&mut buf).unwrap();
-        assert_eq!(1, recved);
-        assert_eq!([3], &buf[..1]);
+        {
+            let mut adapter = ReadAdapter::new(&mut cursor, Some(2));
+            let recved = adapter.recv(&mut buf).unwrap();
+            assert_eq!(2, recved);
+            assert_eq!([1, 2], &buf[..2]);
+        }
 
-        adapter.set_max_chunk_size(None);
-        let recved = adapter.recv(&mut buf).unwrap();
-        assert_eq!(2, recved);
-        assert_eq!([4, 5], &buf[..2]);
+        {
+            let mut adapter = ReadAdapter::new(&mut cursor, Some(1));
+            let recved = adapter.recv(&mut buf).unwrap();
+            assert_eq!(1, recved);
+            assert_eq!([3], &buf[..1]);
+        }
+
+        {
+            let mut adapter = ReadAdapter::new(&mut cursor, None);
+            let recved = adapter.recv(&mut buf).unwrap();
+            assert_eq!(2, recved);
+            assert_eq!([4, 5], &buf[..2]);
+        }
     }
 }
