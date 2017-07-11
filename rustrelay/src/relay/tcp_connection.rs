@@ -189,7 +189,7 @@ impl TCPConnection {
     fn process_connect(&mut self, selector: &mut Selector) {
         assert_eq!(self.tcb.state, TCPState::SynSent);
         self.tcb.state = TCPState::SynReceived;
-        self.send_empty_packet_to_client(selector, tcp_header::FLAG_SYN |tcp_header::FLAG_ACK);
+        self.send_empty_packet_to_client(selector, tcp_header::FLAG_SYN | tcp_header::FLAG_ACK);
         self.tcb.sequence_number += Wrapping(1); // SYN counts for 1 byte
     }
 
