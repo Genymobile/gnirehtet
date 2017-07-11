@@ -125,6 +125,17 @@ public class TCPHeaderTest {
         Assert.assertEquals(300, sequenceNumber);
         Assert.assertEquals(101, acknowledgementNumber);
         Assert.assertEquals(0x5011, dataOffsetAndFlags);
+
+        header.swapSourceAndDestination();
+
+        Assert.assertEquals(2222, header.getSourcePort());
+        Assert.assertEquals(1111, header.getDestinationPort());
+
+        sourcePort = Short.toUnsignedInt(buffer.getShort(0));
+        destinationPort = Short.toUnsignedInt(buffer.getShort(2));
+
+        Assert.assertEquals(2222, sourcePort);
+        Assert.assertEquals(1111, destinationPort);
     }
 
     @Test
