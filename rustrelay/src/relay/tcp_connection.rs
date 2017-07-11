@@ -178,8 +178,9 @@ impl TCPConnection {
                         let mut client = client_rc.borrow_mut();
                         let self_rc = self.self_weak.upgrade().unwrap();
                         client.register_pending_packet_source(self_rc);
-                    }
-                }
+                        self.packet_for_client_length = Some(ipv4_packet.length());
+                    },
+                };
                 Ok(Some(()))
             },
             Ok(None) => Ok(None),
