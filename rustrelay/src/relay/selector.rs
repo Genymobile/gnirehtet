@@ -27,11 +27,6 @@ pub struct Selector {
     handlers: Slab<Rc<RefCell<Box<EventHandler>>>, Token>,
 }
 
-struct RunningState {
-    token: Option<Token>,
-    removed: bool,
-}
-
 impl Selector {
     pub fn new() -> io::Result<Self> {
         Ok(Self {
