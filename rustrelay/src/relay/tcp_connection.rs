@@ -144,7 +144,8 @@ impl TCPConnection {
             },
             Err(err) => {
                 cx_error!(target: TAG, self.id, "Cannot write: {}", err);
-                self.reset_connection(selector);
+                self.send_empty_packet_to_client(selector, tcp_header::FLAG_RST);
+                self.close(selector);
             },
         }
     }
@@ -178,7 +179,8 @@ impl TCPConnection {
             Ok(None) => self.eof(selector),
             Err(err) => {
                 cx_error!(target: TAG, self.id, "Cannot read: {}", err);
-                self.reset_connection(selector);
+                self.send_empty_packet_to_client(selector, tcp_header::FLAG_RST);
+                self.close(selector);
             },
             Ok(Some(_)) => (), // already handled
         }
@@ -292,7 +294,7 @@ impl TCPConnection {
         }
     }
 
-    fn handle_first_packet(&mut self, selector: &mut Selector, _: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
+    fn handle_first_packet(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
         cx_debug!(target: TAG, self.id, "handle_first_packet()");
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         if tcp_header.is_syn() {
@@ -308,11 +310,12 @@ impl TCPConnection {
             cx_warn!(target: TAG, self.id, "Unexpected first packet {}; acking {}; flags={}",
                      tcp_header.sequence_number(), tcp_header.acknowledgement_number(), tcp_header.flags());
             self.tcb.sequence_number = Wrapping(tcp_header.acknowledgement_number()); // make a RST in the window client
-            self.reset_connection(selector);
+            self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_RST);
+            self.close(selector);
         }
     }
 
-    fn handle_duplicate_syn(&mut self, selector: &mut Selector, _: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
+    fn handle_duplicate_syn(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         let their_sequence_number = tcp_header.sequence_number();
         if self.tcb.state == TCPState::SynSent {
@@ -322,7 +325,8 @@ impl TCPConnection {
             self.tcb.acknowledgement_number = Wrapping(their_sequence_number) + Wrapping(1);
         } else if their_sequence_number != self.tcb.syn_sequence_number {
             // duplicate SYN with different sequence number
-            self.reset_connection(selector);
+            self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_RST);
+            self.close(selector);
         }
     }
 
@@ -387,11 +391,6 @@ impl TCPConnection {
             cx_trace!(target: TAG, id, "{}", binary::to_string(ipv4_packet.raw()));
         }
         ipv4_packet
-    }
-
-    fn reset_connection(&mut self, selector: &mut Selector) {
-        self.send_empty_packet_to_client(selector, tcp_header::FLAG_RST);
-        self.close(selector);
     }
 
     fn update_interests(&mut self, selector: &mut Selector) {
