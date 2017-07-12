@@ -5,6 +5,8 @@ use std::rc::Rc;
 use std::time::Duration;
 use slab::Slab;
 
+const TAG: &'static str = "Selector";
+
 pub trait EventHandler {
     fn on_ready(&mut self, selector: &mut Selector, event: Event);
 }
@@ -95,7 +97,7 @@ impl Selector {
         Ok(())
     }
 
-    pub fn clean_removed_tokens(&mut self) {
+    fn clean_removed_tokens(&mut self) {
         for &token in &self.tokens_to_remove {
             self.handlers.remove(token).expect("Token not found");
         }
@@ -106,8 +108,14 @@ impl Selector {
         self.poll.poll(events, timeout)
     }
 
-    pub fn run_handler(&mut self, event: Event) {
-        let handler = self.handlers.get_mut(event.token()).expect("Token not found").handler.clone();
-        handler.borrow_mut().on_ready(self, event);
+    pub fn run_handlers(&mut self, events: &Events) {
+        for event in events {
+            debug!(target: TAG, "event={:?}", event);
+            let handler = self.handlers.get_mut(event.token()).expect("Token not found").handler.clone();
+            handler.borrow_mut().on_ready(self, event);
+        }
+
+        // remove the tokens marked as removed
+        self.clean_removed_tokens();
     }
 }

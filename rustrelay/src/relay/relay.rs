@@ -2,7 +2,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 use std::time::Duration;
 use chrono::Local;
-use mio::*;
+use mio::Events;
 
 use super::udp_connection::IDLE_TIMEOUT_SECONDS;
 use super::selector::Selector;
@@ -50,13 +50,7 @@ impl Relay {
                 assert!(!events.is_empty(), "poll() returned without any event");
             }
 
-            for event in &events {
-                println!("event={:?}", event);
-                selector.run_handler(event);
-            }
-
-            // remove the tokens marked as removed
-            selector.clean_removed_tokens();
+            selector.run_handlers(&mut events);
         }
     }
 }
