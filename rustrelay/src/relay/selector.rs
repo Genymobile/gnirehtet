@@ -73,9 +73,10 @@ impl Selector {
         } else {
             if !selection_handler.registered {
                 selection_handler.registered = true;
-                self.poll.register(handle, token, interest, opts)?;
+                self.poll.register(handle, token, interest, opts)
+            } else {
+                self.poll.reregister(handle, token, interest, opts)
             }
-            self.poll.reregister(handle, token, interest, opts)
         }
     }
 
