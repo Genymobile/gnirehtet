@@ -54,6 +54,9 @@ impl Relay {
                 println!("event={:?}", event);
                 selector.run_handler(event);
             }
+
+            // remove the tokens marked as removed
+            selector.clean_removed_tokens();
         }
     }
 }
