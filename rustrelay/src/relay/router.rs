@@ -38,7 +38,7 @@ impl Router {
         if ipv4_packet.is_valid() {
             let (ipv4_header, transport) = ipv4_packet.split();
             let (transport_header, _) = transport.expect("No transport");
-            match self.connection(selector, &ipv4_header, &transport_header) {
+            match self.connection(selector, ipv4_header, transport_header) {
                 Ok(index) => {
                     let closed = {
                         let connection_ref = self.connections.get_mut(index).unwrap();
@@ -61,7 +61,7 @@ impl Router {
         }
     }
 
-    fn connection(&mut self, selector: &mut Selector, ipv4_header: &IPv4Header, transport_header: &TransportHeader) -> io::Result<usize> {
+    fn connection(&mut self, selector: &mut Selector, ipv4_header: IPv4Header, transport_header: TransportHeader) -> io::Result<usize> {
         // TODO avoid cloning transport_header
         let id = ConnectionId::from_headers(ipv4_header.data(), &transport_header.data_clone());
         let index = match self.find_index(&id) {
@@ -76,7 +76,7 @@ impl Router {
         Ok(index)
     }
 
-    fn create_connection(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: &IPv4Header, transport_header: &TransportHeader) -> io::Result<Rc<RefCell<Connection>>> {
+    fn create_connection(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: IPv4Header, transport_header: TransportHeader) -> io::Result<Rc<RefCell<Connection>>> {
         match id.protocol() {
             Protocol::TCP => Ok(TCPConnection::new(selector, id, client, ipv4_header, transport_header)?),
             Protocol::UDP => Ok(UDPConnection::new(selector, id, client, ipv4_header, transport_header)?),

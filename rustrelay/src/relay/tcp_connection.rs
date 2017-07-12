@@ -86,53 +86,52 @@ impl TCB {
 }
 
 impl TCPConnection {
-    pub fn new(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: &IPv4Header, transport_header: &TransportHeader) -> io::Result<Rc<RefCell<Self>>> {
+    pub fn new(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: IPv4Header, transport_header: TransportHeader) -> io::Result<Rc<RefCell<Self>>> {
         let stream = Self::create_stream(&id)?;
 
-        if let TransportHeader::TCP(ref tcp_header) = *transport_header {
-            // shrink the TCP options to pass a minimal refrence header to the packetizer
-            let mut shrinked_tcp_header_raw = [0u8; 20];
-            shrinked_tcp_header_raw.copy_from_slice(&tcp_header.raw()[..20]);
-            let mut shrinked_tcp_header_data = tcp_header.data().clone();
-            {
-                let mut shrinked_tcp_header = shrinked_tcp_header_data.bind_mut(&mut shrinked_tcp_header_raw);
-                shrinked_tcp_header.shrink_options();
-                assert_eq!(20, shrinked_tcp_header.header_length());
-            }
+        cx_debug!(target: TAG, id, "CREATING TCPConnection");
+        let tcp_header = Self::tcp_header_of_transport(transport_header);
 
-            let shrinked_transport_header = shrinked_tcp_header_data.bind(&shrinked_tcp_header_raw).into();
-
-            let packetizer = Packetizer::new(&ipv4_header, &shrinked_transport_header);
-
-            let rc = Rc::new(RefCell::new(Self {
-                self_weak: Weak::new(),
-                id: id,
-                client: client,
-                stream: stream,
-                token: Token(0), // default value, will be set afterwards
-                client_to_network: StreamBuffer::new(4 * MAX_PACKET_LENGTH),
-                network_to_client: packetizer,
-                packet_for_client_length: None,
-                closed: false,
-                tcb: TCB::new(),
-            }));
-
-            {
-                let mut self_ref = rc.borrow_mut();
-
-                // keep a shared reference to this
-                self_ref.self_weak = Rc::downgrade(&rc);
-
-                // rc is an EventHandler, register() expects a Box<EventHandler>
-                let handler = Box::new(rc.clone());
-                // writable to detect when the stream is connected
-                let token = selector.register(&self_ref.stream, handler, Ready::writable(), PollOpt::level())?;
-                self_ref.token = token;
-            }
-            Ok(rc)
-        } else {
-            panic!("Not a TCP header");
+        // shrink the TCP options to pass a minimal refrence header to the packetizer
+        let mut shrinked_tcp_header_raw = [0u8; 20];
+        shrinked_tcp_header_raw.copy_from_slice(&tcp_header.raw()[..20]);
+        let mut shrinked_tcp_header_data = tcp_header.data().clone();
+        {
+            let mut shrinked_tcp_header = shrinked_tcp_header_data.bind_mut(&mut shrinked_tcp_header_raw);
+            shrinked_tcp_header.shrink_options();
+            assert_eq!(20, shrinked_tcp_header.header_length());
         }
+
+        let shrinked_transport_header = shrinked_tcp_header_data.bind(&shrinked_tcp_header_raw).into();
+
+        let packetizer = Packetizer::new(&ipv4_header, &shrinked_transport_header);
+
+        let rc = Rc::new(RefCell::new(Self {
+            self_weak: Weak::new(),
+            id: id,
+            client: client,
+            stream: stream,
+            token: Token(0), // default value, will be set afterwards
+            client_to_network: StreamBuffer::new(4 * MAX_PACKET_LENGTH),
+            network_to_client: packetizer,
+            packet_for_client_length: None,
+            closed: false,
+            tcb: TCB::new(),
+        }));
+
+        {
+            let mut self_ref = rc.borrow_mut();
+
+            // keep a shared reference to this
+            self_ref.self_weak = Rc::downgrade(&rc);
+
+            // rc is an EventHandler, register() expects a Box<EventHandler>
+            let handler = Box::new(rc.clone());
+            // writable to detect when the stream is connected
+            let token = selector.register(&self_ref.stream, handler, Ready::writable(), PollOpt::level())?;
+            self_ref.token = token;
+        }
+        Ok(rc)
     }
 
     fn create_stream(id: &ConnectionId) -> io::Result<TcpStream> {
@@ -239,6 +238,15 @@ impl TCPConnection {
         if self.tcb.state == TCPState::CloseWait {
             self.send_empty_packet_to_client(selector, tcp_header::FLAG_FIN);
             self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
+        }
+    }
+
+    #[inline]
+    fn tcp_header_of_transport<'a>(transport_header: TransportHeader<'a>) -> TCPHeader<'a> {
+        if let TransportHeader::TCP(tcp_header) = transport_header {
+            tcp_header
+        } else {
+            panic!("Not a TCP header");
         }
     }
 
