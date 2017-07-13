@@ -475,24 +475,25 @@ impl Connection for TCPConnection {
 
 impl EventHandler for TCPConnection {
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
-        assert!(!self.closed);
-        let ready = event.readiness();
-        if ready.is_writable() {
-            if self.tcb.state == TCPState::SynSent {
-                // writable is first triggered when the stream is connected
-                self.process_connect(selector);
-            } else {
-                self.process_send(selector);
-            }
-        }
-        if !self.closed && ready.is_readable() {
-            self.process_receive(selector);
-        }
         if !self.closed {
-            self.update_interests(selector);
-        } else {
-            // on_ready is not called from the router, so the connection must remove itself
-            self.remove_from_router();
+            let ready = event.readiness();
+            if ready.is_writable() {
+                if self.tcb.state == TCPState::SynSent {
+                    // writable is first triggered when the stream is connected
+                    self.process_connect(selector);
+                } else {
+                    self.process_send(selector);
+                }
+            }
+            if !self.closed && ready.is_readable() {
+                self.process_receive(selector);
+            }
+            if !self.closed {
+                self.update_interests(selector);
+            } else {
+                // on_ready is not called from the router, so the connection must remove itself
+                self.remove_from_router();
+            }
         }
     }
 }
