@@ -2,8 +2,8 @@ use std::fmt;
 use std::net::SocketAddrV4;
 
 use super::client::ClientChannel;
-use super::ipv4_header::{IPv4HeaderData, Protocol};
-use super::ipv4_packet::IPv4Packet;
+use super::ipv4_header::{Ipv4HeaderData, Protocol};
+use super::ipv4_packet::Ipv4Packet;
 use super::net;
 use super::selector::Selector;
 use super::transport_header::TransportHeaderData;
@@ -13,7 +13,7 @@ const LOCALHOST: u32 = 0x7F000001; // 127.0.0.1
 
 pub trait Connection {
     fn id(&self) -> &ConnectionId;
-    fn send_to_network(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet);
+    fn send_to_network(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &Ipv4Packet);
     fn close(&mut self, selector: &mut Selector);
     fn is_expired(&self) -> bool;
     fn is_closed(&self) -> bool;
@@ -29,7 +29,7 @@ pub struct ConnectionId {
 }
 
 impl ConnectionId {
-    pub fn from_headers(ipv4_header_data: &IPv4HeaderData, transport_header_data: &TransportHeaderData) -> Self {
+    pub fn from_headers(ipv4_header_data: &Ipv4HeaderData, transport_header_data: &TransportHeaderData) -> Self {
         Self {
             protocol: ipv4_header_data.protocol(),
             source_ip: ipv4_header_data.source(),

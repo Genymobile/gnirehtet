@@ -1,8 +1,8 @@
 use std::io;
 
 use super::datagram::{DatagramReceiver, ReadAdapter};
-use super::ipv4_header::{IPv4Header, IPv4HeaderData, IPv4HeaderMut};
-use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
+use super::ipv4_header::{Ipv4Header, Ipv4HeaderData, Ipv4HeaderMut};
+use super::ipv4_packet::{Ipv4Packet, MAX_PACKET_LENGTH};
 use super::transport_header::{TransportHeader, TransportHeaderData, TransportHeaderMut};
 
 /// Convert from level 5 to level 3 by appending correct IP and transport headers.
@@ -10,12 +10,12 @@ pub struct Packetizer {
     buffer: Box<[u8; MAX_PACKET_LENGTH]>,
     transport_index: usize,
     payload_index: usize,
-    ipv4_header_data: IPv4HeaderData,
+    ipv4_header_data: Ipv4HeaderData,
     transport_header_data: TransportHeaderData,
 }
 
 impl Packetizer {
-    pub fn new(reference_ipv4_header: &IPv4Header, reference_transport_header: &TransportHeader) -> Self {
+    pub fn new(reference_ipv4_header: &Ipv4Header, reference_transport_header: &TransportHeader) -> Self {
         let mut buffer = Box::new([0; MAX_PACKET_LENGTH]);
 
         let transport_index = reference_ipv4_header.header_length() as usize;
@@ -47,11 +47,11 @@ impl Packetizer {
         }
     }
 
-    pub fn packetize_empty_payload(&mut self) -> IPv4Packet {
+    pub fn packetize_empty_payload(&mut self) -> Ipv4Packet {
         self.build(0)
     }
 
-    pub fn packetize<R: DatagramReceiver>(&mut self, source: &mut R) -> io::Result<IPv4Packet> {
+    pub fn packetize<R: DatagramReceiver>(&mut self, source: &mut R) -> io::Result<Ipv4Packet> {
         let r = source.recv(&mut self.buffer[self.payload_index..])?;
         let ipv4_packet = self.build(r as u16);
         Ok(ipv4_packet)
@@ -62,7 +62,7 @@ impl Packetizer {
     /// `Ok(Some(_))` when packet is available
     /// `Ok(None)` on EOF (read 0 byte)
     /// `Err(_)` on error
-    pub fn packetize_read<R: io::Read>(&mut self, source: &mut R, max_chunk_size: Option<usize>) -> io::Result<Option<IPv4Packet>> {
+    pub fn packetize_read<R: io::Read>(&mut self, source: &mut R, max_chunk_size: Option<usize>) -> io::Result<Option<Ipv4Packet>> {
         let mut adapter = ReadAdapter::new(source, max_chunk_size);
         let r = adapter.recv(&mut self.buffer[self.payload_index..])?;
         let option = if r > 0 {
@@ -74,7 +74,7 @@ impl Packetizer {
         Ok(option)
     }
 
-    pub fn ipv4_header_mut(&mut self) -> IPv4HeaderMut {
+    pub fn ipv4_header_mut(&mut self) -> Ipv4HeaderMut {
         let raw = &mut self.buffer[..self.transport_index];
         self.ipv4_header_data.bind_mut(raw)
     }
@@ -84,19 +84,19 @@ impl Packetizer {
         self.transport_header_data.bind_mut(raw)
     }
 
-    fn build(&mut self, payload_length: u16) -> IPv4Packet {
+    fn build(&mut self, payload_length: u16) -> Ipv4Packet {
         let total_length = self.payload_index as u16 + payload_length;
 
         self.ipv4_header_mut().set_total_length(total_length);
         self.transport_header_mut().set_payload_length(payload_length);
 
-        let mut ipv4_packet = IPv4Packet::new(&mut self.buffer[..total_length as usize], self.ipv4_header_data.clone(), self.transport_header_data.clone());
+        let mut ipv4_packet = Ipv4Packet::new(&mut self.buffer[..total_length as usize], self.ipv4_header_data.clone(), self.transport_header_data.clone());
         ipv4_packet.compute_checksums();
         ipv4_packet
     }
 
-    pub fn inflate(&mut self, packet_length: u16) -> IPv4Packet {
-        IPv4Packet::new(&mut self.buffer[..packet_length as usize], self.ipv4_header_data.clone(), self.transport_header_data.clone())
+    pub fn inflate(&mut self, packet_length: u16) -> Ipv4Packet {
+        Ipv4Packet::new(&mut self.buffer[..packet_length as usize], self.ipv4_header_data.clone(), self.transport_header_data.clone())
     }
 }
 
@@ -131,7 +131,7 @@ mod tests {
     #[test]
     fn merge_headers_and_payload() {
         let mut raw = &mut create_packet()[..];
-        let reference_packet = IPv4Packet::parse(raw);
+        let reference_packet = Ipv4Packet::parse(raw);
 
         let data = [ 0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 ];
         let mut mock = MockDatagramSocket::from_data(&data);
@@ -148,7 +148,7 @@ mod tests {
     #[test]
     fn last_packet() {
         let mut raw = &mut create_packet()[..];
-        let reference_packet = IPv4Packet::parse(raw);
+        let reference_packet = Ipv4Packet::parse(raw);
 
         let data = [ 0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 ];
         let mut mock = MockDatagramSocket::from_data(&data);
@@ -166,7 +166,7 @@ mod tests {
     #[test]
     fn packetize_chunks() {
         let mut raw = &mut create_packet()[..];
-        let reference_packet = IPv4Packet::parse(raw);
+        let reference_packet = Ipv4Packet::parse(raw);
 
         let data = [ 0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 ];
         let mut cursor = io::Cursor::new(&data);

@@ -11,17 +11,17 @@ use super::binary;
 use super::client::{Client, ClientChannel};
 use super::connection::{Connection, ConnectionId};
 use super::datagram_buffer::DatagramBuffer;
-use super::ipv4_header::IPv4Header;
-use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
+use super::ipv4_header::Ipv4Header;
+use super::ipv4_packet::{Ipv4Packet, MAX_PACKET_LENGTH};
 use super::packetizer::Packetizer;
 use super::selector::{EventHandler, Selector};
 use super::transport_header::TransportHeader;
 
-const TAG: &'static str = "UDPConnection";
+const TAG: &'static str = "UdpConnection";
 
 pub const IDLE_TIMEOUT_SECONDS: u64 = 2 * 60;
 
-pub struct UDPConnection {
+pub struct UdpConnection {
     id: ConnectionId,
     client: Weak<RefCell<Client>>,
     socket: UdpSocket,
@@ -32,9 +32,9 @@ pub struct UDPConnection {
     idle_since: Instant,
 }
 
-impl UDPConnection {
-    pub fn new(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: IPv4Header, transport_header: TransportHeader) -> io::Result<Rc<RefCell<Self>>> {
-        let socket = UDPConnection::create_socket(&id)?;
+impl UdpConnection {
+    pub fn new(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: Ipv4Header, transport_header: TransportHeader) -> io::Result<Rc<RefCell<Self>>> {
+        let socket = UdpConnection::create_socket(&id)?;
         let packetizer = Packetizer::new(&ipv4_header, &transport_header);
         let rc = Rc::new(RefCell::new(Self {
             id: id,
@@ -120,12 +120,12 @@ impl UDPConnection {
     }
 }
 
-impl Connection for UDPConnection {
+impl Connection for UdpConnection {
     fn id(&self) -> &ConnectionId {
         &self.id
     }
 
-    fn send_to_network(&mut self, selector: &mut Selector, _: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
+    fn send_to_network(&mut self, selector: &mut Selector, _: &mut ClientChannel, ipv4_packet: &Ipv4Packet) {
         match self.client_to_network.read_from(ipv4_packet.payload().expect("No payload")) {
             Ok(_) => {
                 self.update_interests(selector);
@@ -150,7 +150,7 @@ impl Connection for UDPConnection {
     }
 }
 
-impl EventHandler for UDPConnection {
+impl EventHandler for UdpConnection {
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
         if !self.closed {
             self.touch();

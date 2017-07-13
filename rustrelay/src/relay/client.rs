@@ -8,8 +8,8 @@ use mio::{Event, PollOpt, Ready, Token};
 
 use super::binary;
 use super::close_listener::CloseListener;
-use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
-use super::ipv4_packet_buffer::IPv4PacketBuffer;
+use super::ipv4_packet::{Ipv4Packet, MAX_PACKET_LENGTH};
+use super::ipv4_packet_buffer::Ipv4PacketBuffer;
 use super::packet_source::PacketSource;
 use super::router::Router;
 use super::selector::{EventHandler, Selector};
@@ -21,7 +21,7 @@ pub struct Client {
     id: u32,
     stream: TcpStream,
     token: Token,
-    client_to_network: IPv4PacketBuffer,
+    client_to_network: Ipv4PacketBuffer,
     network_to_client: StreamBuffer,
     router: Router,
     close_listener: Box<CloseListener<Client>>,
@@ -49,7 +49,7 @@ impl<'a> ClientChannel<'a> {
 
     // Functionally equivalent to Client::send_to_client(), except that it does not require to
     // mutably borrow the whole client.
-    pub fn send_to_client(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<()> {
+    pub fn send_to_client(&mut self, selector: &mut Selector, ipv4_packet: &Ipv4Packet) -> io::Result<()> {
         if ipv4_packet.length() as usize <= self.network_to_client.remaining() {
             self.network_to_client.read_from(ipv4_packet.raw());
             self.update_interests(selector);
@@ -76,7 +76,7 @@ impl Client {
             id: id,
             stream: stream,
             token: Token(0), // default value, will be set afterwards
-            client_to_network: IPv4PacketBuffer::new(),
+            client_to_network: Ipv4PacketBuffer::new(),
             network_to_client: StreamBuffer::new(16 * MAX_PACKET_LENGTH),
             router: Router::new(),
             closed: false,
@@ -160,7 +160,7 @@ impl Client {
         }
     }
 
-    pub fn send_to_client(&mut self, selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<()> {
+    pub fn send_to_client(&mut self, selector: &mut Selector, ipv4_packet: &Ipv4Packet) -> io::Result<()> {
         if ipv4_packet.length() as usize <= self.network_to_client.remaining() {
             self.network_to_client.read_from(ipv4_packet.raw());
             self.update_interests(selector);

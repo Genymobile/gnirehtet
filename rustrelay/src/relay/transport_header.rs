@@ -1,29 +1,29 @@
-use super::ipv4_header::{IPv4HeaderData, Protocol};
-use super::tcp_header::{TCPHeader, TCPHeaderData, TCPHeaderMut};
-use super::udp_header::{UDPHeader, UDPHeaderData, UDPHeaderMut, UDP_HEADER_LENGTH};
+use super::ipv4_header::{Ipv4HeaderData, Protocol};
+use super::tcp_header::{TcpHeader, TcpHeaderData, TcpHeaderMut};
+use super::udp_header::{UdpHeader, UdpHeaderData, UdpHeaderMut, UDP_HEADER_LENGTH};
 
 pub enum TransportHeader<'a> {
-    TCP(TCPHeader<'a>),
-    UDP(UDPHeader<'a>),
+    Tcp(TcpHeader<'a>),
+    Udp(UdpHeader<'a>),
 }
 
 pub enum TransportHeaderMut<'a> {
-    TCP(TCPHeaderMut<'a>),
-    UDP(UDPHeaderMut<'a>),
+    Tcp(TcpHeaderMut<'a>),
+    Udp(UdpHeaderMut<'a>),
 }
 
 #[derive(Clone)]
 pub enum TransportHeaderData {
-    TCP(TCPHeaderData),
-    UDP(UDPHeaderData),
+    Tcp(TcpHeaderData),
+    Udp(UdpHeaderData),
 }
 
 #[allow(dead_code)]
 impl TransportHeaderData {
     pub fn parse(protocol: Protocol, raw: &[u8]) -> Option<Self> {
         match protocol {
-            Protocol::UDP => Some(UDPHeaderData::parse(raw).into()),
-            Protocol::TCP => Some(TCPHeaderData::parse(raw).into()),
+            Protocol::Udp => Some(UdpHeaderData::parse(raw).into()),
+            Protocol::Tcp => Some(TcpHeaderData::parse(raw).into()),
             _ => None
         }
     }
@@ -41,24 +41,24 @@ impl TransportHeaderData {
     #[inline]
     pub fn source_port(&self) -> u16 {
         match *self {
-            TransportHeaderData::TCP(ref tcp_header_data) => tcp_header_data.source_port(),
-            TransportHeaderData::UDP(ref udp_header_data) => udp_header_data.source_port(),
+            TransportHeaderData::Tcp(ref tcp_header_data) => tcp_header_data.source_port(),
+            TransportHeaderData::Udp(ref udp_header_data) => udp_header_data.source_port(),
         }
     }
 
     #[inline]
     pub fn destination_port(&self) -> u16 {
         match *self {
-            TransportHeaderData::TCP(ref tcp_header_data) => tcp_header_data.destination_port(),
-            TransportHeaderData::UDP(ref udp_header_data) => udp_header_data.destination_port(),
+            TransportHeaderData::Tcp(ref tcp_header_data) => tcp_header_data.destination_port(),
+            TransportHeaderData::Udp(ref udp_header_data) => udp_header_data.destination_port(),
         }
     }
 
     #[inline]
     pub fn header_length(&self) -> u8 {
         match *self {
-            TransportHeaderData::TCP(ref tcp_header_data) => tcp_header_data.header_length(),
-            TransportHeaderData::UDP(_) => UDP_HEADER_LENGTH,
+            TransportHeaderData::Tcp(ref tcp_header_data) => tcp_header_data.header_length(),
+            TransportHeaderData::Udp(_) => UDP_HEADER_LENGTH,
         }
     }
 }
@@ -66,8 +66,8 @@ impl TransportHeaderData {
 impl<'a> TransportHeader<'a> {
     pub fn new(raw: &'a [u8], data: &'a TransportHeaderData) -> Self {
         match *data {
-            TransportHeaderData::TCP(ref tcp_header_data) => tcp_header_data.bind(raw).into(),
-            TransportHeaderData::UDP(ref udp_header_data) => udp_header_data.bind(raw).into(),
+            TransportHeaderData::Tcp(ref tcp_header_data) => tcp_header_data.bind(raw).into(),
+            TransportHeaderData::Udp(ref udp_header_data) => udp_header_data.bind(raw).into(),
         }
     }
 }
@@ -75,8 +75,8 @@ impl<'a> TransportHeader<'a> {
 impl<'a> TransportHeaderMut<'a> {
     pub fn new(raw: &'a mut [u8], data: &'a mut TransportHeaderData) -> Self {
         match *data {
-            TransportHeaderData::TCP(ref mut tcp_header_data) => tcp_header_data.bind_mut(raw).into(),
-            TransportHeaderData::UDP(ref mut udp_header_data) => udp_header_data.bind_mut(raw).into(),
+            TransportHeaderData::Tcp(ref mut tcp_header_data) => tcp_header_data.bind_mut(raw).into(),
+            TransportHeaderData::Udp(ref mut udp_header_data) => udp_header_data.bind_mut(raw).into(),
         }
     }
 }
@@ -90,40 +90,40 @@ macro_rules! transport_header_common {
             #[inline]
             pub fn raw(&self) -> &[u8] {
                 match *self {
-                    $name::TCP(ref tcp_header) => tcp_header.raw(),
-                    $name::UDP(ref udp_header) => udp_header.raw(),
+                    $name::Tcp(ref tcp_header) => tcp_header.raw(),
+                    $name::Udp(ref udp_header) => udp_header.raw(),
                 }
             }
 
             #[inline]
             pub fn data_clone(&self) -> TransportHeaderData {
                 match *self {
-                    $name::TCP(ref tcp_header) => tcp_header.data().clone().into(),
-                    $name::UDP(ref udp_header) => udp_header.data().clone().into(),
+                    $name::Tcp(ref tcp_header) => tcp_header.data().clone().into(),
+                    $name::Udp(ref udp_header) => udp_header.data().clone().into(),
                 }
             }
 
             #[inline]
             pub fn source_port(&self) -> u16 {
                 match *self {
-                    $name::TCP(ref tcp_header) => tcp_header.data().source_port(),
-                    $name::UDP(ref udp_header) => udp_header.data().source_port(),
+                    $name::Tcp(ref tcp_header) => tcp_header.data().source_port(),
+                    $name::Udp(ref udp_header) => udp_header.data().source_port(),
                 }
             }
 
             #[inline]
             pub fn destination_port(&self) -> u16 {
                 match *self {
-                    $name::TCP(ref tcp_header) => tcp_header.data().destination_port(),
-                    $name::UDP(ref udp_header) => udp_header.data().destination_port(),
+                    $name::Tcp(ref tcp_header) => tcp_header.data().destination_port(),
+                    $name::Udp(ref udp_header) => udp_header.data().destination_port(),
                 }
             }
 
             #[inline]
             pub fn header_length(&self) -> u8 {
                 match *self {
-                    $name::TCP(ref tcp_header) => tcp_header.data().header_length(),
-                    $name::UDP(_) => UDP_HEADER_LENGTH,
+                    $name::Tcp(ref tcp_header) => tcp_header.data().header_length(),
+                    $name::Udp(_) => UDP_HEADER_LENGTH,
                 }
             }
         }
@@ -139,68 +139,68 @@ impl<'a> TransportHeaderMut<'a> {
     #[inline]
     pub fn raw_mut(&mut self) -> &mut [u8] {
         match *self {
-            TransportHeaderMut::TCP(ref mut tcp_header) => tcp_header.raw_mut(),
-            TransportHeaderMut::UDP(ref mut udp_header) => udp_header.raw_mut(),
+            TransportHeaderMut::Tcp(ref mut tcp_header) => tcp_header.raw_mut(),
+            TransportHeaderMut::Udp(ref mut udp_header) => udp_header.raw_mut(),
         }
     }
 
     #[inline]
     pub fn swap_source_and_destination(&mut self) {
         match *self {
-            TransportHeaderMut::TCP(ref mut tcp_header) => tcp_header.swap_source_and_destination(),
-            TransportHeaderMut::UDP(ref mut udp_header) => udp_header.swap_source_and_destination(),
+            TransportHeaderMut::Tcp(ref mut tcp_header) => tcp_header.swap_source_and_destination(),
+            TransportHeaderMut::Udp(ref mut udp_header) => udp_header.swap_source_and_destination(),
         }
     }
 
     #[inline]
     pub fn set_payload_length(&mut self, payload_length: u16) {
         match *self {
-            TransportHeaderMut::UDP(ref mut udp_header) => udp_header.set_payload_length(payload_length),
+            TransportHeaderMut::Udp(ref mut udp_header) => udp_header.set_payload_length(payload_length),
             _ => (), // TCP does not store its payload length
         }
     }
 
     #[inline]
-    pub fn update_checksum(&mut self, ipv4_header_data: &IPv4HeaderData, payload: &[u8]) {
+    pub fn update_checksum(&mut self, ipv4_header_data: &Ipv4HeaderData, payload: &[u8]) {
         match *self {
-            TransportHeaderMut::TCP(ref mut tcp_header) => tcp_header.update_checksum(ipv4_header_data, payload),
-            TransportHeaderMut::UDP(ref mut udp_header) => udp_header.update_checksum(ipv4_header_data, payload),
+            TransportHeaderMut::Tcp(ref mut tcp_header) => tcp_header.update_checksum(ipv4_header_data, payload),
+            TransportHeaderMut::Udp(ref mut udp_header) => udp_header.update_checksum(ipv4_header_data, payload),
         }
     }
 }
 
-impl From<TCPHeaderData> for TransportHeaderData {
-    fn from(tcp_header_data: TCPHeaderData) -> TransportHeaderData {
-        TransportHeaderData::TCP(tcp_header_data)
+impl From<TcpHeaderData> for TransportHeaderData {
+    fn from(tcp_header_data: TcpHeaderData) -> TransportHeaderData {
+        TransportHeaderData::Tcp(tcp_header_data)
     }
 }
 
-impl From<UDPHeaderData> for TransportHeaderData {
-    fn from(udp_header_data: UDPHeaderData) -> TransportHeaderData {
-        TransportHeaderData::UDP(udp_header_data)
+impl From<UdpHeaderData> for TransportHeaderData {
+    fn from(udp_header_data: UdpHeaderData) -> TransportHeaderData {
+        TransportHeaderData::Udp(udp_header_data)
     }
 }
 
-impl<'a> From<TCPHeader<'a>> for TransportHeader<'a> {
-    fn from(tcp_header: TCPHeader) -> TransportHeader {
-        TransportHeader::TCP(tcp_header)
+impl<'a> From<TcpHeader<'a>> for TransportHeader<'a> {
+    fn from(tcp_header: TcpHeader) -> TransportHeader {
+        TransportHeader::Tcp(tcp_header)
     }
 }
 
-impl<'a> From<UDPHeader<'a>> for TransportHeader<'a> {
-    fn from(udp_header: UDPHeader) -> TransportHeader { 
-        TransportHeader::UDP(udp_header)
+impl<'a> From<UdpHeader<'a>> for TransportHeader<'a> {
+    fn from(udp_header: UdpHeader) -> TransportHeader {
+        TransportHeader::Udp(udp_header)
     }
 }
 
-impl<'a> From<TCPHeaderMut<'a>> for TransportHeaderMut<'a> {
-    fn from(tcp_header: TCPHeaderMut) -> TransportHeaderMut {
-        TransportHeaderMut::TCP(tcp_header)
+impl<'a> From<TcpHeaderMut<'a>> for TransportHeaderMut<'a> {
+    fn from(tcp_header: TcpHeaderMut) -> TransportHeaderMut {
+        TransportHeaderMut::Tcp(tcp_header)
     }
 }
 
-impl<'a> From<UDPHeaderMut<'a>> for TransportHeaderMut<'a> {
-    fn from(udp_header: UDPHeaderMut) -> TransportHeaderMut { 
-        TransportHeaderMut::UDP(udp_header)
+impl<'a> From<UdpHeaderMut<'a>> for TransportHeaderMut<'a> {
+    fn from(udp_header: UdpHeaderMut) -> TransportHeaderMut {
+        TransportHeaderMut::Udp(udp_header)
     }
 }

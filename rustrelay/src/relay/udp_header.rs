@@ -1,27 +1,27 @@
 use std::mem;
 use byteorder::{BigEndian, ByteOrder};
-use super::ipv4_header::IPv4HeaderData;
+use super::ipv4_header::Ipv4HeaderData;
 
 pub const UDP_HEADER_LENGTH: u8 = 8;
 
-pub struct UDPHeader<'a> {
+pub struct UdpHeader<'a> {
     raw: &'a [u8],
-    data: &'a UDPHeaderData,
+    data: &'a UdpHeaderData,
 }
 
-pub struct UDPHeaderMut<'a> {
+pub struct UdpHeaderMut<'a> {
     raw: &'a mut [u8],
-    data: &'a mut UDPHeaderData,
+    data: &'a mut UdpHeaderData,
 }
 
 #[derive(Clone)]
-pub struct UDPHeaderData {
+pub struct UdpHeaderData {
     source_port: u16,
     destination_port: u16,
 }
 
 #[allow(dead_code)]
-impl UDPHeaderData {
+impl UdpHeaderData {
     pub fn parse(raw: &[u8]) -> Self {
         Self {
             source_port: BigEndian::read_u16(&raw[0..2]),
@@ -30,13 +30,13 @@ impl UDPHeaderData {
     }
 
     #[inline]
-    pub fn bind<'c, 'a: 'c, 'b: 'c>(&'a self, raw: &'b [u8]) -> UDPHeader<'c> {
-        UDPHeader::new(raw, self)
+    pub fn bind<'c, 'a: 'c, 'b: 'c>(&'a self, raw: &'b [u8]) -> UdpHeader<'c> {
+        UdpHeader::new(raw, self)
     }
 
     #[inline]
-    pub fn bind_mut<'c, 'a: 'c, 'b: 'c>(&'a mut self, raw: &'b mut [u8]) -> UDPHeaderMut<'c> {
-        UDPHeaderMut::new(raw, self)
+    pub fn bind_mut<'c, 'a: 'c, 'b: 'c>(&'a mut self, raw: &'b mut [u8]) -> UdpHeaderMut<'c> {
+        UdpHeaderMut::new(raw, self)
     }
 
     #[inline]
@@ -50,7 +50,7 @@ impl UDPHeaderData {
     }
 }
 
-// shared definition for UDPHeader and UDPHeaderMut
+// shared definition for UdpHeader and UdpHeaderMut
 macro_rules! udp_header_common {
     ($name:ident, $raw_type:ty, $data_type:ty) => {
         // for readability, declare structs manually outside the macro
@@ -69,7 +69,7 @@ macro_rules! udp_header_common {
             }
 
             #[inline]
-            pub fn data(&self) -> &UDPHeaderData {
+            pub fn data(&self) -> &UdpHeaderData {
                 self.data
             }
 
@@ -86,19 +86,19 @@ macro_rules! udp_header_common {
     }
 }
 
-udp_header_common!(UDPHeader, &'a [u8], &'a UDPHeaderData);
-udp_header_common!(UDPHeaderMut, &'a mut [u8], &'a mut UDPHeaderData);
+udp_header_common!(UdpHeader, &'a [u8], &'a UdpHeaderData);
+udp_header_common!(UdpHeaderMut, &'a mut [u8], &'a mut UdpHeaderData);
 
 // additional methods for the mutable version
 #[allow(dead_code)]
-impl<'a> UDPHeaderMut<'a> {
+impl<'a> UdpHeaderMut<'a> {
     #[inline]
     pub fn raw_mut(&mut self) -> &mut [u8] {
         self.raw
     }
 
     #[inline]
-    pub fn data_mut(&mut self) -> &mut UDPHeaderData {
+    pub fn data_mut(&mut self) -> &mut UdpHeaderData {
         self.data
     }
 
@@ -133,7 +133,7 @@ impl<'a> UDPHeaderMut<'a> {
     }
 
     #[inline]
-    pub fn update_checksum(&mut self, _ipv4_header_data: &IPv4HeaderData, _payload: &[u8]) {
+    pub fn update_checksum(&mut self, _ipv4_header_data: &Ipv4HeaderData, _payload: &[u8]) {
         // disable checksum validation
         self.set_checksum(0);
     }
@@ -157,7 +157,7 @@ mod tests {
     #[test]
     fn parse_header() {
         let raw = &create_header()[..];
-        let data = UDPHeaderData::parse(raw);
+        let data = UdpHeaderData::parse(raw);
         assert_eq!(1234, data.source_port());
         assert_eq!(5678, data.destination_port());
     }
@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn edit_header() {
         let raw = &mut create_header()[..];
-        let mut header_data = UDPHeaderData::parse(raw);
+        let mut header_data = UdpHeaderData::parse(raw);
         let mut header = header_data.bind_mut(raw);
 
         header.set_source_port(1111);

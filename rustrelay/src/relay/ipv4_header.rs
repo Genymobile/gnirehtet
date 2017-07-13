@@ -1,18 +1,18 @@
 use byteorder::{BigEndian, ByteOrder};
 use std::mem;
 
-pub struct IPv4Header<'a> {
+pub struct Ipv4Header<'a> {
     raw: &'a [u8],
-    data: &'a IPv4HeaderData,
+    data: &'a Ipv4HeaderData,
 }
 
-pub struct IPv4HeaderMut<'a> {
+pub struct Ipv4HeaderMut<'a> {
     raw: &'a mut [u8],
-    data: &'a mut IPv4HeaderData,
+    data: &'a mut Ipv4HeaderData,
 }
 
 #[derive(Clone)]
-pub struct IPv4HeaderData {
+pub struct Ipv4HeaderData {
     version: u8,
     header_length: u8,
     total_length: u16,
@@ -23,34 +23,34 @@ pub struct IPv4HeaderData {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum Protocol {
-    TCP,
-    UDP,
-    OTHER,
+    Tcp,
+    Udp,
+    Other,
 }
 
 #[allow(dead_code)]
-impl IPv4HeaderData {
+impl Ipv4HeaderData {
     pub fn parse(raw: &[u8]) -> Self {
         Self {
             version: raw[0] >> 4,
             header_length: (raw[0] & 0xf) << 2,
             total_length: BigEndian::read_u16(&raw[2..4]),
             protocol: match raw[9] {
-                6 => Protocol::TCP,
-                17 => Protocol::UDP,
-                _ => Protocol::OTHER
+                6 => Protocol::Tcp,
+                17 => Protocol::Udp,
+                _ => Protocol::Other,
             },
             source: BigEndian::read_u32(&raw[12..16]),
             destination: BigEndian::read_u32(&raw[16..20]),
         }
     }
 
-    pub fn bind<'c, 'a: 'c, 'b: 'c>(&'a self, raw: &'b [u8]) -> IPv4Header<'c> {
-        IPv4Header::new(raw, self)
+    pub fn bind<'c, 'a: 'c, 'b: 'c>(&'a self, raw: &'b [u8]) -> Ipv4Header<'c> {
+        Ipv4Header::new(raw, self)
     }
 
-    pub fn bind_mut<'c, 'a: 'c, 'b: 'c>(&'a mut self, raw: &'b mut [u8]) -> IPv4HeaderMut<'c> {
-        IPv4HeaderMut::new(raw, self)
+    pub fn bind_mut<'c, 'a: 'c, 'b: 'c>(&'a mut self, raw: &'b mut [u8]) -> Ipv4HeaderMut<'c> {
+        Ipv4HeaderMut::new(raw, self)
     }
 
     pub fn header_length(&self) -> u8 {
@@ -86,7 +86,7 @@ pub fn peek_version_length(raw: &[u8]) -> Option<(u8, u16)> {
     }
 }
 
-// shared definition for IPv4Header and IPv4HeaderMut
+// shared definition for Ipv4Header and Ipv4HeaderMut
 macro_rules! ipv4_header_common {
     ($name:ident, $raw_type:ty, $data_type:ty) => {
         // for readability, declare structs manually outside the macro
@@ -103,7 +103,7 @@ macro_rules! ipv4_header_common {
                 self.raw
             }
 
-            pub fn data(&self) -> &IPv4HeaderData {
+            pub fn data(&self) -> &Ipv4HeaderData {
                 self.data
             }
 
@@ -130,17 +130,17 @@ macro_rules! ipv4_header_common {
     }
 }
 
-ipv4_header_common!(IPv4Header, &'a [u8], &'a IPv4HeaderData);
-ipv4_header_common!(IPv4HeaderMut, &'a mut [u8], &'a mut IPv4HeaderData);
+ipv4_header_common!(Ipv4Header, &'a [u8], &'a Ipv4HeaderData);
+ipv4_header_common!(Ipv4HeaderMut, &'a mut [u8], &'a mut Ipv4HeaderData);
 
 // additional methods for the mutable version
 #[allow(dead_code)]
-impl<'a> IPv4HeaderMut<'a> {
+impl<'a> Ipv4HeaderMut<'a> {
     pub fn raw_mut(&mut self) -> &mut [u8] {
         self.raw
     }
 
-    pub fn data_mut(&mut self) -> &mut IPv4HeaderData {
+    pub fn data_mut(&mut self) -> &mut Ipv4HeaderData {
         self.data
     }
 
@@ -211,11 +211,11 @@ mod tests {
     #[test]
     fn parse_header() {
         let raw = &create_header()[..];
-        let data = IPv4HeaderData::parse(raw);
+        let data = Ipv4HeaderData::parse(raw);
         assert_eq!(4, data.version);
         assert_eq!(20, data.header_length);
         assert_eq!(28, data.total_length);
-        assert_eq!(Protocol::UDP, data.protocol);
+        assert_eq!(Protocol::Udp, data.protocol);
         assert_eq!(0x12345678, data.source);
         assert_eq!(0x42424242, data.destination);
     }
@@ -223,7 +223,7 @@ mod tests {
     #[test]
     fn edit_header() {
         let raw = &mut create_header()[..];
-        let mut header_data = IPv4HeaderData::parse(raw);
+        let mut header_data = Ipv4HeaderData::parse(raw);
         let mut header = header_data.bind_mut(raw);
 
         header.set_source(0x87654321);
@@ -255,7 +255,7 @@ mod tests {
     #[test]
     fn compute_checksum() {
         let raw = &mut create_header()[..];
-        let mut header_data = IPv4HeaderData::parse(raw);
+        let mut header_data = Ipv4HeaderData::parse(raw);
         let mut header = header_data.bind_mut(raw);
 
         // set a fake checksum value to assert that it is correctly computed
