@@ -16,7 +16,7 @@ impl StreamBuffer {
         }
     }
 
-    pub fn is_empty(&self) -> bool{
+    pub fn is_empty(&self) -> bool {
         self.head == self.tail
     }
 
@@ -46,7 +46,8 @@ impl StreamBuffer {
                 let source_slice = &self.buf[self.tail..self.head];
                 w = destination.write(source_slice)?;
                 self.tail += w;
-            } else { // self.head < self.tail
+            } else {
+                // self.head < self.tail
                 let source_slice = &self.buf[self.tail..];
                 w = destination.write(source_slice)?;
                 self.tail = (self.tail + w) % self.buf.len();
@@ -57,7 +58,10 @@ impl StreamBuffer {
     }
 
     pub fn read_from(&mut self, source: &[u8]) {
-        assert!(source.len() <= self.remaining(), "StreamBuffer is full, check remaining() before calling read_from()");
+        assert!(
+            source.len() <= self.remaining(),
+            "StreamBuffer is full, check remaining() before calling read_from()"
+        );
         let source_len = source.len();
         let buf_len = self.buf.len();
         if source_len <= buf_len - self.head {
@@ -126,7 +130,7 @@ mod tests {
 
         // put test data
         stream_buffer.read_from(&data);
-        // consume 3 bytes (so that the first 6 bytes are totally consumed, and the "tail" position is 6)
+        // consume 3 bytes (so that the first 6 bytes are consumed, and the "tail" position is 6)
         read_some(&mut stream_buffer, 3);
 
         // consume test data

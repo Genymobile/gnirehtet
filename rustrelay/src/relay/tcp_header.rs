@@ -285,7 +285,8 @@ impl<'a> TcpHeaderMut<'a> {
         // pseudo-header checksum (cf rfc793 section 3.1)
         let source = ipv4_header_data.source();
         let destination = ipv4_header_data.destination();
-        let transport_length = ipv4_header_data.total_length() - ipv4_header_data.header_length() as u16;
+        let transport_length = ipv4_header_data.total_length() -
+            ipv4_header_data.header_length() as u16;
 
         let mut sum = 6u32; // protocol: TCP = 6
         sum += source >> 16;
@@ -308,7 +309,11 @@ impl<'a> TcpHeaderMut<'a> {
             }
 
             let payload_length = transport_length - header_length as u16;
-            assert_eq!(payload_length as usize, payload.len(), "Payload length does not match");
+            assert_eq!(
+                payload_length as usize,
+                payload.len(),
+                "Payload length does not match"
+            );
             let mut cursor = Cursor::new(&payload);
             for _ in 0..payload_length / 2 {
                 sum += cursor.read_u16::<BigEndian>().unwrap() as u32;
@@ -469,8 +474,8 @@ mod tests {
                 let mut sum: u32 = 0x1234 + 0x5678 + 0xA2A2 + 0x4242 + 0x0006 + 0x0018;
 
                 // header
-                sum += 0x1234 + 0x5678 + 0x0000 + 0x0111 + 0x0000 +
-                       0x0222 + 0x5000 + 0x0000 + 0x0000 + 0x0000;
+                sum += 0x1234 + 0x5678 + 0x0000 + 0x0111 + 0x0000 + 0x0222 + 0x5000 + 0x0000 +
+                    0x0000 + 0x0000;
 
                 // payload
                 sum += 0x1122 + 0x3344;
@@ -503,8 +508,8 @@ mod tests {
                 let mut sum: u32 = 0x1234 + 0x5678 + 0xA2A2 + 0x4242 + 0x0006 + 0x0019;
 
                 // header
-                sum += 0x1234 + 0x5678 + 0x0000 + 0x0111 + 0x0000 +
-                       0x0222 + 0x5000 + 0x0000 + 0x0000 + 0x0000;
+                sum += 0x1234 + 0x5678 + 0x0000 + 0x0111 + 0x0000 + 0x0222 + 0x5000 + 0x0000 +
+                    0x0000 + 0x0000;
 
                 // payload
                 sum += 0x1122 + 0x3344 + 0x5500;

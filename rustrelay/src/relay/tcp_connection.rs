@@ -72,7 +72,9 @@ impl Tcb {
     }
 
     fn get_remaining_client_window(&self) -> u16 {
-        let wrapped_remaining = Wrapping(self.their_acknowledgement_number) + Wrapping(self.client_window as u32) - self.sequence_number;
+        let wrapped_remaining = Wrapping(self.their_acknowledgement_number) +
+            Wrapping(self.client_window as u32) -
+            self.sequence_number;
         let remaining = wrapped_remaining.0;
         if remaining <= self.client_window as u32 {
             remaining as u16
@@ -82,12 +84,22 @@ impl Tcb {
     }
 
     fn numbers(&self) -> String {
-        format!("(seq={}, ack={})", self.sequence_number, self.acknowledgement_number)
+        format!(
+            "(seq={}, ack={})",
+            self.sequence_number,
+            self.acknowledgement_number
+        )
     }
 }
 
 impl TcpConnection {
-    pub fn new(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: Ipv4Header, transport_header: TransportHeader) -> io::Result<Rc<RefCell<Self>>> {
+    pub fn new(
+        selector: &mut Selector,
+        id: ConnectionId,
+        client: Weak<RefCell<Client>>,
+        ipv4_header: Ipv4Header,
+        transport_header: TransportHeader,
+    ) -> io::Result<Rc<RefCell<Self>>> {
         let stream = Self::create_stream(&id)?;
 
         let tcp_header = Self::tcp_header_of_transport(transport_header);
@@ -97,12 +109,15 @@ impl TcpConnection {
         shrinked_tcp_header_raw.copy_from_slice(&tcp_header.raw()[..20]);
         let mut shrinked_tcp_header_data = tcp_header.data().clone();
         {
-            let mut shrinked_tcp_header = shrinked_tcp_header_data.bind_mut(&mut shrinked_tcp_header_raw);
+            let mut shrinked_tcp_header =
+                shrinked_tcp_header_data.bind_mut(&mut shrinked_tcp_header_raw);
             shrinked_tcp_header.shrink_options();
             assert_eq!(20, shrinked_tcp_header.header_length());
         }
 
-        let shrinked_transport_header = shrinked_tcp_header_data.bind(&shrinked_tcp_header_raw).into();
+        let shrinked_transport_header = shrinked_tcp_header_data
+            .bind(&shrinked_tcp_header_raw)
+            .into();
 
         let packetizer = Packetizer::new(&ipv4_header, &shrinked_transport_header);
 
@@ -128,7 +143,12 @@ impl TcpConnection {
             // rc is an EventHandler, register() expects a Box<EventHandler>
             let handler = Box::new(rc.clone());
             // writable to detect when the stream is connected
-            let token = selector.register(&self_ref.stream, handler, Ready::writable(), PollOpt::level())?;
+            let token = selector.register(
+                &self_ref.stream,
+                handler,
+                Ready::writable(),
+                PollOpt::level(),
+            )?;
             self_ref.token = token;
         }
         Ok(rc)
@@ -147,33 +167,61 @@ impl TcpConnection {
 
     fn process_send(&mut self, selector: &mut Selector) {
         match self.client_to_network.write_to(&mut self.stream) {
-            Ok(w) => if w == 0 {
-                self.close(selector);
-            },
+            Ok(w) => {
+                if w == 0 {
+                    self.close(selector);
+                }
+            }
             Err(err) => {
-                cx_error!(target: TAG, self.id, "Cannot write: [{:?}] {}", err.kind(), err);
+                cx_error!(
+                    target: TAG,
+                    self.id,
+                    "Cannot write: [{:?}] {}",
+                    err.kind(),
+                    err
+                );
                 self.send_empty_packet_to_client(selector, tcp_header::FLAG_RST);
                 self.close(selector);
-            },
+            }
         }
     }
 
     fn process_receive(&mut self, selector: &mut Selector) {
-        assert!(self.packet_for_client_length.is_none(), "A pending packet was not sent");
+        assert!(
+            self.packet_for_client_length.is_none(),
+            "A pending packet was not sent"
+        );
         let remaining_client_window = self.tcb.get_remaining_client_window();
-        assert!(remaining_client_window > 0, "process_received() must not be called when window == 0");
-        let max_payload_length = cmp::min(remaining_client_window, MAX_PAYLOAD_LENGTH) as usize;
-        Self::update_headers(&mut self.network_to_client, &self.tcb, tcp_header::FLAG_ACK | tcp_header::FLAG_PSH);
+        assert!(
+            remaining_client_window > 0,
+            "process_received() must not be called when window == 0"
+        );
+        let max_payload_length = Some(cmp::min(remaining_client_window, MAX_PAYLOAD_LENGTH) as
+            usize);
+        Self::update_headers(
+            &mut self.network_to_client,
+            &self.tcb,
+            tcp_header::FLAG_ACK | tcp_header::FLAG_PSH,
+        );
         // the packet is bound to the lifetime of self, so we cannot borrow self to call methods
         // defer the other branches in a separate match-block
-        let non_lexical_lifetime_workaround = match self.network_to_client.packetize_read(&mut self.stream, Some(max_payload_length)) {
+        let non_lexical_lifetime_workaround = match self.network_to_client.packetize_read(
+            &mut self.stream,
+            max_payload_length,
+        ) {
             Ok(Some(ipv4_packet)) => {
                 match Self::send_to_client(&self.client, selector, &ipv4_packet) {
                     Ok(_) => {
                         let len = ipv4_packet.payload().unwrap().len();
-                        cx_debug!(target: TAG, self.id, "Packet ({} bytes) sent to client {}", len, self.tcb.numbers());
+                        cx_debug!(
+                            target: TAG,
+                            self.id,
+                            "Packet ({} bytes) sent to client {}",
+                            len,
+                            self.tcb.numbers()
+                        );
                         self.tcb.sequence_number += Wrapping(len as u32);
-                    },
+                    }
                     Err(_) => {
                         // ask to the client to pull when its buffer is not full
                         let client_rc = self.client.upgrade().expect("Expected client not found");
@@ -181,20 +229,26 @@ impl TcpConnection {
                         let self_rc = self.self_weak.upgrade().unwrap();
                         client.register_pending_packet_source(self_rc);
                         self.packet_for_client_length = Some(ipv4_packet.length());
-                    },
+                    }
                 };
                 Ok(Some(()))
-            },
+            }
             Ok(None) => Ok(None),
             Err(err) => Err(err),
         };
         match non_lexical_lifetime_workaround {
             Ok(None) => self.eof(selector),
             Err(err) => {
-                cx_error!(target: TAG, self.id, "Cannot read: [{:?}] {}", err.kind(), err);
+                cx_error!(
+                    target: TAG,
+                    self.id,
+                    "Cannot read: [{:?}] {}",
+                    err.kind(),
+                    err
+                );
                 self.send_empty_packet_to_client(selector, tcp_header::FLAG_RST);
                 self.close(selector);
-            },
+            }
             Ok(Some(_)) => (), // already handled
         }
     }
@@ -206,7 +260,11 @@ impl TcpConnection {
         self.tcb.sequence_number += Wrapping(1); // SYN counts for 1 byte
     }
 
-    fn send_to_client(client: &Weak<RefCell<Client>>, selector: &mut Selector, ipv4_packet: &Ipv4Packet) -> io::Result<()> {
+    fn send_to_client(
+        client: &Weak<RefCell<Client>>,
+        selector: &mut Selector,
+        ipv4_packet: &Ipv4Packet,
+    ) -> io::Result<()> {
         let client_rc = client.upgrade().expect("Expected client not found");
         let mut client = client_rc.borrow_mut();
         client.send_to_client(selector, &ipv4_packet)
@@ -225,11 +283,26 @@ impl TcpConnection {
     ///
     /// To be used if called by send_to_network() (called by the client, so it is already
     /// borrowed).
-    fn reply_empty_packet_to_client(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, flags: u16) {
-        let ipv4_packet = Self::create_empty_response_packet(&self.id, &mut self.network_to_client, &self.tcb, flags);
+    fn reply_empty_packet_to_client(
+        &mut self,
+        selector: &mut Selector,
+        client_channel: &mut ClientChannel,
+        flags: u16,
+    ) {
+        let ipv4_packet = Self::create_empty_response_packet(
+            &self.id,
+            &mut self.network_to_client,
+            &self.tcb,
+            flags,
+        );
         if let Err(err) = client_channel.send_to_client(selector, &ipv4_packet) {
             // losing such an empty packet will not break the TCP connection
-            cx_warn!(target: TAG, self.id, "Cannot send packet to client: {}", err);
+            cx_warn!(
+                target: TAG,
+                self.id,
+                "Cannot send packet to client: {}",
+                err
+            );
         }
     }
 
@@ -251,7 +324,9 @@ impl TcpConnection {
     }
 
     #[inline]
-    fn tcp_header_of_transport_mut<'a>(transport_header: TransportHeaderMut<'a>) -> TcpHeaderMut<'a> {
+    fn tcp_header_of_transport_mut<'a>(
+        transport_header: TransportHeaderMut<'a>,
+    ) -> TcpHeaderMut<'a> {
         if let TransportHeaderMut::Tcp(tcp_header) = transport_header {
             tcp_header
         } else {
@@ -275,7 +350,12 @@ impl TcpConnection {
         tcp_header.set_flags(flags);
     }
 
-    fn handle_packet(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &Ipv4Packet) {
+    fn handle_packet(
+        &mut self,
+        selector: &mut Selector,
+        client_channel: &mut ClientChannel,
+        ipv4_packet: &Ipv4Packet,
+    ) {
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         if self.tcb.state == TcpState::Init {
             self.handle_first_packet(selector, client_channel, ipv4_packet);
@@ -290,15 +370,29 @@ impl TcpConnection {
         if tcp_header.sequence_number() != self.tcb.acknowledgement_number.0 {
             // ignore packet already received or out-of-order, retransmission is already
             // managed by both sides
-            cx_warn!(target: TAG, self.id, "Ignoring packet {}; expecting {}; flags={}", tcp_header.sequence_number(), self.tcb.acknowledgement_number.0, tcp_header.flags());
-            self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_ACK); // re-ack
+            cx_warn!(
+                target: TAG,
+                self.id,
+                "Ignoring packet {}; expecting {}; flags={}",
+                tcp_header.sequence_number(),
+                self.tcb.acknowledgement_number.0,
+                tcp_header.flags()
+            );
+            // re-ack
+            self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_ACK);
             return;
         }
 
         self.tcb.client_window = tcp_header.window();
         self.tcb.their_acknowledgement_number = tcp_header.acknowledgement_number();
 
-        cx_debug!(target: TAG, self.id, "Receiving expected packet {} (flags={})", tcp_header.sequence_number(), tcp_header.flags());
+        cx_debug!(
+            target: TAG,
+            self.id,
+            "Receiving expected packet {} (flags={})",
+            tcp_header.sequence_number(),
+            tcp_header.flags()
+        );
 
         if tcp_header.is_rst() {
             self.close(selector);
@@ -306,7 +400,12 @@ impl TcpConnection {
         }
 
         if tcp_header.is_ack() {
-            cx_debug!(target: TAG, self.id, "Client acked {}", tcp_header.acknowledgement_number());
+            cx_debug!(
+                target: TAG,
+                self.id,
+                "Client acked {}",
+                tcp_header.acknowledgement_number()
+            );
         }
 
         if tcp_header.is_fin() {
@@ -316,7 +415,12 @@ impl TcpConnection {
         }
     }
 
-    fn handle_first_packet(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &Ipv4Packet) {
+    fn handle_first_packet(
+        &mut self,
+        selector: &mut Selector,
+        client_channel: &mut ClientChannel,
+        ipv4_packet: &Ipv4Packet,
+    ) {
         cx_debug!(target: TAG, self.id, "handle_first_packet()");
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         if tcp_header.is_syn() {
@@ -325,19 +429,37 @@ impl TcpConnection {
             self.tcb.syn_sequence_number = their_sequence_number;
 
             self.tcb.sequence_number = Wrapping(random::<u32>());
-            cx_debug!(target: TAG, self.id, "Initialized seq={}; ack={}", self.tcb.sequence_number, self.tcb.acknowledgement_number);
+            cx_debug!(
+                target: TAG,
+                self.id,
+                "Initialized seq={}; ack={}",
+                self.tcb.sequence_number,
+                self.tcb.acknowledgement_number
+            );
             self.tcb.client_window = tcp_header.window();
             self.tcb.state = TcpState::SynSent;
         } else {
-            cx_warn!(target: TAG, self.id, "Unexpected first packet {}; acking {}; flags={}",
-                     tcp_header.sequence_number(), tcp_header.acknowledgement_number(), tcp_header.flags());
-            self.tcb.sequence_number = Wrapping(tcp_header.acknowledgement_number()); // make a RST in the window client
+            cx_warn!(
+                target: TAG,
+                self.id,
+                "Unexpected first packet {}; acking {}; flags={}",
+                tcp_header.sequence_number(),
+                tcp_header.acknowledgement_number(),
+                tcp_header.flags()
+            );
+            // make a RST in the window client
+            self.tcb.sequence_number = Wrapping(tcp_header.acknowledgement_number());
             self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_RST);
             self.close(selector);
         }
     }
 
-    fn handle_duplicate_syn(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &Ipv4Packet) {
+    fn handle_duplicate_syn(
+        &mut self,
+        selector: &mut Selector,
+        client_channel: &mut ClientChannel,
+        ipv4_packet: &Ipv4Packet,
+    ) {
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         let their_sequence_number = tcp_header.sequence_number();
         if self.tcb.state == TcpState::SynSent {
@@ -352,13 +474,27 @@ impl TcpConnection {
         }
     }
 
-    fn handle_fin(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &Ipv4Packet) {
+    fn handle_fin(
+        &mut self,
+        selector: &mut Selector,
+        client_channel: &mut ClientChannel,
+        ipv4_packet: &Ipv4Packet,
+    ) {
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         self.tcb.acknowledgement_number = Wrapping(tcp_header.sequence_number()) + Wrapping(1);
         if self.tcb.remote_closed {
             self.tcb.state = TcpState::LastAck;
-            cx_debug!(target: TAG, self.id, "Received a FIN from the client, sending ACK+FIN {}", self.tcb.numbers());
-            self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_FIN | tcp_header::FLAG_ACK);
+            cx_debug!(
+                target: TAG,
+                self.id,
+                "Received a FIN from the client, sending ACK+FIN {}",
+                self.tcb.numbers()
+            );
+            self.reply_empty_packet_to_client(
+                selector,
+                client_channel,
+                tcp_header::FLAG_FIN | tcp_header::FLAG_ACK,
+            );
             self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
         } else {
             self.tcb.state = TcpState::CloseWait;
@@ -366,7 +502,12 @@ impl TcpConnection {
         }
     }
 
-    fn handle_ack(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &Ipv4Packet) {
+    fn handle_ack(
+        &mut self,
+        selector: &mut Selector,
+        client_channel: &mut ClientChannel,
+        ipv4_packet: &Ipv4Packet,
+    ) {
         cx_debug!(target: TAG, self.id, "handle_ack()");
         if self.tcb.state == TcpState::SynReceived {
             self.tcb.state = TcpState::Established;
@@ -379,7 +520,12 @@ impl TcpConnection {
         }
 
         if log_enabled!(target: TAG, LogLevel::Trace) {
-            cx_trace!(target: TAG, self.id, "{}", binary::to_string(ipv4_packet.raw()));
+            cx_trace!(
+                target: TAG,
+                self.id,
+                "{}",
+                binary::to_string(ipv4_packet.raw())
+            );
         }
 
         let payload = ipv4_packet.payload().expect("No payload");
@@ -397,14 +543,30 @@ impl TcpConnection {
         self.tcb.acknowledgement_number += Wrapping(payload.len() as u32);
 
         // send ACK to client
-        cx_debug!(target: TAG, self.id, "Received a payload from the client ({} bytes), sending ACK {}",
-                  payload.len(), self.tcb.numbers());
+        cx_debug!(
+            target: TAG,
+            self.id,
+            "Received a payload from the client ({} bytes), sending ACK {}",
+            payload.len(),
+            self.tcb.numbers()
+        );
         self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_ACK);
     }
 
-    fn create_empty_response_packet<'a>(id: &ConnectionId, packetizer: &'a mut Packetizer, tcb: &Tcb, flags: u16) -> Ipv4Packet<'a> {
+    fn create_empty_response_packet<'a>(
+        id: &ConnectionId,
+        packetizer: &'a mut Packetizer,
+        tcb: &Tcb,
+        flags: u16,
+    ) -> Ipv4Packet<'a> {
         Self::update_headers(packetizer, tcb, flags);
-        cx_debug!(target: TAG, id, "Forging empty response (flags={}) {}", flags, tcb.numbers());
+        cx_debug!(
+            target: TAG,
+            id,
+            "Forging empty response (flags={}) {}",
+            flags,
+            tcb.numbers()
+        );
         if (flags & tcp_header::FLAG_ACK) != 0 {
             cx_debug!(target: TAG, id, "Acking {}", tcb.numbers());
         }
@@ -430,13 +592,14 @@ impl TcpConnection {
             }
         }
         cx_debug!(target: TAG, self.id, "interests: {:?}", ready);
-        selector.reregister(&self.stream, self.token, ready, PollOpt::level()).expect("Cannot register on poll");
+        selector
+            .reregister(&self.stream, self.token, ready, PollOpt::level())
+            .expect("Cannot register on poll");
     }
 
     fn may_read(&self) -> bool {
-        !self.tcb.remote_closed &&
-                self.packet_for_client_length.is_none() &&
-                self.tcb.get_remaining_client_window() > 0
+        !self.tcb.remote_closed && self.packet_for_client_length.is_none() &&
+            self.tcb.get_remaining_client_window() > 0
     }
 
     fn may_write(&self) -> bool {
@@ -449,7 +612,12 @@ impl Connection for TcpConnection {
         &self.id
     }
 
-    fn send_to_network(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &Ipv4Packet) {
+    fn send_to_network(
+        &mut self,
+        selector: &mut Selector,
+        client_channel: &mut ClientChannel,
+        ipv4_packet: &Ipv4Packet,
+    ) {
         self.handle_packet(selector, client_channel, ipv4_packet);
         if !self.closed {
             self.update_interests(selector);
@@ -508,8 +676,16 @@ impl PacketSource for TcpConnection {
     }
 
     fn next(&mut self, selector: &mut Selector) {
-        let len = self.packet_for_client_length.expect("next() called on empty packet source");
-        cx_debug!(target: TAG, self.id, "Deferred packet ({} bytes) sent to client {}", len, self.tcb.numbers());
+        let len = self.packet_for_client_length.expect(
+            "next() called on empty packet source",
+        );
+        cx_debug!(
+            target: TAG,
+            self.id,
+            "Deferred packet ({} bytes) sent to client {}",
+            len,
+            self.tcb.numbers()
+        );
         self.tcb.sequence_number += Wrapping(len as u32);
         self.packet_for_client_length = None;
         self.update_interests(selector);

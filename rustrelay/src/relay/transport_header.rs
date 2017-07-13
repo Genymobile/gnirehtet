@@ -24,7 +24,7 @@ impl TransportHeaderData {
         match protocol {
             Protocol::Udp => Some(UdpHeaderData::parse(raw).into()),
             Protocol::Tcp => Some(TcpHeaderData::parse(raw).into()),
-            _ => None
+            _ => None,
         }
     }
 
@@ -75,8 +75,12 @@ impl<'a> TransportHeader<'a> {
 impl<'a> TransportHeaderMut<'a> {
     pub fn new(raw: &'a mut [u8], data: &'a mut TransportHeaderData) -> Self {
         match *data {
-            TransportHeaderData::Tcp(ref mut tcp_header_data) => tcp_header_data.bind_mut(raw).into(),
-            TransportHeaderData::Udp(ref mut udp_header_data) => udp_header_data.bind_mut(raw).into(),
+            TransportHeaderData::Tcp(ref mut tcp_header_data) => {
+                tcp_header_data.bind_mut(raw).into()
+            }
+            TransportHeaderData::Udp(ref mut udp_header_data) => {
+                udp_header_data.bind_mut(raw).into()
+            }
         }
     }
 }
@@ -155,7 +159,9 @@ impl<'a> TransportHeaderMut<'a> {
     #[inline]
     pub fn set_payload_length(&mut self, payload_length: u16) {
         match *self {
-            TransportHeaderMut::Udp(ref mut udp_header) => udp_header.set_payload_length(payload_length),
+            TransportHeaderMut::Udp(ref mut udp_header) => {
+                udp_header.set_payload_length(payload_length)
+            }
             _ => (), // TCP does not store its payload length
         }
     }
@@ -163,8 +169,12 @@ impl<'a> TransportHeaderMut<'a> {
     #[inline]
     pub fn update_checksum(&mut self, ipv4_header_data: &Ipv4HeaderData, payload: &[u8]) {
         match *self {
-            TransportHeaderMut::Tcp(ref mut tcp_header) => tcp_header.update_checksum(ipv4_header_data, payload),
-            TransportHeaderMut::Udp(ref mut udp_header) => udp_header.update_checksum(ipv4_header_data, payload),
+            TransportHeaderMut::Tcp(ref mut tcp_header) => {
+                tcp_header.update_checksum(ipv4_header_data, payload)
+            }
+            TransportHeaderMut::Udp(ref mut udp_header) => {
+                udp_header.update_checksum(ipv4_header_data, payload)
+            }
         }
     }
 }

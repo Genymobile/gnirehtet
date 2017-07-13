@@ -177,10 +177,13 @@ impl<'a> Ipv4HeaderMut<'a> {
     pub fn update_checksum(&mut self) {
         let j = self.data.header_length as usize / 2;
         // skip checksum field at 10..12
-        let mut sum = (0..5).chain(6..j).map(|i| {
-            let range = 2 * i..2 * (i + 1);
-            BigEndian::read_u16(&self.raw[range]) as u32
-        }).sum::<u32>();
+        let mut sum = (0..5)
+            .chain(6..j)
+            .map(|i| {
+                let range = 2 * i..2 * (i + 1);
+                BigEndian::read_u16(&self.raw[range]) as u32
+            })
+            .sum::<u32>();
         while (sum & !0xffff) != 0 {
             sum = (sum & 0xffff) + (sum >> 16);
         }
@@ -263,8 +266,8 @@ mod tests {
 
         header.update_checksum();
 
-        let mut sum: u32 = 0x4500 + 0x001C + 0x0000 + 0x0000 + 0x0011 +
-                           0x0000 + 0x1234 + 0x5678 + 0x4242 + 0x4242;
+        let mut sum: u32 = 0x4500 + 0x001C + 0x0000 + 0x0000 + 0x0011 + 0x0000 + 0x1234 +
+            0x5678 + 0x4242 + 0x4242;
         while (sum & !0xffff) != 0 {
             sum = (sum & 0xffff) + (sum >> 16);
         }
@@ -276,13 +279,13 @@ mod tests {
     fn peek_version_length_unavailable() {
         let raw: [u8; 0] = [];
         assert!(peek_version_length(&raw).is_none());
-        let raw = [ 0x40, 2 ];
+        let raw = [0x40, 2];
         assert!(peek_version_length(&raw).is_none());
     }
 
     #[test]
     fn peek_version_length_available() {
-        let raw = [ 4u8 << 4 | 5, 0, 0x01, 0x23 ];
+        let raw = [4u8 << 4 | 5, 0, 0x01, 0x23];
         let (version, length) = peek_version_length(&raw).unwrap();
         assert_eq!(4, version);
         assert_eq!(0x123, length);
