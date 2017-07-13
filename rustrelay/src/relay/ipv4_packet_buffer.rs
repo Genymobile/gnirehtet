@@ -1,14 +1,14 @@
 use std::io;
 use std::ptr;
 use super::ipv4_header;
-use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
+use super::ipv4_packet::{Ipv4Packet, MAX_PACKET_LENGTH};
 
-pub struct IPv4PacketBuffer {
+pub struct Ipv4PacketBuffer {
     buf: [u8; MAX_PACKET_LENGTH],
     head: usize,
 }
 
-impl IPv4PacketBuffer {
+impl Ipv4PacketBuffer {
     pub fn new() -> Self {
         Self {
             buf: [0; MAX_PACKET_LENGTH],
@@ -25,7 +25,7 @@ impl IPv4PacketBuffer {
 
     fn available_packet_length(&self) -> Option<u16> {
         if let Some((version, length)) = ipv4_header::peek_version_length(&self.buf) {
-            assert!(version == 4, "Not an IPv4 packet, version={}", version);
+            assert!(version == 4, "Not an Ipv4 packet, version={}", version);
             if length <= self.head as u16 {
                 // full packet available
                 Some(length)
@@ -39,10 +39,10 @@ impl IPv4PacketBuffer {
         }
     }
 
-    pub fn as_ipv4_packet<'a>(&'a mut self) -> Option<IPv4Packet<'a>> {
+    pub fn as_ipv4_packet<'a>(&'a mut self) -> Option<Ipv4Packet<'a>> {
         let length = self.available_packet_length();
         if let Some(len) = length {
-            Some(IPv4Packet::parse(&mut self.buf[..len as usize]))
+            Some(Ipv4Packet::parse(&mut self.buf[..len as usize]))
         } else {
             None
         }
@@ -134,15 +134,15 @@ mod tests {
         raw.write_u8(0x99).unwrap(); // payload
     }
 
-    fn check_packet_headers(ipv4_packet: &IPv4Packet) {
+    fn check_packet_headers(ipv4_packet: &Ipv4Packet) {
         let ipv4_header = ipv4_packet.ipv4_header();
         assert_eq!(20, ipv4_header.header_length());
         assert_eq!(32, ipv4_header.total_length());
-        assert_eq!(Protocol::UDP, ipv4_header.protocol());
+        assert_eq!(Protocol::Udp, ipv4_header.protocol());
         assert_eq!(0x12345678, ipv4_header.source());
         assert_eq!(0x42424242, ipv4_header.destination());
 
-        if let Some(TransportHeaderData::UDP(ref udp_header)) = *ipv4_packet.transport_header_data() {
+        if let Some(TransportHeaderData::Udp(ref udp_header)) = *ipv4_packet.transport_header_data() {
             assert_eq!(1234, udp_header.source_port());
             assert_eq!(5678, udp_header.destination_port());
         } else {
@@ -150,15 +150,15 @@ mod tests {
         }
     }
 
-    fn check_another_packet_headers(ipv4_packet: &IPv4Packet) {
+    fn check_another_packet_headers(ipv4_packet: &Ipv4Packet) {
         let ipv4_header = ipv4_packet.ipv4_header();
         assert_eq!(20, ipv4_header.header_length());
         assert_eq!(29, ipv4_header.total_length());
-        assert_eq!(Protocol::UDP, ipv4_header.protocol());
+        assert_eq!(Protocol::Udp, ipv4_header.protocol());
         assert_eq!(0x11111111, ipv4_header.source());
         assert_eq!(0x22222222, ipv4_header.destination());
 
-        if let Some(TransportHeaderData::UDP(ref udp_header)) = *ipv4_packet.transport_header_data() {
+        if let Some(TransportHeaderData::Udp(ref udp_header)) = *ipv4_packet.transport_header_data() {
             assert_eq!(1111, udp_header.source_port());
             assert_eq!(2222, udp_header.destination_port());
         } else {
@@ -169,7 +169,7 @@ mod tests {
     #[test]
     fn parse_ipv4_packet_buffer() {
         let raw = create_packet();
-        let mut packet_buffer = IPv4PacketBuffer::new();
+        let mut packet_buffer = Ipv4PacketBuffer::new();
 
         let mut cursor = io::Cursor::new(raw);
         packet_buffer.read_from(&mut cursor).unwrap();
@@ -181,7 +181,7 @@ mod tests {
     #[test]
     fn parse_fragmented_ipv4_packet_buffer() {
         let raw = create_packet();
-        let mut packet_buffer = IPv4PacketBuffer::new();
+        let mut packet_buffer = Ipv4PacketBuffer::new();
 
         let mut cursor = io::Cursor::new(&raw[..14]);
         packet_buffer.read_from(&mut cursor).unwrap();
@@ -206,7 +206,7 @@ mod tests {
     #[test]
     fn parse_multi_packets() {
         let raw = create_multi_packets();
-        let mut packet_buffer = IPv4PacketBuffer::new();
+        let mut packet_buffer = Ipv4PacketBuffer::new();
 
         let mut cursor = io::Cursor::new(raw);
         packet_buffer.read_from(&mut cursor).unwrap();

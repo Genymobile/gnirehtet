@@ -1,17 +1,17 @@
-use super::ipv4_header::{IPv4Header, IPv4HeaderData, IPv4HeaderMut};
+use super::ipv4_header::{Ipv4Header, Ipv4HeaderData, Ipv4HeaderMut};
 use super::transport_header::{TransportHeader, TransportHeaderData, TransportHeaderMut};
 
 pub const MAX_PACKET_LENGTH: usize = 1 << 16;
 
-pub struct IPv4Packet<'a> {
+pub struct Ipv4Packet<'a> {
     raw: &'a mut [u8],
-    ipv4_header_data: IPv4HeaderData,
+    ipv4_header_data: Ipv4HeaderData,
     transport_header_data: Option<TransportHeaderData>,
 }
 
-impl<'a> IPv4Packet<'a> {
+impl<'a> Ipv4Packet<'a> {
     pub fn parse(raw: &'a mut [u8]) -> Self {
-        let ipv4_header_data = IPv4HeaderData::parse(raw);
+        let ipv4_header_data = Ipv4HeaderData::parse(raw);
         let transport_header_data = {
             let payload = &raw[ipv4_header_data.header_length() as usize..];
             TransportHeaderData::parse(ipv4_header_data.protocol(), payload)
@@ -23,7 +23,7 @@ impl<'a> IPv4Packet<'a> {
         }
     }
 
-    pub fn new(raw: &'a mut [u8], ipv4_header_data: IPv4HeaderData, transport_header_data: TransportHeaderData) -> Self {
+    pub fn new(raw: &'a mut [u8], ipv4_header_data: Ipv4HeaderData, transport_header_data: TransportHeaderData) -> Self {
         Self {
             raw: raw,
             ipv4_header_data: ipv4_header_data,
@@ -38,20 +38,20 @@ impl<'a> IPv4Packet<'a> {
 
     #[inline]
     #[allow(dead_code)]
-    pub fn ipv4_header_data(&self) -> &IPv4HeaderData {
+    pub fn ipv4_header_data(&self) -> &Ipv4HeaderData {
         &self.ipv4_header_data
     }
 
     #[inline]
     #[allow(dead_code)]
-    pub fn ipv4_header(&self) -> IPv4Header {
+    pub fn ipv4_header(&self) -> Ipv4Header {
         let slice = &self.raw[..self.ipv4_header_data.header_length() as usize];
         self.ipv4_header_data.bind(slice)
     }
 
     #[inline]
     #[allow(dead_code)]
-    pub fn ipv4_header_mut(&mut self) -> IPv4HeaderMut {
+    pub fn ipv4_header_mut(&mut self) -> Ipv4HeaderMut {
         let slice = &mut self.raw[..self.ipv4_header_data.header_length() as usize];
         self.ipv4_header_data.bind_mut(slice)
     }
@@ -100,10 +100,10 @@ impl<'a> IPv4Packet<'a> {
     }
 
     /// Devide the packet into parts:
-    ///  - the IPv4 header
+    ///  - the IP v4 header
     ///  - the transport header (if any)
     ///  - the payload (if there is a transport at all)
-    pub fn split(&self) -> (IPv4Header, Option<(TransportHeader, &[u8])>) {
+    pub fn split(&self) -> (Ipv4Header, Option<(TransportHeader, &[u8])>) {
         let transport_index = self.ipv4_header_data.header_length() as usize;
         if let Some(ref transport_header_data) = self.transport_header_data {
             let payload_index = transport_header_data.header_length() as usize; // relative to transport
@@ -120,10 +120,10 @@ impl<'a> IPv4Packet<'a> {
     }
 
     /// Devide the packet into mutable parts:
-    ///  - the IPv4 header
+    ///  - the IP v4 header
     ///  - the transport header (if any)
     ///  - the payload (if there is a transport at all)
-    pub fn split_mut(&mut self) -> (IPv4HeaderMut, Option<(TransportHeaderMut, &mut [u8])>) {
+    pub fn split_mut(&mut self) -> (Ipv4HeaderMut, Option<(TransportHeaderMut, &mut [u8])>) {
         let transport_index = self.ipv4_header_data.header_length() as usize;
         if let Some(ref mut transport_header_data) = self.transport_header_data {
             let payload_index = transport_header_data.header_length() as usize; // relative to transport
@@ -206,17 +206,17 @@ mod tests {
     #[test]
     fn parse_headers() {
         let raw = &mut create_packet()[..];
-        let mut ipv4_packet = IPv4Packet::parse(raw);
+        let mut ipv4_packet = Ipv4Packet::parse(raw);
 
         {
             let ipv4_header = ipv4_packet.ipv4_header();
             assert_eq!(20, ipv4_header.header_length());
             assert_eq!(32, ipv4_header.total_length());
-            assert_eq!(Protocol::UDP, ipv4_header.protocol());
+            assert_eq!(Protocol::Udp, ipv4_header.protocol());
             assert_eq!(0x12345678, ipv4_header.source());
             assert_eq!(0x42424242, ipv4_header.destination());
 
-            if let Some(TransportHeaderData::UDP(ref udp_header)) = *ipv4_packet.transport_header_data() {
+            if let Some(TransportHeaderData::Udp(ref udp_header)) = *ipv4_packet.transport_header_data() {
                 assert_eq!(1234, udp_header.source_port());
                 assert_eq!(5678, udp_header.destination_port());
             } else {
@@ -228,7 +228,7 @@ mod tests {
     #[test]
     fn payload() {
         let raw = &mut create_packet()[..];
-        let ipv4_packet = IPv4Packet::parse(raw);
+        let ipv4_packet = Ipv4Packet::parse(raw);
         assert_eq!([0x11, 0x22, 0x33, 0x44], ipv4_packet.payload().unwrap());
     }
 }

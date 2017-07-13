@@ -6,12 +6,12 @@ use log::LogLevel;
 use super::binary;
 use super::client::{Client, ClientChannel};
 use super::connection::{Connection, ConnectionId};
-use super::ipv4_header::{IPv4Header, Protocol};
-use super::ipv4_packet::IPv4Packet;
+use super::ipv4_header::{Ipv4Header, Protocol};
+use super::ipv4_packet::Ipv4Packet;
 use super::selector::Selector;
-use super::tcp_connection::TCPConnection;
+use super::tcp_connection::TcpConnection;
 use super::transport_header::TransportHeader;
-use super::udp_connection::UDPConnection;
+use super::udp_connection::UdpConnection;
 
 const TAG: &'static str = "Router";
 
@@ -34,7 +34,7 @@ impl Router {
         self.client = client;
     }
 
-    pub fn send_to_network(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
+    pub fn send_to_network(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &Ipv4Packet) {
         if ipv4_packet.is_valid() {
             let (ipv4_header, transport) = ipv4_packet.split();
             let (transport_header, _) = transport.expect("No transport");
@@ -61,7 +61,7 @@ impl Router {
         }
     }
 
-    fn connection(&mut self, selector: &mut Selector, ipv4_header: IPv4Header, transport_header: TransportHeader) -> io::Result<usize> {
+    fn connection(&mut self, selector: &mut Selector, ipv4_header: Ipv4Header, transport_header: TransportHeader) -> io::Result<usize> {
         // TODO avoid cloning transport_header
         let id = ConnectionId::from_headers(ipv4_header.data(), &transport_header.data_clone());
         let index = match self.find_index(&id) {
@@ -76,10 +76,10 @@ impl Router {
         Ok(index)
     }
 
-    fn create_connection(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: IPv4Header, transport_header: TransportHeader) -> io::Result<Rc<RefCell<Connection>>> {
+    fn create_connection(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: Ipv4Header, transport_header: TransportHeader) -> io::Result<Rc<RefCell<Connection>>> {
         match id.protocol() {
-            Protocol::TCP => Ok(TCPConnection::new(selector, id, client, ipv4_header, transport_header)?),
-            Protocol::UDP => Ok(UDPConnection::new(selector, id, client, ipv4_header, transport_header)?),
+            Protocol::Tcp => Ok(TcpConnection::new(selector, id, client, ipv4_header, transport_header)?),
+            Protocol::Udp => Ok(UdpConnection::new(selector, id, client, ipv4_header, transport_header)?),
             p => Err(io::Error::new(io::ErrorKind::Other, format!("Unsupported protocol: {:?}", p))),
         }
     }

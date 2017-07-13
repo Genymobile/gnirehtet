@@ -11,21 +11,21 @@ use rand::random;
 use super::binary;
 use super::client::{Client, ClientChannel};
 use super::connection::{Connection, ConnectionId};
-use super::ipv4_header::IPv4Header;
-use super::ipv4_packet::{IPv4Packet, MAX_PACKET_LENGTH};
+use super::ipv4_header::Ipv4Header;
+use super::ipv4_packet::{Ipv4Packet, MAX_PACKET_LENGTH};
 use super::packet_source::PacketSource;
 use super::packetizer::Packetizer;
 use super::selector::{EventHandler, Selector};
 use super::stream_buffer::StreamBuffer;
-use super::tcp_header::{self, TCPHeader, TCPHeaderMut};
+use super::tcp_header::{self, TcpHeader, TcpHeaderMut};
 use super::transport_header::{TransportHeader, TransportHeaderMut};
 
-const TAG: &'static str = "TCPConnection";
+const TAG: &'static str = "TcpConnection";
 
 const MAX_PAYLOAD_LENGTH: u16 = 1400;
 
-pub struct TCPConnection {
-    self_weak: Weak<RefCell<TCPConnection>>,
+pub struct TcpConnection {
+    self_weak: Weak<RefCell<TcpConnection>>,
     id: ConnectionId,
     client: Weak<RefCell<Client>>,
     stream: TcpStream,
@@ -34,11 +34,12 @@ pub struct TCPConnection {
     network_to_client: Packetizer,
     packet_for_client_length: Option<u16>,
     closed: bool,
-    tcb: TCB,
+    tcb: Tcb,
 }
 
-struct TCB {
-    state: TCPState,
+// Transport Control Block
+struct Tcb {
+    state: TcpState,
     syn_sequence_number: u32,
     sequence_number: Wrapping<u32>,
     acknowledgement_number: Wrapping<u32>,
@@ -48,7 +49,7 @@ struct TCB {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum TCPState {
+enum TcpState {
     Init,
     SynSent,
     SynReceived,
@@ -57,10 +58,10 @@ enum TCPState {
     LastAck,
 }
 
-impl TCB {
+impl Tcb {
     fn new() -> Self {
         Self {
-            state: TCPState::Init,
+            state: TcpState::Init,
             syn_sequence_number: 0,
             sequence_number: Wrapping(0),
             acknowledgement_number: Wrapping(0),
@@ -85,11 +86,10 @@ impl TCB {
     }
 }
 
-impl TCPConnection {
-    pub fn new(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: IPv4Header, transport_header: TransportHeader) -> io::Result<Rc<RefCell<Self>>> {
+impl TcpConnection {
+    pub fn new(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: Ipv4Header, transport_header: TransportHeader) -> io::Result<Rc<RefCell<Self>>> {
         let stream = Self::create_stream(&id)?;
 
-        cx_debug!(target: TAG, id, "CREATING TCPConnection");
         let tcp_header = Self::tcp_header_of_transport(transport_header);
 
         // shrink the TCP options to pass a minimal refrence header to the packetizer
@@ -116,7 +116,7 @@ impl TCPConnection {
             network_to_client: packetizer,
             packet_for_client_length: None,
             closed: false,
-            tcb: TCB::new(),
+            tcb: Tcb::new(),
         }));
 
         {
@@ -200,13 +200,13 @@ impl TCPConnection {
     }
 
     fn process_connect(&mut self, selector: &mut Selector) {
-        assert_eq!(self.tcb.state, TCPState::SynSent);
-        self.tcb.state = TCPState::SynReceived;
+        assert_eq!(self.tcb.state, TcpState::SynSent);
+        self.tcb.state = TcpState::SynReceived;
         self.send_empty_packet_to_client(selector, tcp_header::FLAG_SYN | tcp_header::FLAG_ACK);
         self.tcb.sequence_number += Wrapping(1); // SYN counts for 1 byte
     }
 
-    fn send_to_client(client: &Weak<RefCell<Client>>, selector: &mut Selector, ipv4_packet: &IPv4Packet) -> io::Result<()> {
+    fn send_to_client(client: &Weak<RefCell<Client>>, selector: &mut Selector, ipv4_packet: &Ipv4Packet) -> io::Result<()> {
         let client_rc = client.upgrade().expect("Expected client not found");
         let mut client = client_rc.borrow_mut();
         client.send_to_client(selector, &ipv4_packet)
@@ -235,15 +235,15 @@ impl TCPConnection {
 
     fn eof(&mut self, selector: &mut Selector) {
         self.tcb.remote_closed = true;
-        if self.tcb.state == TCPState::CloseWait {
+        if self.tcb.state == TcpState::CloseWait {
             self.send_empty_packet_to_client(selector, tcp_header::FLAG_FIN);
             self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
         }
     }
 
     #[inline]
-    fn tcp_header_of_transport<'a>(transport_header: TransportHeader<'a>) -> TCPHeader<'a> {
-        if let TransportHeader::TCP(tcp_header) = transport_header {
+    fn tcp_header_of_transport<'a>(transport_header: TransportHeader<'a>) -> TcpHeader<'a> {
+        if let TransportHeader::Tcp(tcp_header) = transport_header {
             tcp_header
         } else {
             panic!("Not a TCP header");
@@ -251,8 +251,8 @@ impl TCPConnection {
     }
 
     #[inline]
-    fn tcp_header_of_transport_mut<'a>(transport_header: TransportHeaderMut<'a>) -> TCPHeaderMut<'a> {
-        if let TransportHeaderMut::TCP(tcp_header) = transport_header {
+    fn tcp_header_of_transport_mut<'a>(transport_header: TransportHeaderMut<'a>) -> TcpHeaderMut<'a> {
+        if let TransportHeaderMut::Tcp(tcp_header) = transport_header {
             tcp_header
         } else {
             panic!("Not a TCP header");
@@ -260,24 +260,24 @@ impl TCPConnection {
     }
 
     #[inline]
-    fn tcp_header_of_packet<'a>(ipv4_packet: &'a IPv4Packet) -> TCPHeader<'a> {
-        if let Some(TransportHeader::TCP(tcp_header)) = ipv4_packet.transport_header() {
+    fn tcp_header_of_packet<'a>(ipv4_packet: &'a Ipv4Packet) -> TcpHeader<'a> {
+        if let Some(TransportHeader::Tcp(tcp_header)) = ipv4_packet.transport_header() {
             tcp_header
         } else {
             panic!("Not a TCP packet");
         }
     }
 
-    fn update_headers(packetizer: &mut Packetizer, tcb: &TCB, flags: u16) {
+    fn update_headers(packetizer: &mut Packetizer, tcb: &Tcb, flags: u16) {
         let mut tcp_header = Self::tcp_header_of_transport_mut(packetizer.transport_header_mut());
         tcp_header.set_sequence_number(tcb.sequence_number.0);
         tcp_header.set_acknowledgement_number(tcb.acknowledgement_number.0);
         tcp_header.set_flags(flags);
     }
 
-    fn handle_packet(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
+    fn handle_packet(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &Ipv4Packet) {
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
-        if self.tcb.state == TCPState::Init {
+        if self.tcb.state == TcpState::Init {
             self.handle_first_packet(selector, client_channel, ipv4_packet);
             return;
         }
@@ -316,7 +316,7 @@ impl TCPConnection {
         }
     }
 
-    fn handle_first_packet(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
+    fn handle_first_packet(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &Ipv4Packet) {
         cx_debug!(target: TAG, self.id, "handle_first_packet()");
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         if tcp_header.is_syn() {
@@ -327,7 +327,7 @@ impl TCPConnection {
             self.tcb.sequence_number = Wrapping(random::<u32>());
             cx_debug!(target: TAG, self.id, "Initialized seq={}; ack={}", self.tcb.sequence_number, self.tcb.acknowledgement_number);
             self.tcb.client_window = tcp_header.window();
-            self.tcb.state = TCPState::SynSent;
+            self.tcb.state = TcpState::SynSent;
         } else {
             cx_warn!(target: TAG, self.id, "Unexpected first packet {}; acking {}; flags={}",
                      tcp_header.sequence_number(), tcp_header.acknowledgement_number(), tcp_header.flags());
@@ -337,10 +337,10 @@ impl TCPConnection {
         }
     }
 
-    fn handle_duplicate_syn(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
+    fn handle_duplicate_syn(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &Ipv4Packet) {
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         let their_sequence_number = tcp_header.sequence_number();
-        if self.tcb.state == TCPState::SynSent {
+        if self.tcb.state == TcpState::SynSent {
             // the connection is not established yet, we can accept this packet as if it were the
             // first SYN
             self.tcb.syn_sequence_number = their_sequence_number;
@@ -352,27 +352,27 @@ impl TCPConnection {
         }
     }
 
-    fn handle_fin(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
+    fn handle_fin(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &Ipv4Packet) {
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         self.tcb.acknowledgement_number = Wrapping(tcp_header.sequence_number()) + Wrapping(1);
         if self.tcb.remote_closed {
-            self.tcb.state = TCPState::LastAck;
+            self.tcb.state = TcpState::LastAck;
             cx_debug!(target: TAG, self.id, "Received a FIN from the client, sending ACK+FIN {}", self.tcb.numbers());
             self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_FIN | tcp_header::FLAG_ACK);
             self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
         } else {
-            self.tcb.state = TCPState::CloseWait;
+            self.tcb.state = TcpState::CloseWait;
             self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_ACK);
         }
     }
 
-    fn handle_ack(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
+    fn handle_ack(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &Ipv4Packet) {
         cx_debug!(target: TAG, self.id, "handle_ack()");
-        if self.tcb.state == TCPState::SynReceived {
-            self.tcb.state = TCPState::Established;
+        if self.tcb.state == TcpState::SynReceived {
+            self.tcb.state = TcpState::Established;
             return;
         }
-        if self.tcb.state == TCPState::LastAck {
+        if self.tcb.state == TcpState::LastAck {
             cx_debug!(target: TAG, self.id, "LAST_ACK");
             self.close(selector);
             return;
@@ -402,7 +402,7 @@ impl TCPConnection {
         self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_ACK);
     }
 
-    fn create_empty_response_packet<'a>(id: &ConnectionId, packetizer: &'a mut Packetizer, tcb: &TCB, flags: u16) -> IPv4Packet<'a> {
+    fn create_empty_response_packet<'a>(id: &ConnectionId, packetizer: &'a mut Packetizer, tcb: &Tcb, flags: u16) -> Ipv4Packet<'a> {
         Self::update_headers(packetizer, tcb, flags);
         cx_debug!(target: TAG, id, "Forging empty response (flags={}) {}", flags, tcb.numbers());
         if (flags & tcp_header::FLAG_ACK) != 0 {
@@ -418,7 +418,7 @@ impl TCPConnection {
     fn update_interests(&mut self, selector: &mut Selector) {
         assert!(!self.closed);
         let mut ready = Ready::empty();
-        if self.tcb.state == TCPState::SynSent {
+        if self.tcb.state == TcpState::SynSent {
             // waiting for connectable
             ready = Ready::writable()
         } else {
@@ -444,12 +444,12 @@ impl TCPConnection {
     }
 }
 
-impl Connection for TCPConnection {
+impl Connection for TcpConnection {
     fn id(&self) -> &ConnectionId {
         &self.id
     }
 
-    fn send_to_network(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &IPv4Packet) {
+    fn send_to_network(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel, ipv4_packet: &Ipv4Packet) {
         self.handle_packet(selector, client_channel, ipv4_packet);
         if !self.closed {
             self.update_interests(selector);
@@ -473,12 +473,12 @@ impl Connection for TCPConnection {
     }
 }
 
-impl EventHandler for TCPConnection {
+impl EventHandler for TcpConnection {
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
         if !self.closed {
             let ready = event.readiness();
             if ready.is_writable() {
-                if self.tcb.state == TCPState::SynSent {
+                if self.tcb.state == TcpState::SynSent {
                     // writable is first triggered when the stream is connected
                     self.process_connect(selector);
                 } else {
@@ -498,8 +498,8 @@ impl EventHandler for TCPConnection {
     }
 }
 
-impl PacketSource for TCPConnection {
-    fn get(&mut self) -> Option<IPv4Packet> {
+impl PacketSource for TcpConnection {
+    fn get(&mut self) -> Option<Ipv4Packet> {
         if let Some(len) = self.packet_for_client_length {
             Some(self.network_to_client.inflate(len))
         } else {

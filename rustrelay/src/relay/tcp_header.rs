@@ -1,20 +1,20 @@
 use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
 use std::io::Cursor;
 use std::mem;
-use super::ipv4_header::IPv4HeaderData;
+use super::ipv4_header::Ipv4HeaderData;
 
-pub struct TCPHeader<'a> {
+pub struct TcpHeader<'a> {
     raw: &'a [u8],
-    data: &'a TCPHeaderData,
+    data: &'a TcpHeaderData,
 }
 
-pub struct TCPHeaderMut<'a> {
+pub struct TcpHeaderMut<'a> {
     raw: &'a mut [u8],
-    data: &'a mut TCPHeaderData,
+    data: &'a mut TcpHeaderData,
 }
 
 #[derive(Clone)]
-pub struct TCPHeaderData {
+pub struct TcpHeaderData {
     source_port: u16,
     destination_port: u16,
     sequence_number: u32,
@@ -31,7 +31,7 @@ pub const FLAG_PSH: u16 = 1 << 3;
 pub const FLAG_ACK: u16 = 1 << 4;
 
 #[allow(dead_code)]
-impl TCPHeaderData {
+impl TcpHeaderData {
     pub fn parse(raw: &[u8]) -> Self {
         let data_offset_and_flags = BigEndian::read_u16(&raw[12..14]);
         Self {
@@ -46,13 +46,13 @@ impl TCPHeaderData {
     }
 
     #[inline]
-    pub fn bind<'c, 'a: 'c, 'b: 'c>(&'a self, raw: &'b [u8]) -> TCPHeader<'c> {
-        TCPHeader::new(raw, self)
+    pub fn bind<'c, 'a: 'c, 'b: 'c>(&'a self, raw: &'b [u8]) -> TcpHeader<'c> {
+        TcpHeader::new(raw, self)
     }
 
     #[inline]
-    pub fn bind_mut<'c, 'a: 'c, 'b: 'c>(&'a mut self, raw: &'b mut [u8]) -> TCPHeaderMut<'c> {
-        TCPHeaderMut::new(raw, self)
+    pub fn bind_mut<'c, 'a: 'c, 'b: 'c>(&'a mut self, raw: &'b mut [u8]) -> TcpHeaderMut<'c> {
+        TcpHeaderMut::new(raw, self)
     }
 
     #[inline]
@@ -116,7 +116,7 @@ impl TCPHeaderData {
     }
 }
 
-// shared definition for UDPHeader and UDPHeaderMut
+// shared definition for UdpHeader and UdpHeaderMut
 macro_rules! tcp_header_common {
     ($name:ident, $raw_type:ty, $data_type:ty) => {
         // for readability, declare structs manually outside the macro
@@ -135,7 +135,7 @@ macro_rules! tcp_header_common {
             }
 
             #[inline]
-            pub fn data(&self) -> &TCPHeaderData {
+            pub fn data(&self) -> &TcpHeaderData {
                 self.data
             }
 
@@ -202,19 +202,19 @@ macro_rules! tcp_header_common {
     }
 }
 
-tcp_header_common!(TCPHeader, &'a [u8], &'a TCPHeaderData);
-tcp_header_common!(TCPHeaderMut, &'a mut [u8], &'a mut TCPHeaderData);
+tcp_header_common!(TcpHeader, &'a [u8], &'a TcpHeaderData);
+tcp_header_common!(TcpHeaderMut, &'a mut [u8], &'a mut TcpHeaderData);
 
 // additional methods for the mutable version
 #[allow(dead_code)]
-impl<'a> TCPHeaderMut<'a> {
+impl<'a> TcpHeaderMut<'a> {
     #[inline]
     pub fn raw_mut(&mut self) -> &mut [u8] {
         self.raw
     }
 
     #[inline]
-    pub fn data_mut(&mut self) -> &mut TCPHeaderData {
+    pub fn data_mut(&mut self) -> &mut TcpHeaderData {
         self.data
     }
 
@@ -281,7 +281,7 @@ impl<'a> TCPHeaderMut<'a> {
         BigEndian::write_u16(&mut self.raw[16..18], checksum);
     }
 
-    pub fn update_checksum(&mut self, ipv4_header_data: &IPv4HeaderData, payload: &[u8]) {
+    pub fn update_checksum(&mut self, ipv4_header_data: &Ipv4HeaderData, payload: &[u8]) {
         // pseudo-header checksum (cf rfc793 section 3.1)
         let source = ipv4_header_data.source();
         let destination = ipv4_header_data.destination();
@@ -330,7 +330,7 @@ impl<'a> TCPHeaderMut<'a> {
 mod tests {
     use super::*;
     use byteorder::{BigEndian, WriteBytesExt};
-    use relay::ipv4_packet::IPv4Packet;
+    use relay::ipv4_packet::Ipv4Packet;
     use relay::transport_header::TransportHeaderMut;
 
     fn create_packet() -> Vec<u8> {
@@ -410,7 +410,7 @@ mod tests {
     #[test]
     fn edit_header() {
         let raw = &mut create_tcp_header()[..];
-        let mut header_data = TCPHeaderData::parse(raw);
+        let mut header_data = TcpHeaderData::parse(raw);
         let mut header = header_data.bind_mut(raw);
 
         header.set_source_port(1111);
@@ -456,9 +456,9 @@ mod tests {
     #[test]
     fn compute_checksum() {
         let raw = &mut create_packet()[..];
-        let mut ipv4_packet = IPv4Packet::parse(raw);
+        let mut ipv4_packet = Ipv4Packet::parse(raw);
         let (ipv4_header, mut transport) = ipv4_packet.split_mut();
-        if let Some((TransportHeaderMut::TCP(ref mut tcp_header), ref payload)) = transport {
+        if let Some((TransportHeaderMut::Tcp(ref mut tcp_header), ref payload)) = transport {
             // set a fake checksum value to assert that it is correctly computed
             tcp_header.set_checksum(0x79);
             tcp_header.update_checksum(ipv4_header.data(), payload);
@@ -490,9 +490,9 @@ mod tests {
     #[test]
     fn compute_checksum_odd() {
         let raw = &mut create_odd_packet()[..];
-        let mut ipv4_packet = IPv4Packet::parse(raw);
+        let mut ipv4_packet = Ipv4Packet::parse(raw);
         let (ipv4_header, mut transport) = ipv4_packet.split_mut();
-        if let Some((TransportHeaderMut::TCP(ref mut tcp_header), ref payload)) = transport {
+        if let Some((TransportHeaderMut::Tcp(ref mut tcp_header), ref payload)) = transport {
             // set a fake checksum value to assert that it is correctly computed
             tcp_header.set_checksum(0x79);
             tcp_header.update_checksum(ipv4_header.data(), payload);
