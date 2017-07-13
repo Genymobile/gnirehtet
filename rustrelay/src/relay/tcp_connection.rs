@@ -151,7 +151,7 @@ impl TCPConnection {
                 self.close(selector);
             },
             Err(err) => {
-                cx_error!(target: TAG, self.id, "Cannot write: {}", err);
+                cx_error!(target: TAG, self.id, "Cannot write: [{:?}] {}", err.kind(), err);
                 self.send_empty_packet_to_client(selector, tcp_header::FLAG_RST);
                 self.close(selector);
             },
@@ -191,7 +191,7 @@ impl TCPConnection {
         match non_lexical_lifetime_workaround {
             Ok(None) => self.eof(selector),
             Err(err) => {
-                cx_error!(target: TAG, self.id, "Cannot read: {}", err);
+                cx_error!(target: TAG, self.id, "Cannot read: [{:?}] {}", err.kind(), err);
                 self.send_empty_packet_to_client(selector, tcp_header::FLAG_RST);
                 self.close(selector);
             },
