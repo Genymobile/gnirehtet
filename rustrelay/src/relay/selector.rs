@@ -11,7 +11,10 @@ pub trait EventHandler {
     fn on_ready(&mut self, selector: &mut Selector, event: Event);
 }
 
-impl<F> EventHandler for F where F: FnMut(&mut Selector, Event) {
+impl<F> EventHandler for F
+where
+    F: FnMut(&mut Selector, Event),
+{
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
         self(selector, event);
     }
@@ -55,18 +58,35 @@ impl Selector {
         })
     }
 
-    pub fn register<E>(&mut self, handle: &E, handler: Box<EventHandler>,
-                   interest: Ready, opts: PollOpt) -> io::Result<Token>
-            where E: Evented + ?Sized {
-        let token = self.handlers.insert(SelectionHandler::new(handler))
-                        .map_err(|_| io::Error::new(io::ErrorKind::Other, "Cannot allocate slab slot"))?;
+    pub fn register<E>(
+        &mut self,
+        handle: &E,
+        handler: Box<EventHandler>,
+        interest: Ready,
+        opts: PollOpt,
+    ) -> io::Result<Token>
+    where
+        E: Evented + ?Sized,
+    {
+        let token = self.handlers
+            .insert(SelectionHandler::new(handler))
+            .map_err(|_| {
+                io::Error::new(io::ErrorKind::Other, "Cannot allocate slab slot")
+            })?;
         self.poll.register(handle, token, interest, opts)?;
         Ok(token)
     }
 
-    pub fn reregister<E>(&mut self, handle: &E, token: Token,
-                   interest: Ready, opts: PollOpt) -> io::Result<()>
-            where E: Evented + ?Sized {
+    pub fn reregister<E>(
+        &mut self,
+        handle: &E,
+        token: Token,
+        interest: Ready,
+        opts: PollOpt,
+    ) -> io::Result<()>
+    where
+        E: Evented + ?Sized,
+    {
         // a Poll does not accept to register an empty Ready
         // for simplifying its usage, expose an API that does
         let selection_handler = self.handlers.get_mut(token).expect("Token not found");
@@ -87,7 +107,9 @@ impl Selector {
     }
 
     pub fn deregister<E>(&mut self, handle: &E, token: Token) -> io::Result<()>
-            where E: Evented + ?Sized {
+    where
+        E: Evented + ?Sized,
+    {
         let selection_handler = self.handlers.get_mut(token).expect("Token not found");
         if selection_handler.registered {
             self.poll.deregister(handle)?;
@@ -111,7 +133,11 @@ impl Selector {
     pub fn run_handlers(&mut self, events: &Events) {
         for event in events {
             debug!(target: TAG, "event={:?}", event);
-            let handler = self.handlers.get_mut(event.token()).expect("Token not found").handler.clone();
+            let handler = self.handlers
+                .get_mut(event.token())
+                .expect("Token not found")
+                .handler
+                .clone();
             handler.borrow_mut().on_ready(self, event);
         }
 

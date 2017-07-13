@@ -23,7 +23,11 @@ impl<'a> Ipv4Packet<'a> {
         }
     }
 
-    pub fn new(raw: &'a mut [u8], ipv4_header_data: Ipv4HeaderData, transport_header_data: TransportHeaderData) -> Self {
+    pub fn new(
+        raw: &'a mut [u8],
+        ipv4_header_data: Ipv4HeaderData,
+        transport_header_data: TransportHeaderData,
+    ) -> Self {
         Self {
             raw: raw,
             ipv4_header_data: ipv4_header_data,
@@ -72,7 +76,7 @@ impl<'a> Ipv4Packet<'a> {
         } else {
             None
         }
-/*        self.transport_header_data.as_ref().map(|transport_header_data| {
+        /*        self.transport_header_data.as_ref().map(|transport_header_data| {
             let start = self.ipv4_header_data.header_length() as usize;
             let end = start + transport_header_data.header_length() as usize;
             let slice = &self.raw[start..end];
@@ -91,7 +95,7 @@ impl<'a> Ipv4Packet<'a> {
         } else {
             None
         }
-/*        self.transport_header_data.as_mut().map(|transport_header_data| {
+        /*        self.transport_header_data.as_mut().map(|transport_header_data| {
             let start = self.ipv4_header_data.header_length() as usize;
             let end = start + transport_header_data.header_length() as usize;
             let slice = &mut self.raw[start..end];
@@ -106,7 +110,8 @@ impl<'a> Ipv4Packet<'a> {
     pub fn split(&self) -> (Ipv4Header, Option<(TransportHeader, &[u8])>) {
         let transport_index = self.ipv4_header_data.header_length() as usize;
         if let Some(ref transport_header_data) = self.transport_header_data {
-            let payload_index = transport_header_data.header_length() as usize; // relative to transport
+            // payload_index is relative to transport
+            let payload_index = transport_header_data.header_length() as usize;
             let (ipv4_header_slice, transport_slice) = self.raw.split_at(transport_index);
             let (transport_header_slice, payload_slice) = transport_slice.split_at(payload_index);
             let ipv4_header = self.ipv4_header_data.bind(ipv4_header_slice);
@@ -126,9 +131,11 @@ impl<'a> Ipv4Packet<'a> {
     pub fn split_mut(&mut self) -> (Ipv4HeaderMut, Option<(TransportHeaderMut, &mut [u8])>) {
         let transport_index = self.ipv4_header_data.header_length() as usize;
         if let Some(ref mut transport_header_data) = self.transport_header_data {
-            let payload_index = transport_header_data.header_length() as usize; // relative to transport
+            // payload_index is relative to transport
+            let payload_index = transport_header_data.header_length() as usize;
             let (ipv4_header_slice, transport_slice) = self.raw.split_at_mut(transport_index);
-            let (transport_header_slice, payload_slice) = transport_slice.split_at_mut(payload_index);
+            let (transport_header_slice, payload_slice) =
+                transport_slice.split_at_mut(payload_index);
             let ipv4_header = self.ipv4_header_data.bind_mut(ipv4_header_slice);
             let transport_header = transport_header_data.bind_mut(transport_header_slice);
             (ipv4_header, Some((transport_header, payload_slice)))
@@ -150,10 +157,13 @@ impl<'a> Ipv4Packet<'a> {
     }
 
     pub fn payload(&self) -> Option<&[u8]> {
-        self.transport_header_data.as_ref().map(|transport_header_data| {
-            let range = self.ipv4_header_data.header_length() as usize + transport_header_data.header_length() as usize..;
-            &self.raw[range]
-        })
+        self.transport_header_data.as_ref().map(
+            |transport_header_data| {
+                let range = self.ipv4_header_data.header_length() as usize +
+                    transport_header_data.header_length() as usize..;
+                &self.raw[range]
+            },
+        )
     }
 
     pub fn compute_checksums(&mut self) {
@@ -177,7 +187,7 @@ impl<'a> Ipv4Packet<'a> {
 mod tests {
     use super::*;
     use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
-    use ::relay::ipv4_header::Protocol;
+    use relay::ipv4_header::Protocol;
 
     fn create_packet() -> Vec<u8> {
         let mut raw = Vec::new();
@@ -216,7 +226,9 @@ mod tests {
             assert_eq!(0x12345678, ipv4_header.source());
             assert_eq!(0x42424242, ipv4_header.destination());
 
-            if let Some(TransportHeaderData::Udp(ref udp_header)) = *ipv4_packet.transport_header_data() {
+            if let Some(TransportHeaderData::Udp(ref udp_header)) =
+                *ipv4_packet.transport_header_data()
+            {
                 assert_eq!(1234, udp_header.source_port());
                 assert_eq!(5678, udp_header.destination_port());
             } else {

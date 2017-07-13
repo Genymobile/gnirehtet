@@ -17,15 +17,14 @@ pub struct Relay {
 
 impl Relay {
     pub fn new(port: u16) -> Self {
-        Self {
-            port: port,
-        }
+        Self { port: port }
     }
 
     pub fn start(&self) {
         info!(target: TAG, "Starting server...");
         let mut selector = Selector::new().unwrap();
-        let tunnel_server = TunnelServer::new(self.port, &mut selector).expect("Cannot start tunnel server");
+        let tunnel_server =
+            TunnelServer::new(self.port, &mut selector).expect("Cannot start tunnel server");
         self.poll_loop(&mut selector, &tunnel_server);
     }
 
@@ -54,4 +53,3 @@ impl Relay {
         }
     }
 }
-

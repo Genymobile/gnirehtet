@@ -33,7 +33,13 @@ pub struct UdpConnection {
 }
 
 impl UdpConnection {
-    pub fn new(selector: &mut Selector, id: ConnectionId, client: Weak<RefCell<Client>>, ipv4_header: Ipv4Header, transport_header: TransportHeader) -> io::Result<Rc<RefCell<Self>>> {
+    pub fn new(
+        selector: &mut Selector,
+        id: ConnectionId,
+        client: Weak<RefCell<Client>>,
+        ipv4_header: Ipv4Header,
+        transport_header: TransportHeader,
+    ) -> io::Result<Rc<RefCell<Self>>> {
         let socket = UdpConnection::create_socket(&id)?;
         let packetizer = Packetizer::new(&ipv4_header, &transport_header);
         let rc = Rc::new(RefCell::new(Self {
@@ -52,7 +58,12 @@ impl UdpConnection {
 
             // rc is an EventHandler, register() expects a Box<EventHandler>
             let handler = Box::new(rc.clone());
-            let token = selector.register(&self_ref.socket, handler, Ready::readable(), PollOpt::level())?;
+            let token = selector.register(
+                &self_ref.socket,
+                handler,
+                Ready::readable(),
+                PollOpt::level(),
+            )?;
             self_ref.token = token;
         }
         Ok(rc)
@@ -74,14 +85,26 @@ impl UdpConnection {
 
     fn process_send(&mut self, selector: &mut Selector) {
         if let Err(err) = self.write() {
-            cx_error!(target: TAG, self.id, "Cannot write: [{:?}] {}", err.kind(), err);
+            cx_error!(
+                target: TAG,
+                self.id,
+                "Cannot write: [{:?}] {}",
+                err.kind(),
+                err
+            );
             self.close(selector);
         }
     }
 
     fn process_receive(&mut self, selector: &mut Selector) {
         if let Err(err) = self.read(selector) {
-            cx_error!(target: TAG, self.id, "Cannot read: [{:?}] {}", err.kind(), err);
+            cx_error!(
+                target: TAG,
+                self.id,
+                "Cannot read: [{:?}] {}",
+                err.kind(),
+                err
+            );
             self.close(selector);
         }
     }
@@ -89,13 +112,26 @@ impl UdpConnection {
     fn read(&mut self, selector: &mut Selector) -> io::Result<()> {
         let ipv4_packet = self.network_to_client.packetize(&mut self.socket)?;
         let client_rc = self.client.upgrade().expect("Expected client not found");
-        match client_rc.borrow_mut().send_to_client(selector, &ipv4_packet) {
+        match client_rc.borrow_mut().send_to_client(
+            selector,
+            &ipv4_packet,
+        ) {
             Ok(_) => {
-                cx_debug!(target: TAG, self.id, "Packet ({} bytes) sent to client", ipv4_packet.length());
+                cx_debug!(
+                    target: TAG,
+                    self.id,
+                    "Packet ({} bytes) sent to client",
+                    ipv4_packet.length()
+                );
                 if log_enabled!(target: TAG, LogLevel::Trace) {
-                    cx_trace!(target: TAG, self.id, "{}", binary::to_string(ipv4_packet.raw()));
+                    cx_trace!(
+                        target: TAG,
+                        self.id,
+                        "{}",
+                        binary::to_string(ipv4_packet.raw())
+                    );
                 }
-            },
+            }
             Err(_) => cx_warn!(target: TAG, self.id, "Cannot send to client, drop packet"),
         }
         Ok(())
@@ -112,7 +148,9 @@ impl UdpConnection {
         } else {
             Ready::readable() | Ready::writable()
         };
-        selector.reregister(&self.socket, self.token, ready, PollOpt::level()).expect("Cannot register on poll");
+        selector
+            .reregister(&self.socket, self.token, ready, PollOpt::level())
+            .expect("Cannot register on poll");
     }
 
     fn touch(&mut self) {
@@ -125,12 +163,28 @@ impl Connection for UdpConnection {
         &self.id
     }
 
-    fn send_to_network(&mut self, selector: &mut Selector, _: &mut ClientChannel, ipv4_packet: &Ipv4Packet) {
-        match self.client_to_network.read_from(ipv4_packet.payload().expect("No payload")) {
+    fn send_to_network(
+        &mut self,
+        selector: &mut Selector,
+        _: &mut ClientChannel,
+        ipv4_packet: &Ipv4Packet,
+    ) {
+        match self.client_to_network.read_from(
+            ipv4_packet.payload().expect(
+                "No payload",
+            ),
+        ) {
             Ok(_) => {
                 self.update_interests(selector);
-            },
-            Err(err) => cx_warn!(target: TAG, self.id, "Cannot send to network, drop packet: {}", err),
+            }
+            Err(err) => {
+                cx_warn!(
+                    target: TAG,
+                    self.id,
+                    "Cannot send to network, drop packet: {}",
+                    err
+                )
+            }
         }
     }
 

@@ -29,12 +29,18 @@ impl DatagramReceiver for UdpSocket {
 }
 
 // Convert a Read to a DatagramReceiver
-pub struct ReadAdapter<'a, R> where R: io::Read + 'a {
+pub struct ReadAdapter<'a, R>
+where
+    R: io::Read + 'a,
+{
     read: &'a mut R,
     max_chunk_size: Option<usize>,
 }
 
-impl<'a, R> ReadAdapter<'a, R> where R: io::Read + 'a {
+impl<'a, R> ReadAdapter<'a, R>
+where
+    R: io::Read + 'a,
+{
     pub fn new(read: &'a mut R, max_chunk_size: Option<usize>) -> Self {
         Self {
             read: read,
@@ -43,7 +49,10 @@ impl<'a, R> ReadAdapter<'a, R> where R: io::Read + 'a {
     }
 }
 
-impl<'a, R> DatagramReceiver for ReadAdapter<'a, R> where R: io::Read + 'a {
+impl<'a, R> DatagramReceiver for ReadAdapter<'a, R>
+where
+    R: io::Read + 'a,
+{
     fn recv(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         let len = if let Some(max_chunk_size) = self.max_chunk_size {
             cmp::min(max_chunk_size, buf.len())
@@ -103,7 +112,7 @@ pub mod tests {
     #[test]
     fn mock_send() {
         let mut mock = MockDatagramSocket::new();
-        let data = [ 1, 2, 3, 4, 5 ];
+        let data = [1, 2, 3, 4, 5];
         let sent = mock.send(&data).unwrap();
         assert_eq!(5, sent);
         assert_eq!([1, 2, 3, 4, 5], mock.data());

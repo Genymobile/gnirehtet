@@ -51,7 +51,10 @@ impl DatagramBuffer {
     }
 
     pub fn write_to<S: DatagramSender>(&mut self, destination: &mut S) -> io::Result<()> {
-        assert!(!self.is_empty(), "DatagramBuffer.write_to() called while empty");
+        assert!(
+            !self.is_empty(),
+            "DatagramBuffer.write_to() called while empty"
+        );
         let length = self.read_length() as usize;
         let source_slice = &self.buf[self.tail..self.tail + length];
         self.tail += length;
@@ -60,17 +63,32 @@ impl DatagramBuffer {
         }
         let w = destination.send(source_slice)?;
         if w != length {
-            error!(target: TAG, "Cannot write the whole datagram to the buffer (only {}/{})", w, length);
-            return Err(io::Error::new(io::ErrorKind::Other, "Cannot write the whole datagram"))
+            error!(
+                target: TAG,
+                "Cannot write the whole datagram to the buffer (only {}/{})",
+                w,
+                length
+            );
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Cannot write the whole datagram",
+            ));
         }
         Ok(())
     }
 
     pub fn read_from(&mut self, source: &[u8]) -> io::Result<()> {
         let length = source.len();
-        assert!(length <= MAX_DATAGRAM_LENGTH, "Datagram length may not be greater than {} bytes", MAX_DATAGRAM_LENGTH);
+        assert!(
+            length <= MAX_DATAGRAM_LENGTH,
+            "Datagram length may not be greater than {} bytes",
+            MAX_DATAGRAM_LENGTH
+        );
         if !self.has_enough_space_for(length) {
-            return Err(io::Error::new(io::ErrorKind::Other, "Datagram buffer is full"));
+            return Err(io::Error::new(
+                io::ErrorKind::Other,
+                "Datagram buffer is full",
+            ));
         }
         self.write_length(length as u16);
         let target_slice = &mut self.buf[self.head..self.head + length];
@@ -146,7 +164,7 @@ mod tests {
             datagram_buffer.write_to(&mut mock).unwrap();
         }
 
-        // DatagramBuffer is expected to store the whole datagram (even if it exceeds its "capacity")
+        // DatagramBuffer is expected to store the whole datagram, even if it exceeds its "capacity"
         datagram_buffer.read_from(&datagram5).unwrap();
         datagram_buffer.read_from(&datagram3).unwrap();
 

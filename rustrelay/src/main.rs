@@ -9,4 +9,3 @@ fn main() {
     SimpleLogger::init().unwrap();
     relaylib::relay();
 }
-

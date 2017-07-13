@@ -49,14 +49,21 @@ impl<'a> ClientChannel<'a> {
 
     // Functionally equivalent to Client::send_to_client(), except that it does not require to
     // mutably borrow the whole client.
-    pub fn send_to_client(&mut self, selector: &mut Selector, ipv4_packet: &Ipv4Packet) -> io::Result<()> {
+    pub fn send_to_client(
+        &mut self,
+        selector: &mut Selector,
+        ipv4_packet: &Ipv4Packet,
+    ) -> io::Result<()> {
         if ipv4_packet.length() as usize <= self.network_to_client.remaining() {
             self.network_to_client.read_from(ipv4_packet.raw());
             self.update_interests(selector);
             Ok(())
         } else {
             warn!(target: TAG, "Client buffer full");
-            Err(io::Error::new(io::ErrorKind::WouldBlock, "Client buffer full"))
+            Err(io::Error::new(
+                io::ErrorKind::WouldBlock,
+                "Client buffer full",
+            ))
         }
     }
 
@@ -66,12 +73,19 @@ impl<'a> ClientChannel<'a> {
         } else {
             Ready::readable() | Ready::writable()
         };
-        selector.reregister(self.stream, self.token, ready, PollOpt::level()).expect("Cannot register on poll");
+        selector
+            .reregister(self.stream, self.token, ready, PollOpt::level())
+            .expect("Cannot register on poll");
     }
 }
 
 impl Client {
-    pub fn new(id: u32, selector: &mut Selector, stream: TcpStream, close_listener: Box<CloseListener<Client>>) -> io::Result<Rc<RefCell<Self>>> {
+    pub fn new(
+        id: u32,
+        selector: &mut Selector,
+        stream: TcpStream,
+        close_listener: Box<CloseListener<Client>>,
+    ) -> io::Result<Rc<RefCell<Self>>> {
         let rc = Rc::new(RefCell::new(Self {
             id: id,
             stream: stream,
@@ -93,7 +107,12 @@ impl Client {
             // rc is an EventHandler, register() expects a Box<EventHandler>
             let handler = Box::new(rc.clone());
             // on start, we are interested only in writing (we must first send the client id)
-            let token = selector.register(&self_ref.stream, handler, Ready::writable(), PollOpt::level())?;
+            let token = selector.register(
+                &self_ref.stream,
+                handler,
+                Ready::writable(),
+                PollOpt::level(),
+            )?;
             self_ref.token = token;
         }
         Ok(rc)
@@ -127,7 +146,7 @@ impl Client {
             match self.send_id() {
                 Ok(_) => {
                     if self.pending_id_bytes == 0 {
-                        debug!(target:TAG, "Client id #{} sent to client", self.id);
+                        debug!(target: TAG, "Client id #{} sent to client", self.id);
                     }
                 }
                 Err(_) => {
@@ -160,14 +179,21 @@ impl Client {
         }
     }
 
-    pub fn send_to_client(&mut self, selector: &mut Selector, ipv4_packet: &Ipv4Packet) -> io::Result<()> {
+    pub fn send_to_client(
+        &mut self,
+        selector: &mut Selector,
+        ipv4_packet: &Ipv4Packet,
+    ) -> io::Result<()> {
         if ipv4_packet.length() as usize <= self.network_to_client.remaining() {
             self.network_to_client.read_from(ipv4_packet.raw());
             self.update_interests(selector);
             Ok(())
         } else {
             warn!(target: TAG, "Client buffer full");
-            Err(io::Error::new(io::ErrorKind::WouldBlock, "Client buffer full"))
+            Err(io::Error::new(
+                io::ErrorKind::WouldBlock,
+                "Client buffer full",
+            ))
         }
     }
 
@@ -205,11 +231,16 @@ impl Client {
     fn push_one_packet_to_network(&mut self, selector: &mut Selector) -> bool {
         match self.client_to_network.as_ipv4_packet() {
             Some(ref packet) => {
-                let mut client_channel = ClientChannel::new(&mut self.network_to_client, &self.stream, self.token);
-                self.router.send_to_network(selector, &mut client_channel, packet);
+                let mut client_channel =
+                    ClientChannel::new(&mut self.network_to_client, &self.stream, self.token);
+                self.router.send_to_network(
+                    selector,
+                    &mut client_channel,
+                    packet,
+                );
                 true
             }
-            None => false
+            None => false,
         }
     }
 
@@ -220,17 +251,17 @@ impl Client {
             let consumed = {
                 let mut source = pending.borrow_mut();
                 let result = {
-                    let ipv4_packet = source.get().expect("Unexpected pending source with no packet");
+                    let ipv4_packet = source.get().expect(
+                        "Unexpected pending source with no packet",
+                    );
                     self.send_to_client(selector, &ipv4_packet)
                 };
                 match result {
                     Ok(_) => {
                         source.next(selector);
                         true
-                    },
-                    Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
-                        false
-                    },
+                    }
+                    Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => false,
                     Err(_) => {
                         panic!("Cannot send packet to client for unknown reason");
                     }
@@ -247,7 +278,7 @@ impl Client {
         self.router.clean_expired_connections(selector);
     }
 
-    fn must_send_id(&self) -> bool{
+    fn must_send_id(&self) -> bool {
         self.pending_id_bytes > 0
     }
 }

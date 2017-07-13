@@ -15,7 +15,10 @@ pub struct Packetizer {
 }
 
 impl Packetizer {
-    pub fn new(reference_ipv4_header: &Ipv4Header, reference_transport_header: &TransportHeader) -> Self {
+    pub fn new(
+        reference_ipv4_header: &Ipv4Header,
+        reference_transport_header: &TransportHeader,
+    ) -> Self {
         let mut buffer = Box::new([0; MAX_PACKET_LENGTH]);
 
         let transport_index = reference_ipv4_header.header_length() as usize;
@@ -62,7 +65,11 @@ impl Packetizer {
     /// `Ok(Some(_))` when packet is available
     /// `Ok(None)` on EOF (read 0 byte)
     /// `Err(_)` on error
-    pub fn packetize_read<R: io::Read>(&mut self, source: &mut R, max_chunk_size: Option<usize>) -> io::Result<Option<Ipv4Packet>> {
+    pub fn packetize_read<R: io::Read>(
+        &mut self,
+        source: &mut R,
+        max_chunk_size: Option<usize>,
+    ) -> io::Result<Option<Ipv4Packet>> {
         let mut adapter = ReadAdapter::new(source, max_chunk_size);
         let r = adapter.recv(&mut self.buffer[self.payload_index..])?;
         let option = if r > 0 {
@@ -88,15 +95,25 @@ impl Packetizer {
         let total_length = self.payload_index as u16 + payload_length;
 
         self.ipv4_header_mut().set_total_length(total_length);
-        self.transport_header_mut().set_payload_length(payload_length);
+        self.transport_header_mut().set_payload_length(
+            payload_length,
+        );
 
-        let mut ipv4_packet = Ipv4Packet::new(&mut self.buffer[..total_length as usize], self.ipv4_header_data.clone(), self.transport_header_data.clone());
+        let mut ipv4_packet = Ipv4Packet::new(
+            &mut self.buffer[..total_length as usize],
+            self.ipv4_header_data.clone(),
+            self.transport_header_data.clone(),
+        );
         ipv4_packet.compute_checksums();
         ipv4_packet
     }
 
     pub fn inflate(&mut self, packet_length: u16) -> Ipv4Packet {
-        Ipv4Packet::new(&mut self.buffer[..packet_length as usize], self.ipv4_header_data.clone(), self.transport_header_data.clone())
+        Ipv4Packet::new(
+            &mut self.buffer[..packet_length as usize],
+            self.ipv4_header_data.clone(),
+            self.transport_header_data.clone(),
+        )
     }
 }
 
@@ -133,7 +150,7 @@ mod tests {
         let mut raw = &mut create_packet()[..];
         let reference_packet = Ipv4Packet::parse(raw);
 
-        let data = [ 0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 ];
+        let data = [0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88];
         let mut mock = MockDatagramSocket::from_data(&data);
 
         let ipv4_header = reference_packet.ipv4_header();
@@ -150,7 +167,7 @@ mod tests {
         let mut raw = &mut create_packet()[..];
         let reference_packet = Ipv4Packet::parse(raw);
 
-        let data = [ 0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 ];
+        let data = [0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88];
         let mut mock = MockDatagramSocket::from_data(&data);
 
         let ipv4_header = reference_packet.ipv4_header();
@@ -168,7 +185,7 @@ mod tests {
         let mut raw = &mut create_packet()[..];
         let reference_packet = Ipv4Packet::parse(raw);
 
-        let data = [ 0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88 ];
+        let data = [0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88];
         let mut cursor = io::Cursor::new(&data);
 
         let ipv4_header = reference_packet.ipv4_header();
@@ -176,19 +193,28 @@ mod tests {
         let mut packetizer = Packetizer::new(&ipv4_header, &transport_header);
 
         {
-            let packet = packetizer.packetize_read(&mut cursor, Some(2)).unwrap().unwrap();
+            let packet = packetizer
+                .packetize_read(&mut cursor, Some(2))
+                .unwrap()
+                .unwrap();
             assert_eq!(30, packet.ipv4_header_data().total_length());
             assert_eq!([0x11, 0x22], packet.payload().unwrap());
         }
 
         {
-            let packet = packetizer.packetize_read(&mut cursor, Some(3)).unwrap().unwrap();
+            let packet = packetizer
+                .packetize_read(&mut cursor, Some(3))
+                .unwrap()
+                .unwrap();
             assert_eq!(31, packet.ipv4_header_data().total_length());
             assert_eq!([0x33, 0x44, 0x55], packet.payload().unwrap());
         }
 
         {
-            let packet = packetizer.packetize_read(&mut cursor, Some(1024)).unwrap().unwrap();
+            let packet = packetizer
+                .packetize_read(&mut cursor, Some(1024))
+                .unwrap()
+                .unwrap();
             assert_eq!(31, packet.ipv4_header_data().total_length());
             assert_eq!([0x66, 0x77, 0x88], packet.payload().unwrap());
         }

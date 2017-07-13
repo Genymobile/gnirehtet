@@ -50,8 +50,9 @@ impl Ipv4PacketBuffer {
 
     pub fn next(&mut self) {
         // remove the packet in front of the buffer
-        let length = self.available_packet_length()
-                .expect("next() called while there was no packet") as usize;
+        let length = self.available_packet_length().expect(
+            "next() called while there was no packet",
+        ) as usize;
         assert!(self.head >= length);
         self.head -= length;
         if self.head > 0 {
@@ -87,8 +88,8 @@ mod tests {
     use super::*;
     use std::io;
     use byteorder::{BigEndian, WriteBytesExt};
-    use ::relay::ipv4_header::Protocol;
-    use ::relay::transport_header::TransportHeaderData;
+    use relay::ipv4_header::Protocol;
+    use relay::transport_header::TransportHeaderData;
 
     fn create_packet() -> Vec<u8> {
         let mut raw = Vec::new();
@@ -142,7 +143,9 @@ mod tests {
         assert_eq!(0x12345678, ipv4_header.source());
         assert_eq!(0x42424242, ipv4_header.destination());
 
-        if let Some(TransportHeaderData::Udp(ref udp_header)) = *ipv4_packet.transport_header_data() {
+        if let Some(TransportHeaderData::Udp(ref udp_header)) =
+            *ipv4_packet.transport_header_data()
+        {
             assert_eq!(1234, udp_header.source_port());
             assert_eq!(5678, udp_header.destination_port());
         } else {
@@ -158,7 +161,9 @@ mod tests {
         assert_eq!(0x11111111, ipv4_header.source());
         assert_eq!(0x22222222, ipv4_header.destination());
 
-        if let Some(TransportHeaderData::Udp(ref udp_header)) = *ipv4_packet.transport_header_data() {
+        if let Some(TransportHeaderData::Udp(ref udp_header)) =
+            *ipv4_packet.transport_header_data()
+        {
             assert_eq!(1111, udp_header.source_port());
             assert_eq!(2222, udp_header.destination_port());
         } else {

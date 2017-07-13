@@ -33,7 +33,12 @@ impl TunnelServer {
 
         // rc is an EventHandler, register() expects a Box<EventHandler>
         let handler = Box::new(rc.clone());
-        selector.register(&rc.borrow().tcp_listener, handler, Ready::readable(), PollOpt::edge())?;
+        selector.register(
+            &rc.borrow().tcp_listener,
+            handler,
+            Ready::readable(),
+            PollOpt::edge(),
+        )?;
         Ok(rc)
     }
 
@@ -49,13 +54,14 @@ impl TunnelServer {
         let client_id = self.next_client_id;
         self.next_client_id += 1;
         let weak = self.self_weak.clone();
-        let on_client_closed = Box::new(move |client: &Client| {
-            if let Some(rc) = weak.upgrade() {
-                let mut tunnel_server = rc.borrow_mut();
-                tunnel_server.remove_client(client);
-            } else {
-                warn!(target: TAG, "on_client_closed called but no client available");
-            }
+        let on_client_closed = Box::new(move |client: &Client| if let Some(rc) = weak.upgrade() {
+            let mut tunnel_server = rc.borrow_mut();
+            tunnel_server.remove_client(client);
+        } else {
+            warn!(
+                target: TAG,
+                "on_client_closed called but no client available"
+            );
         });
         let client = Client::new(client_id, selector, stream, on_client_closed)?;
         self.clients.push(client);
@@ -65,10 +71,13 @@ impl TunnelServer {
 
     fn remove_client(&mut self, client: &Client) {
         info!(target: TAG, "Client #{} disconnected", client.id());
-        let index = self.clients.iter().position(|item| {
-            // compare pointers to find the client to remove
-            binary::ptr_eq(client, item.as_ptr())
-        }).expect("Trying to remove an unknown client");
+        let index = self.clients
+            .iter()
+            .position(|item| {
+                // compare pointers to find the client to remove
+                binary::ptr_eq(client, item.as_ptr())
+            })
+            .expect("Trying to remove an unknown client");
         self.clients.swap_remove(index);
     }
 
