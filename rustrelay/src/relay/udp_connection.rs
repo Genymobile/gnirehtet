@@ -152,20 +152,21 @@ impl Connection for UDPConnection {
 
 impl EventHandler for UDPConnection {
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
-        assert!(!self.closed);
-        self.touch();
-        let ready = event.readiness();
-        if ready.is_writable() {
-            self.process_send(selector);
-        }
-        if !self.closed && ready.is_readable() {
-            self.process_receive(selector);
-        }
         if !self.closed {
-            self.update_interests(selector);
-        } else {
-            // on_ready is not called from the router, so the connection must remove itself
-            self.remove_from_router();
+            self.touch();
+            let ready = event.readiness();
+            if ready.is_writable() {
+                self.process_send(selector);
+            }
+            if !self.closed && ready.is_readable() {
+                self.process_receive(selector);
+            }
+            if !self.closed {
+                self.update_interests(selector);
+            } else {
+                // on_ready is not called from the router, so the connection must remove itself
+                self.remove_from_router();
+            }
         }
     }
 }

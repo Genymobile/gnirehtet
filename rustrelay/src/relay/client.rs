@@ -254,16 +254,17 @@ impl Client {
 
 impl EventHandler for Client {
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
-        assert!(!self.closed);
-        let ready = event.readiness();
-        if ready.is_writable() {
-            self.process_send(selector);
-        }
-        if !self.closed && ready.is_readable() {
-            self.process_receive(selector);
-        }
         if !self.closed {
-            self.update_interests(selector);
+            let ready = event.readiness();
+            if ready.is_writable() {
+                self.process_send(selector);
+            }
+            if !self.closed && ready.is_readable() {
+                self.process_receive(selector);
+            }
+            if !self.closed {
+                self.update_interests(selector);
+            }
         }
     }
 }
