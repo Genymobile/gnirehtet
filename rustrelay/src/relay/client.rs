@@ -138,8 +138,8 @@ impl Client {
         } else {
             match self.write() {
                 Ok(_) => self.process_pending(selector),
-                Err(_) => {
-                    error!(target: TAG, "Cannot write");
+                Err(err) => {
+                    error!(target: TAG, "Cannot write: [{:?}] {}", err.kind(), err);
                     self.close(selector);
                 }
             }
@@ -153,8 +153,8 @@ impl Client {
                 debug!(target: TAG, "EOF reached");
                 self.close(selector);
             }
-            Err(_) => {
-                error!(target: TAG, "Cannot read");
+            Err(err) => {
+                error!(target: TAG, "Cannot read: [{:?}] {}", err.kind(), err);
                 self.close(selector);
             }
         }

@@ -74,14 +74,14 @@ impl UDPConnection {
 
     fn process_send(&mut self, selector: &mut Selector) {
         if let Err(err) = self.write() {
-            cx_error!(target: TAG, self.id, "Cannot write: {}", err);
+            cx_error!(target: TAG, self.id, "Cannot write: [{:?}] {}", err.kind(), err);
             self.close(selector);
         }
     }
 
     fn process_receive(&mut self, selector: &mut Selector) {
         if let Err(err) = self.read(selector) {
-            cx_error!(target: TAG, self.id, "Cannot read: {}", err);
+            cx_error!(target: TAG, self.id, "Cannot read: [{:?}] {}", err.kind(), err);
             self.close(selector);
         }
     }
