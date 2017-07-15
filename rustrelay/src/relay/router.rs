@@ -146,7 +146,8 @@ impl Router {
     }
 
     pub fn clean_expired_connections(&mut self, selector: &mut Selector) {
-        for i in 0..self.connections.len() {
+        // remove the last items first, otherwise i might not be less than len() on swap_remove(i)
+        for i in (0..self.connections.len()).rev() {
             let expired = {
                 let mut connection = self.connections[i].borrow_mut();
                 if connection.is_expired() {
