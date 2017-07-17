@@ -20,7 +20,7 @@ pub struct TunnelServer {
 
 impl TunnelServer {
     pub fn new(port: u16, selector: &mut Selector) -> io::Result<Rc<RefCell<Self>>> {
-        let tcp_listener = TunnelServer::start_socket(port)?;
+        let tcp_listener = Self::start_socket(port)?;
         let rc = Rc::new(RefCell::new(Self {
             self_weak: Weak::new(),
             clients: Vec::new(),
