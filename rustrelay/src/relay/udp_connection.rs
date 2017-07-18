@@ -83,30 +83,72 @@ impl UdpConnection {
         client.router().remove(self);
     }
 
-    fn process_send(&mut self, selector: &mut Selector) {
-        if let Err(err) = self.write() {
-            cx_error!(
-                target: TAG,
-                self.id,
-                "Cannot write: [{:?}] {}",
-                err.kind(),
-                err
-            );
-            self.close(selector);
+    // return Err(err) with err.kind() == io::ErrorKind::WouldBlock on spurious event
+    fn process(&mut self, selector: &mut Selector, event: Event) -> io::Result<()> {
+        if !self.closed {
+            self.touch();
+            let ready = event.readiness();
+            if ready.is_writable() {
+                self.process_send(selector)?;
+            }
+            if !self.closed && ready.is_readable() {
+                self.process_receive(selector)?;
+            }
+            if !self.closed {
+                self.update_interests(selector);
+            } else {
+                // on_ready is not called from the router, so the connection must remove itself
+                self.remove_from_router();
+            }
         }
+        Ok(())
     }
 
-    fn process_receive(&mut self, selector: &mut Selector) {
-        if let Err(err) = self.read(selector) {
-            cx_error!(
-                target: TAG,
-                self.id,
-                "Cannot read: [{:?}] {}",
-                err.kind(),
-                err
-            );
-            self.close(selector);
+    // return Err(err) with err.kind() == io::ErrorKind::WouldBlock on spurious event
+    fn process_send(&mut self, selector: &mut Selector) -> io::Result<()> {
+        match self.write() {
+            Ok(_) => (),
+            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
+                cx_debug!(target: TAG, self.id, "Spurious event, ignoring")
+            }
+            Err(err) => {
+                if err.kind() == io::ErrorKind::WouldBlock {
+                    // rethrow
+                    return Err(err);
+                }
+                cx_error!(
+                    target: TAG,
+                    self.id,
+                    "Cannot write: [{:?}] {}",
+                    err.kind(),
+                    err
+                );
+                self.close(selector);
+            }
         }
+        Ok(())
+    }
+
+    // return Err(err) with err.kind() == io::ErrorKind::WouldBlock on spurious event
+    fn process_receive(&mut self, selector: &mut Selector) -> io::Result<()> {
+        match self.read(selector) {
+            Ok(_) => (),
+            Err(err) => {
+                if err.kind() == io::ErrorKind::WouldBlock {
+                    // rethrow
+                    return Err(err);
+                }
+                cx_error!(
+                    target: TAG,
+                    self.id,
+                    "Cannot read: [{:?}] {}",
+                    err.kind(),
+                    err
+                );
+                self.close(selector);
+            }
+        }
+        Ok(())
     }
 
     fn read(&mut self, selector: &mut Selector) -> io::Result<()> {
@@ -206,21 +248,12 @@ impl Connection for UdpConnection {
 
 impl EventHandler for UdpConnection {
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
-        if !self.closed {
-            self.touch();
-            let ready = event.readiness();
-            if ready.is_writable() {
-                self.process_send(selector);
+        match self.process(selector, event) {
+            Ok(_) => (),
+            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
+                cx_debug!(target: TAG, self.id, "Spurious event, ignoring")
             }
-            if !self.closed && ready.is_readable() {
-                self.process_receive(selector);
-            }
-            if !self.closed {
-                self.update_interests(selector);
-            } else {
-                // on_ready is not called from the router, so the connection must remove itself
-                self.remove_from_router();
-            }
+            Err(_) => panic!("Unexpected unhandled error"),
         }
     }
 }

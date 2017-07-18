@@ -90,8 +90,12 @@ impl TunnelServer {
 
 impl EventHandler for TunnelServer {
     fn on_ready(&mut self, selector: &mut Selector, _: Event) {
-        if let Err(err) = self.accept_client(selector) {
-            error!(target: TAG, "Cannot accept client: {}", err);
+        match self.accept_client(selector) {
+            Ok(_) => debug!(target: TAG, "New client accepted"),
+            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
+                debug!(target: TAG, "Spurious event, ignoring");
+            }
+            Err(err) => error!(target: TAG, "Cannot accept client: {}", err),
         }
     }
 }

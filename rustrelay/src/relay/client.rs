@@ -141,7 +141,25 @@ impl Client {
         self.close_listener.on_closed(self);
     }
 
-    fn process_send(&mut self, selector: &mut Selector) {
+    // return Err(err) with err.kind() == io::ErrorKind::WouldBlock on spurious event
+    fn process(&mut self, selector: &mut Selector, event: Event) -> io::Result<()> {
+        if !self.closed {
+            let ready = event.readiness();
+            if ready.is_writable() {
+                self.process_send(selector)?;
+            }
+            if !self.closed && ready.is_readable() {
+                self.process_receive(selector)?;
+            }
+            if !self.closed {
+                self.update_interests(selector);
+            }
+        }
+        Ok(())
+    }
+
+    // return Err(err) with err.kind() == io::ErrorKind::WouldBlock on spurious event
+    fn process_send(&mut self, selector: &mut Selector) -> io::Result<()> {
         if self.must_send_id() {
             match self.send_id() {
                 Ok(_) => {
@@ -149,7 +167,11 @@ impl Client {
                         debug!(target: TAG, "Client id #{} sent to client", self.id);
                     }
                 }
-                Err(_) => {
+                Err(err) => {
+                    if err.kind() == io::ErrorKind::WouldBlock {
+                        // rethrow
+                        return Err(err);
+                    }
                     error!(target: TAG, "Cannot write client id #{}", self.id);
                     self.close(selector);
                 }
@@ -163,9 +185,11 @@ impl Client {
                 }
             }
         }
+        Ok(())
     }
 
-    fn process_receive(&mut self, selector: &mut Selector) {
+    // return Err(err) with err.kind() == io::ErrorKind::WouldBlock on spurious event
+    fn process_receive(&mut self, selector: &mut Selector) -> io::Result<()> {
         match self.read() {
             Ok(true) => self.push_to_network(selector),
             Ok(false) => {
@@ -173,10 +197,15 @@ impl Client {
                 self.close(selector);
             }
             Err(err) => {
+                if err.kind() == io::ErrorKind::WouldBlock {
+                    // rethrow
+                    return Err(err);
+                }
                 error!(target: TAG, "Cannot read: [{:?}] {}", err.kind(), err);
                 self.close(selector);
             }
         }
+        Ok(())
     }
 
     pub fn send_to_client(
@@ -285,17 +314,12 @@ impl Client {
 
 impl EventHandler for Client {
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
-        if !self.closed {
-            let ready = event.readiness();
-            if ready.is_writable() {
-                self.process_send(selector);
+        match self.process(selector, event) {
+            Ok(_) => (),
+            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
+                debug!(target: TAG, "Spurious event, ignoring")
             }
-            if !self.closed && ready.is_readable() {
-                self.process_receive(selector);
-            }
-            if !self.closed {
-                self.update_interests(selector);
-            }
+            Err(_) => panic!("Unexpected unhandled error"),
         }
     }
 }
