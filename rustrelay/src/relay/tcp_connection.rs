@@ -165,7 +165,33 @@ impl TcpConnection {
         client.router().remove(self);
     }
 
-    fn process_send(&mut self, selector: &mut Selector) {
+    // return Err(err) with err.kind() == io::ErrorKind::WouldBlock on spurious event
+    fn process(&mut self, selector: &mut Selector, event: Event) -> io::Result<()> {
+        if !self.closed {
+            let ready = event.readiness();
+            if ready.is_writable() {
+                if self.tcb.state == TcpState::SynSent {
+                    // writable is first triggered when the stream is connected
+                    self.process_connect(selector);
+                } else {
+                    self.process_send(selector)?;
+                }
+            }
+            if !self.closed && ready.is_readable() {
+                self.process_receive(selector)?;
+            }
+            if !self.closed {
+                self.update_interests(selector);
+            } else {
+                // on_ready is not called from the router, so the connection must remove itself
+                self.remove_from_router();
+            }
+        }
+        Ok(())
+    }
+
+    // return Err(err) with err.kind() == io::ErrorKind::WouldBlock on spurious event
+    fn process_send(&mut self, selector: &mut Selector) -> io::Result<()> {
         match self.client_to_network.write_to(&mut self.stream) {
             Ok(w) => {
                 if w == 0 {
@@ -173,6 +199,10 @@ impl TcpConnection {
                 }
             }
             Err(err) => {
+                if err.kind() == io::ErrorKind::WouldBlock {
+                    // rethrow
+                    return Err(err)
+                }
                 cx_error!(
                     target: TAG,
                     self.id,
@@ -184,9 +214,11 @@ impl TcpConnection {
                 self.close(selector);
             }
         }
+        Ok(())
     }
 
-    fn process_receive(&mut self, selector: &mut Selector) {
+    // return Err(err) with err.kind() == io::ErrorKind::WouldBlock on spurious event
+    fn process_receive(&mut self, selector: &mut Selector) -> io::Result<()> {
         assert!(
             self.packet_for_client_length.is_none(),
             "A pending packet was not sent"
@@ -237,8 +269,14 @@ impl TcpConnection {
             Err(err) => Err(err),
         };
         match non_lexical_lifetime_workaround {
-            Ok(None) => self.eof(selector),
+            Ok(None) => {
+                self.eof(selector);
+            }
             Err(err) => {
+                if err.kind() == io::ErrorKind::WouldBlock {
+                    // rethrow
+                    return Err(err)
+                }
                 cx_error!(
                     target: TAG,
                     self.id,
@@ -251,6 +289,7 @@ impl TcpConnection {
             }
             Ok(Some(_)) => (), // already handled
         }
+        Ok(())
     }
 
     fn process_connect(&mut self, selector: &mut Selector) {
@@ -643,25 +682,12 @@ impl Connection for TcpConnection {
 
 impl EventHandler for TcpConnection {
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
-        if !self.closed {
-            let ready = event.readiness();
-            if ready.is_writable() {
-                if self.tcb.state == TcpState::SynSent {
-                    // writable is first triggered when the stream is connected
-                    self.process_connect(selector);
-                } else {
-                    self.process_send(selector);
-                }
+        match self.process(selector, event) {
+            Ok(_) => (),
+            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
+                cx_debug!(target: TAG, self.id, "Spurious event, ignoring")
             }
-            if !self.closed && ready.is_readable() {
-                self.process_receive(selector);
-            }
-            if !self.closed {
-                self.update_interests(selector);
-            } else {
-                // on_ready is not called from the router, so the connection must remove itself
-                self.remove_from_router();
-            }
+            Err(_) => panic!("Unexpected unhandled error"),
         }
     }
 }
