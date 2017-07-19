@@ -21,7 +21,7 @@ public class DisconnectionNotifier {
         Notification.Builder notificationBuilder = new Notification.Builder(context);
         notificationBuilder.setContentTitle(context.getString(R.string.app_name));
         notificationBuilder.setContentText(context.getString(R.string.relay_disconnected));
-        notificationBuilder.setSmallIcon(R.drawable.ic_report_problem_black_24dp);
+        notificationBuilder.setSmallIcon(R.drawable.ic_report_problem_24dp);
         notificationBuilder.addAction(createStopAction());
         Notification notification = notificationBuilder.build();
 
@@ -40,7 +40,7 @@ public class DisconnectionNotifier {
         // the non-deprecated constructor is not available in API 21
         @SuppressWarnings("deprecation")
         Notification.Action.Builder actionBuilder =
-                new Notification.Action.Builder(R.drawable.ic_close_black_24dp, context.getString(R.string.stop_vpn), stopPendingIntent);
+                new Notification.Action.Builder(R.drawable.ic_close_24dp, context.getString(R.string.stop_vpn), stopPendingIntent);
         return actionBuilder.build();
     }
 }
