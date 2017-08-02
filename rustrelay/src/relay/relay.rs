@@ -45,8 +45,9 @@ impl Relay {
             if now >= next_cleaning_deadline {
                 tunnel_server.borrow_mut().clean_up(selector);
                 next_cleaning_deadline = now + CLEANING_INTERVAL_SECONDS;
-            } else {
-                assert!(!events.is_empty(), "poll() returned without any event");
+            } else if events.is_empty() {
+                warn!(target: TAG, "spurious wakeup: poll() returned without any event");
+                continue;
             }
 
             selector.run_handlers(&mut events);
