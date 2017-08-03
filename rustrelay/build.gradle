@@ -17,3 +17,17 @@ task install(type: Exec) {
 task clean(type: Exec) {
     commandLine 'cargo', 'clean'
 }
+
+// Requirements:
+//
+// Install the cross-compile toolchain (on Debian):
+//   sudo apt install gcc-mingw-w64-x86-64
+//   rustup target add x86_64-pc-windows-gnu
+//
+// Add the following lines to ~/.cargo/config:
+//   [target.x86_64-pc-windows-gnu]
+//   linker = "x86_64-w64-mingw32-gcc"
+//   ar = "x86_64-w64-mingw32-gcc-ar"
+task releaseCrossToWindows(type: Exec) {
+    commandLine 'cargo', 'build', '--release', '--target=x86_64-pc-windows-gnu'
+}
