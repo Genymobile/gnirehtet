@@ -1,0 +1,19 @@
+task build(type: Exec) {
+    commandLine 'cargo', 'build'
+}
+
+task release(type: Exec, dependsOn: 'test') {
+    commandLine 'cargo', 'build', '--release'
+}
+
+task test(type: Exec) {
+    commandLine 'cargo', 'test'
+}
+
+task install(type: Exec) {
+    commandLine 'cargo', 'install'
+}
+
+task clean(type: Exec) {
+    commandLine 'cargo', 'clean'
+}
