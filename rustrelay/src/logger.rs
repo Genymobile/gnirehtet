@@ -1,7 +1,7 @@
 use log::*;
 use chrono::prelude::Local;
 
-const THRESHOLD: LogLevelFilter = LogLevelFilter::Debug;
+const THRESHOLD: LogLevelFilter = LogLevelFilter::Info;
 
 pub struct SimpleLogger;
 
