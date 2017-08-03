@@ -46,7 +46,7 @@ impl Relay {
                 tunnel_server.borrow_mut().clean_up(selector);
                 next_cleaning_deadline = now + CLEANING_INTERVAL_SECONDS;
             } else if events.is_empty() {
-                warn!(target: TAG, "spurious wakeup: poll() returned without any event");
+                debug!(target: TAG, "Spurious wakeup: poll() returned without any event");
                 continue;
             }
 
