@@ -186,7 +186,7 @@ impl<'a> Ipv4Packet<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use byteorder::{BigEndian, ByteOrder, WriteBytesExt};
+    use byteorder::{BigEndian, WriteBytesExt};
     use relay::ipv4_header::Protocol;
 
     fn create_packet() -> Vec<u8> {
@@ -216,7 +216,7 @@ mod tests {
     #[test]
     fn parse_headers() {
         let raw = &mut create_packet()[..];
-        let mut ipv4_packet = Ipv4Packet::parse(raw);
+        let ipv4_packet = Ipv4Packet::parse(raw);
 
         {
             let ipv4_header = ipv4_packet.ipv4_header();
