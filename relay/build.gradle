@@ -13,4 +13,7 @@ jar.manifest {
     )
 }
 
+task assembleDebug(dependsOn: 'jar')
+task assembleRelease(dependsOn: ['build', 'jar'])
+
 apply from: "$project.rootDir/config/java-checkstyle.gradle"
