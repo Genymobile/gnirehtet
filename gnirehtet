@@ -21,7 +21,7 @@ JAVA=java
 
 usage() {
     cat >&2 << EOF
-Syntax: $0 (install|uninstall|rt|start|stop|relay) ...
+Syntax: $0 (install|uninstall|reinstall|rt|start|stop|relay) ...
 
   $0 install [serial]
       Install the client on the Android device and exit.
