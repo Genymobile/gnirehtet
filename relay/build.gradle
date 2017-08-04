@@ -1,6 +1,6 @@
 apply plugin: 'application'
 
-mainClassName = 'com.genymobile.relay.Main'
+mainClassName = 'com.genymobile.gnirehtet.Main'
 
 dependencies {
     compile fileTree(dir: 'libs', include: ['*.jar'])
