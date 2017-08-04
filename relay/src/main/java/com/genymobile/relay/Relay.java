@@ -23,6 +23,8 @@ import java.util.Set;
 
 public class Relay {
 
+    private static final String TAG = Relay.class.getSimpleName();
+
     private static final int DEFAULT_PORT = 31416;
     private static final int CLEANING_INTERVAL = 60 * 1000;
 
@@ -41,6 +43,8 @@ public class Relay {
 
         // will register the socket on the selector
         TunnelServer tunnelServer = new TunnelServer(port, selector);
+
+        Log.i(TAG, "Relay server started");
 
         long nextCleaningDeadline = System.currentTimeMillis() + UDPConnection.IDLE_TIMEOUT;
         while (true) {

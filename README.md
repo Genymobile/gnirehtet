@@ -45,7 +45,7 @@ Download the [latest release][latest]:
 Then extract it. You get three files:
  - `gnirehtet`
  - `gnirehtet.apk`
- - `relay.jar`
+ - `gnirehtet.jar`
 
 
 ## Run (simple)
@@ -97,12 +97,6 @@ To stop a client:
 
     ./gnirehtet stop [serial]
 
-On Windows, the server is started in a separate window. To stop it, either close
-the window or kill the server from anywhere:
-
-    gnirehtet killserver     # stop the relay server only
-    gnirehtet kill [serial]  # also stop the client
-
 The _serial_ parameter is required only if `adb devices` outputs more than one
 device.
 
@@ -111,14 +105,12 @@ For advanced options, call `./gnirehtet` without arguments to get more details.
 
 ## Run manually
 
-The `gnirehtet` script just exposes an interface for calling simple commands.
-You can call them manually.
-
-_Note: On Windows, replace `adb` by `adb.exe`._
+The `gnirehtet` program exposes a simple command-line interface that executes
+lower-level commands. You can call them manually instead.
 
 To start the relay server:
 
-    java -jar relay.jar
+    java -jar gnirehtet.jar relay
 
 To install the apk:
 
