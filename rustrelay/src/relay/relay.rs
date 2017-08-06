@@ -1,4 +1,5 @@
 use std::cell::RefCell;
+use std::io;
 use std::rc::Rc;
 use std::time::Duration;
 use chrono::Local;
@@ -20,12 +21,12 @@ impl Relay {
         Self { port: port }
     }
 
-    pub fn start(&self) {
+    pub fn start(&self) -> io::Result<()> {
         info!(target: TAG, "Starting server...");
         let mut selector = Selector::new().unwrap();
-        let tunnel_server =
-            TunnelServer::new(self.port, &mut selector).expect("Cannot start tunnel server");
+        let tunnel_server = TunnelServer::new(self.port, &mut selector)?;
         self.poll_loop(&mut selector, &tunnel_server);
+        Ok(())
     }
 
     fn poll_loop(&self, selector: &mut Selector, tunnel_server: &Rc<RefCell<TunnelServer>>) {
@@ -39,7 +40,14 @@ impl Relay {
             } else {
                 None
             };
-            selector.poll(&mut events, timeout).expect("Cannot poll");
+            if let Err(err) = selector.poll(&mut events, timeout) {
+                if err.kind() == io::ErrorKind::Interrupted {
+                    warn!(target: TAG, "Relay server interrupted");
+                    break;
+                } else {
+                    panic!("Cannot poll: {}", err);
+                }
+            }
 
             let now = Local::now().timestamp();
             if now >= next_cleaning_deadline {
