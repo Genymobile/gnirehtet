@@ -44,10 +44,12 @@ public final class Main {
             }
 
             @Override
-            void execute(List<String> args) throws Exception {
+            void execute(CommandLineArguments args) throws Exception {
                 Log.i(TAG, "Installing gnirehtet...");
-                String serial = args.isEmpty() ? null : args.get(0);
-                execAdb(serial, "install", "-r", "gnirehtet.apk");
+                if (args.hasDnsServers()) {
+                    throw new IllegalArgumentException("Unexpected DNS servers parameter");
+                }
+                execAdb(args.getSerial(), "install", "-r", "gnirehtet.apk");
             }
         },
         UNINSTALL("uninstall", "[serial]") {
@@ -59,10 +61,12 @@ public final class Main {
             }
 
             @Override
-            void execute(List<String> args) throws Exception {
+            void execute(CommandLineArguments args) throws Exception {
                 Log.i(TAG, "Uninstalling gnirehtet...");
-                String serial = args.isEmpty() ? null : args.get(0);
-                execAdb(serial, "uninstall", "com.genymobile.gnirehtet");
+                if (args.hasDnsServers()) {
+                    throw new IllegalArgumentException("Unexpected DNS servers parameter");
+                }
+                execAdb(args.getSerial(), "uninstall", "com.genymobile.gnirehtet");
             }
         },
         REINSTALL("reinstall", "[serial]") {
@@ -72,7 +76,7 @@ public final class Main {
             }
 
             @Override
-            void execute(List<String> args) throws Exception {
+            void execute(CommandLineArguments args) throws Exception {
                 UNINSTALL.execute(args);
                 INSTALL.execute(args);
             }
@@ -89,11 +93,8 @@ public final class Main {
 
             @Override
             @SuppressWarnings("checkstyle:MagicNumber")
-            void execute(List<String> args) throws Exception {
-                String dns = extractDnsArg(args); // don't care about the result, just remove them to get the serial
-                String serial = args.isEmpty() ? null : args.get(0);
-
-                if (!isGnirehtetInstalled(serial)) {
+            void execute(CommandLineArguments args) throws Exception {
+                if (!isGnirehtetInstalled(args.getSerial())) {
                     // args don't contain the dns args anymore
                     INSTALL.execute(args);
                     // wait a bit after the app is installed so that intent actions are correctly registered
@@ -103,7 +104,7 @@ public final class Main {
                 // start in parallel so that the relay server is ready when the client connects
                 new Thread(() -> {
                     try {
-                        startGnirehtet(serial, dns);
+                        startGnirehtet(args.getSerial(), args.getDnsServers());
                     } catch (Exception e) {
                         Log.e(TAG, "Cannot start gnirehtet", e);
                     }
@@ -112,13 +113,13 @@ public final class Main {
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     // executed on Ctrl+C
                     try {
-                        STOP.execute(Arrays.asList(serial));
+                        stopGnirehtet(args.getSerial());
                     } catch (Exception e) {
                         Log.e(TAG, "Cannot stop gnirehtet", e);
                     }
                 }));
 
-                RELAY.execute(Collections.EMPTY_LIST);
+                relay();
             }
         },
         START("start", "[serial] [-d DNS[,DNS2,...]]") {
@@ -135,10 +136,8 @@ public final class Main {
             }
 
             @Override
-            void execute(List<String> args) throws Exception {
-                String dns = extractDnsArg(args);
-                String serial = args.isEmpty() ? null : args.get(0);
-                startGnirehtet(serial, dns);
+            void execute(CommandLineArguments args) throws Exception {
+                startGnirehtet(args.getSerial(), args.getDnsServers());
             }
         },
         STOP("stop", "[serial]") {
@@ -150,10 +149,11 @@ public final class Main {
             }
 
             @Override
-            void execute(List<String> args) throws Exception {
-                Log.i(TAG, "Stopping gnirehtet...");
-                String serial = args.isEmpty() ? null : args.get(0);
-                execAdb(serial, "shell", "am", "startservice", "-a", "com.genymobile.gnirehtet.STOP");
+            void execute(CommandLineArguments args) throws Exception {
+                if (args.hasDnsServers()) {
+                    throw new IllegalArgumentException("Unexpected DNS servers parameter");
+                }
+                stopGnirehtet(args.getSerial());
             }
         },
         RELAY("relay") {
@@ -163,9 +163,12 @@ public final class Main {
             }
 
             @Override
-            void execute(List<String> args) throws Exception {
+            void execute(CommandLineArguments args) throws Exception {
                 Log.i(TAG, "Starting relay server...");
-                new Relay().start();
+                if (args.isEmpty()) {
+                    throw new IllegalArgumentException("Unexpected command-line parameter");
+                }
+                relay();
             }
         };
 
@@ -183,7 +186,7 @@ public final class Main {
 
         abstract String getDescription();
 
-        abstract void execute(List<String> args) throws Exception;
+        abstract void execute(CommandLineArguments args) throws Exception;
     }
 
     private static void execAdb(String serial, String... adbArgs) throws InterruptedException, IOException, CommandExecutionException {
@@ -236,6 +239,16 @@ public final class Main {
             Collections.addAll(cmd, "--esa", "dnsServers", dns);
         }
         execAdb(serial, cmd);
+    }
+
+    private static void stopGnirehtet(String serial) throws InterruptedException, IOException, CommandExecutionException {
+        Log.i(TAG, "Stopping gnirehtet...");
+        execAdb(serial, "shell", "am", "startservice", "-a", "com.genymobile.gnirehtet.STOP");
+    }
+
+    private static void relay() throws IOException {
+        Log.i(TAG, "Starting relay server...");
+        new Relay().start();
     }
 
     /**
@@ -292,12 +305,10 @@ public final class Main {
         String cmd = args[0];
         for (Command command : Command.values()) {
             if (cmd.equals(command.command)) {
-                List<String> commandArgs = new ArrayList<>(args.length - 1);
                 // forget args[0] containing the command name
-                for (int i = 1; i < args.length; ++i) {
-                    commandArgs.add(args[i]);
-                }
-                command.execute(commandArgs);
+                String[] commandArgs = Arrays.copyOfRange(args, 1, args.length);
+                CommandLineArguments arguments = CommandLineArguments.parse(commandArgs);
+                command.execute(arguments);
                 return;
             }
         }
