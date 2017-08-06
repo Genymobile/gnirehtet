@@ -7,9 +7,11 @@ extern crate rand;
 extern crate slab;
 
 mod relay;
+
+use std::io;
 use relay::Relay;
 
-pub fn relay() {
+pub fn relay() -> io::Result<()> {
     const PORT: u16 = 31416;
-    Relay::new(PORT).start();
+    Relay::new(PORT).start()
 }
