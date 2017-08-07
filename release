@@ -10,7 +10,7 @@ GRADLE=${GRADLE:-./gradlew} # set value ./gradlew if not set
 DIST=dist
 
 version=$(git describe --tags --always)
-"$GRADLE" releaseJava
+"$GRADLE" checkJava releaseJava
 mkdir -p "$DIST"
 cd "$DIST"
 cp ../app/build/outputs/apk/gnirehtet-release.apk gnirehtet.apk

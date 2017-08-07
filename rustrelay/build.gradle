@@ -1,8 +1,8 @@
-task build(type: Exec) {
+task debug(type: Exec) {
     commandLine 'cargo', 'build'
 }
 
-task release(type: Exec, dependsOn: 'test') {
+task release(type: Exec) {
     commandLine 'cargo', 'build', '--release'
 }
 
@@ -17,6 +17,8 @@ task install(type: Exec) {
 task clean(type: Exec) {
     commandLine 'cargo', 'clean'
 }
+
+task check(dependsOn: 'test')
 
 // Requirements:
 //
