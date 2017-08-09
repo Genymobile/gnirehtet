@@ -29,6 +29,7 @@ import java.util.Scanner;
 
 public final class Main {
     private static final String TAG = Main.class.getSimpleName();
+    private static final String NL = System.lineSeparator();
 
     private Main() {
         // not instantiable
@@ -44,11 +45,15 @@ public final class Main {
             }
 
             @Override
-            void execute(CommandLineArguments args) throws Exception {
-                Log.i(TAG, "Installing gnirehtet...");
+            void validateArguments(CommandLineArguments args) {
                 if (args.hasDnsServers()) {
                     throw new IllegalArgumentException("Unexpected DNS servers parameter");
                 }
+            }
+
+            @Override
+            void execute(CommandLineArguments args) throws Exception {
+                Log.i(TAG, "Installing gnirehtet...");
                 execAdb(args.getSerial(), "install", "-r", "gnirehtet.apk");
             }
         },
@@ -61,11 +66,15 @@ public final class Main {
             }
 
             @Override
-            void execute(CommandLineArguments args) throws Exception {
-                Log.i(TAG, "Uninstalling gnirehtet...");
+            void validateArguments(CommandLineArguments args) {
                 if (args.hasDnsServers()) {
                     throw new IllegalArgumentException("Unexpected DNS servers parameter");
                 }
+            }
+
+            @Override
+            void execute(CommandLineArguments args) throws Exception {
+                Log.i(TAG, "Uninstalling gnirehtet...");
                 execAdb(args.getSerial(), "uninstall", "com.genymobile.gnirehtet");
             }
         },
@@ -73,6 +82,13 @@ public final class Main {
             @Override
             String getDescription() {
                 return "Uninstall then install.";
+            }
+
+            @Override
+            void validateArguments(CommandLineArguments args) {
+                if (args.hasDnsServers()) {
+                    throw new IllegalArgumentException("Unexpected DNS servers parameter");
+                }
             }
 
             @Override
@@ -89,6 +105,11 @@ public final class Main {
                         + "  - start the client;\n"
                         + "  - start the relay server;\n"
                         + "  - on Ctrl+C, stop both the relay server and the client.";
+            }
+
+            @Override
+            void validateArguments(CommandLineArguments args) {
+                // accept all
             }
 
             @Override
@@ -135,6 +156,11 @@ public final class Main {
             }
 
             @Override
+            void validateArguments(CommandLineArguments args) {
+                // accept all
+            }
+
+            @Override
             void execute(CommandLineArguments args) throws Exception {
                 startGnirehtet(args.getSerial(), args.getDnsServers());
             }
@@ -145,6 +171,13 @@ public final class Main {
                 return "Stop the client on the Android device and exit.\n"
                         + "If several devices are connected via adb, then serial must be\n"
                         + "specified.";
+            }
+
+            @Override
+            void validateArguments(CommandLineArguments args) {
+                if (args.hasDnsServers()) {
+                    throw new IllegalArgumentException("Unexpected DNS servers parameter");
+                }
             }
 
             @Override
@@ -162,11 +195,15 @@ public final class Main {
             }
 
             @Override
+            void validateArguments(CommandLineArguments args) {
+                if (args.isEmpty()) {
+                    throw new IllegalArgumentException("Unexpected command parameter");
+                }
+            }
+
+            @Override
             void execute(CommandLineArguments args) throws Exception {
                 Log.i(TAG, "Starting relay server...");
-                if (args.isEmpty()) {
-                    throw new IllegalArgumentException("Unexpected command-line parameter");
-                }
                 relay();
             }
         };
@@ -184,6 +221,8 @@ public final class Main {
         }
 
         abstract String getDescription();
+
+        abstract void validateArguments(CommandLineArguments args); // throws IllegalArgumentException
 
         abstract void execute(CommandLineArguments args) throws Exception;
     }
@@ -251,8 +290,6 @@ public final class Main {
     }
 
     private static void printUsage() {
-        final String newLine = System.lineSeparator();
-
         StringBuilder builder = new StringBuilder("Syntax: gnirehtet (");
         Command[] commands = Command.values();
         for (int i = 0; i < commands.length; ++i) {
@@ -261,20 +298,31 @@ public final class Main {
             }
             builder.append(commands[i].command);
         }
-        builder.append(") ...").append(newLine);
+        builder.append(") ...").append(NL);
 
         for (Command command : commands) {
-            builder.append(newLine).append("  gnirehtet ").append(command.command);
-            if (command.syntax != null) {
-                builder.append(' ').append(command.syntax);
-            }
-            builder.append(newLine);
-            String[] descLines = command.getDescription().split("\n");
-            for (String descLine : descLines) {
-                builder.append("      ").append(descLine).append(newLine);
-            }
+            builder.append(NL);
+            appendCommandUsage(builder, command);
         }
 
+        System.err.print(builder.toString());
+    }
+
+    private static void appendCommandUsage(StringBuilder builder, Command command) {
+        builder.append("  gnirehtet ").append(command.command);
+        if (command.syntax != null) {
+            builder.append(' ').append(command.syntax);
+        }
+        builder.append(NL);
+        String[] descLines = command.getDescription().split("\n");
+        for (String descLine : descLines) {
+            builder.append("      ").append(descLine).append(NL);
+        }
+    }
+
+    private static void printCommandUsage(Command command) {
+        StringBuilder builder = new StringBuilder();
+        appendCommandUsage(builder, command);
         System.err.print(builder.toString());
     }
 
@@ -283,18 +331,31 @@ public final class Main {
             printUsage();
             return;
         }
+
         String cmd = args[0];
         for (Command command : Command.values()) {
             if (cmd.equals(command.command)) {
                 // forget args[0] containing the command name
                 String[] commandArgs = Arrays.copyOfRange(args, 1, args.length);
-                CommandLineArguments arguments = CommandLineArguments.parse(commandArgs);
+
+                CommandLineArguments arguments;
+                try {
+                    arguments = CommandLineArguments.parse(commandArgs);
+                    command.validateArguments(arguments);
+                } catch (IllegalArgumentException e) {
+                    System.err.println("[Error] " + e.getMessage());
+                    System.err.println();
+                    printCommandUsage(command);
+                    return;
+                }
+
                 command.execute(arguments);
                 return;
             }
         }
 
         System.err.println("Unknown command: " + cmd);
+        System.err.println();
         printUsage();
     }
 }
