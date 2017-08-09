@@ -20,14 +20,19 @@ package com.genymobile.gnirehtet;
  * Simple specific command-line arguments parser.
  */
 public class CommandLineArguments {
+
+    public static final int PARAM_NONE = 0;
+    public static final int PARAM_SERIAL = 1;
+    public static final int PARAM_DNS_SERVER = 1 << 1;
+
     private String serial;
     private String dnsServers;
 
-    public static CommandLineArguments parse(String... args) {
+    public static CommandLineArguments parse(int acceptedParameters, String... args) {
         CommandLineArguments arguments = new CommandLineArguments();
         for (int i = 0; i < args.length; ++i) {
             String arg = args[i];
-            if ("-d".equals(arg)) {
+            if ((acceptedParameters & PARAM_DNS_SERVER) != 0 && "-d".equals(arg)) {
                 if (arguments.dnsServers != null) {
                     throw new IllegalArgumentException("DNS servers already set");
                 }
@@ -36,7 +41,7 @@ public class CommandLineArguments {
                 }
                 arguments.dnsServers = args[i + 1];
                 ++i; // consume the -d parameter
-            } else if (arguments.serial == null) {
+            } else if ((acceptedParameters & PARAM_SERIAL) != 0 && arguments.serial == null) {
                 arguments.serial = arg;
             } else {
                 throw new IllegalArgumentException("Unexpected argument: \"" + arg + "\"");
@@ -51,17 +56,5 @@ public class CommandLineArguments {
 
     public String getDnsServers() {
         return dnsServers;
-    }
-
-    public boolean hasSerial() {
-        return serial != null;
-    }
-
-    public boolean hasDnsServers() {
-        return dnsServers != null;
-    }
-
-    public boolean isEmpty() {
-        return serial == null && dnsServers == null;
     }
 }

@@ -36,7 +36,7 @@ public final class Main {
     }
 
     enum Command {
-        INSTALL("install", "[serial]") {
+        INSTALL("install", CommandLineArguments.PARAM_SERIAL) {
             @Override
             String getDescription() {
                 return "Install the client on the Android device and exit.\n"
@@ -45,19 +45,12 @@ public final class Main {
             }
 
             @Override
-            void validateArguments(CommandLineArguments args) {
-                if (args.hasDnsServers()) {
-                    throw new IllegalArgumentException("Unexpected DNS servers parameter");
-                }
-            }
-
-            @Override
             void execute(CommandLineArguments args) throws Exception {
                 Log.i(TAG, "Installing gnirehtet...");
                 execAdb(args.getSerial(), "install", "-r", "gnirehtet.apk");
             }
         },
-        UNINSTALL("uninstall", "[serial]") {
+        UNINSTALL("uninstall", CommandLineArguments.PARAM_SERIAL) {
             @Override
             String getDescription() {
                 return "Uninstall the client from the Android device and exit.\n"
@@ -66,29 +59,15 @@ public final class Main {
             }
 
             @Override
-            void validateArguments(CommandLineArguments args) {
-                if (args.hasDnsServers()) {
-                    throw new IllegalArgumentException("Unexpected DNS servers parameter");
-                }
-            }
-
-            @Override
             void execute(CommandLineArguments args) throws Exception {
                 Log.i(TAG, "Uninstalling gnirehtet...");
                 execAdb(args.getSerial(), "uninstall", "com.genymobile.gnirehtet");
             }
         },
-        REINSTALL("reinstall", "[serial]") {
+        REINSTALL("reinstall", CommandLineArguments.PARAM_SERIAL) {
             @Override
             String getDescription() {
                 return "Uninstall then install.";
-            }
-
-            @Override
-            void validateArguments(CommandLineArguments args) {
-                if (args.hasDnsServers()) {
-                    throw new IllegalArgumentException("Unexpected DNS servers parameter");
-                }
             }
 
             @Override
@@ -97,7 +76,7 @@ public final class Main {
                 INSTALL.execute(args);
             }
         },
-        RT("rt", "[serial] [-d DNS[,DNS2,...]]") {
+        RT("rt", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER) {
             @Override
             String getDescription() {
                 return "Enable reverse tethering for exactly one device:\n"
@@ -105,11 +84,6 @@ public final class Main {
                         + "  - start the client;\n"
                         + "  - start the relay server;\n"
                         + "  - on Ctrl+C, stop both the relay server and the client.";
-            }
-
-            @Override
-            void validateArguments(CommandLineArguments args) {
-                // accept all
             }
 
             @Override
@@ -142,7 +116,7 @@ public final class Main {
                 relay();
             }
         },
-        START("start", "[serial] [-d DNS[,DNS2,...]]") {
+        START("start", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER) {
             @Override
             String getDescription() {
                 return "Start a client on the Android device and exit.\n"
@@ -156,16 +130,11 @@ public final class Main {
             }
 
             @Override
-            void validateArguments(CommandLineArguments args) {
-                // accept all
-            }
-
-            @Override
             void execute(CommandLineArguments args) throws Exception {
                 startGnirehtet(args.getSerial(), args.getDnsServers());
             }
         },
-        STOP("stop", "[serial]") {
+        STOP("stop", CommandLineArguments.PARAM_SERIAL) {
             @Override
             String getDescription() {
                 return "Stop the client on the Android device and exit.\n"
@@ -174,31 +143,14 @@ public final class Main {
             }
 
             @Override
-            void validateArguments(CommandLineArguments args) {
-                if (args.hasDnsServers()) {
-                    throw new IllegalArgumentException("Unexpected DNS servers parameter");
-                }
-            }
-
-            @Override
             void execute(CommandLineArguments args) throws Exception {
-                if (args.hasDnsServers()) {
-                    throw new IllegalArgumentException("Unexpected DNS servers parameter");
-                }
                 stopGnirehtet(args.getSerial());
             }
         },
-        RELAY("relay") {
+        RELAY("relay", CommandLineArguments.PARAM_NONE) {
             @Override
             String getDescription() {
                 return "Start the relay server in the current terminal.";
-            }
-
-            @Override
-            void validateArguments(CommandLineArguments args) {
-                if (args.isEmpty()) {
-                    throw new IllegalArgumentException("Unexpected command parameter");
-                }
             }
 
             @Override
@@ -209,20 +161,14 @@ public final class Main {
         };
 
         private String command;
-        private String syntax;
+        private int acceptedParameters;
 
-        Command(String command) {
+        Command(String command, int acceptedParameters) {
             this.command = command;
-        }
-
-        Command(String command, String syntax) {
-            this(command);
-            this.syntax = syntax;
+            this.acceptedParameters = acceptedParameters;
         }
 
         abstract String getDescription();
-
-        abstract void validateArguments(CommandLineArguments args); // throws IllegalArgumentException
 
         abstract void execute(CommandLineArguments args) throws Exception;
     }
@@ -310,8 +256,11 @@ public final class Main {
 
     private static void appendCommandUsage(StringBuilder builder, Command command) {
         builder.append("  gnirehtet ").append(command.command);
-        if (command.syntax != null) {
-            builder.append(' ').append(command.syntax);
+        if ((command.acceptedParameters & CommandLineArguments.PARAM_SERIAL) != 0) {
+            builder.append(" [serial]");
+        }
+        if ((command.acceptedParameters & CommandLineArguments.PARAM_DNS_SERVER) != 0) {
+            builder.append(" [-d DNS[,DNS2,...]]");
         }
         builder.append(NL);
         String[] descLines = command.getDescription().split("\n");
@@ -340,8 +289,7 @@ public final class Main {
 
                 CommandLineArguments arguments;
                 try {
-                    arguments = CommandLineArguments.parse(commandArgs);
-                    command.validateArguments(arguments);
+                    arguments = CommandLineArguments.parse(command.acceptedParameters, commandArgs);
                 } catch (IllegalArgumentException e) {
                     System.err.println("[Error] " + e.getMessage());
                     System.err.println();

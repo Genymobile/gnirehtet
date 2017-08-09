@@ -21,53 +21,55 @@ import org.junit.Test;
 
 public class CommandLineArgumentsTest {
 
+    private static final int ACCEPT_ALL = CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER;
+
     @Test
     public void testNoArgs() {
-        CommandLineArguments args = CommandLineArguments.parse();
+        CommandLineArguments args = CommandLineArguments.parse(ACCEPT_ALL);
         Assert.assertNull(args.getSerial());
         Assert.assertNull(args.getDnsServers());
     }
 
     @Test
     public void testSerialOnly() {
-        CommandLineArguments args = CommandLineArguments.parse("myserial");
+        CommandLineArguments args = CommandLineArguments.parse(ACCEPT_ALL, "myserial");
         Assert.assertEquals("myserial", args.getSerial());
         Assert.assertNull(args.getDnsServers());
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testInvalidParameter() {
-        CommandLineArguments.parse("myserial", "other");
+        CommandLineArguments.parse(ACCEPT_ALL, "myserial", "other");
     }
 
     @Test
     public void testDnsServersOnly() {
-        CommandLineArguments args = CommandLineArguments.parse("-d", "8.8.8.8");
+        CommandLineArguments args = CommandLineArguments.parse(ACCEPT_ALL, "-d", "8.8.8.8");
         Assert.assertNull(args.getSerial());
         Assert.assertEquals("8.8.8.8", args.getDnsServers());
     }
 
     @Test
     public void testSerialAndDnsServers() {
-        CommandLineArguments args = CommandLineArguments.parse("myserial", "-d", "8.8.8.8");
+        CommandLineArguments args = CommandLineArguments.parse(ACCEPT_ALL, "myserial", "-d", "8.8.8.8");
         Assert.assertEquals("myserial", args.getSerial());
         Assert.assertEquals("8.8.8.8", args.getDnsServers());
     }
 
     @Test
     public void testDnsServersAndSerial() {
-        CommandLineArguments args = CommandLineArguments.parse("-d", "8.8.8.8", "myserial");
+        CommandLineArguments args = CommandLineArguments.parse(ACCEPT_ALL, "-d", "8.8.8.8", "myserial");
         Assert.assertEquals("myserial", args.getSerial());
         Assert.assertEquals("8.8.8.8", args.getDnsServers());
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testSerialWithNoDnsServersParameter() {
-        CommandLineArguments.parse("myserial", "-d");
+        CommandLineArguments.parse(ACCEPT_ALL, "myserial", "-d");
     }
 
     @Test(expected = IllegalArgumentException.class)
     public void testNoDnsServersParameter() {
-        CommandLineArguments.parse("-d");
+        CommandLineArguments.parse(ACCEPT_ALL, "-d");
     }
 }
