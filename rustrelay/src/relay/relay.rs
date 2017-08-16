@@ -21,7 +21,7 @@ impl Relay {
         Self { port: port }
     }
 
-    pub fn start(&self) -> io::Result<()> {
+    pub fn run(&self) -> io::Result<()> {
         info!(target: TAG, "Starting server...");
         let mut selector = Selector::new().unwrap();
         let tunnel_server = TunnelServer::new(self.port, &mut selector)?;

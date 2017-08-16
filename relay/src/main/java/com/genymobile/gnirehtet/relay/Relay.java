@@ -38,7 +38,7 @@ public class Relay {
         this.port = port;
     }
 
-    public void start() throws IOException {
+    public void run() throws IOException {
         Selector selector = Selector.open();
 
         // will register the socket on the selector
