@@ -8,15 +8,32 @@ set -e # fail on error
 
 GRADLE=${GRADLE:-./gradlew} # set value ./gradlew if not set
 DIST=dist
+TARGET_DIR_JAVA=gnirehtet-java
+TARGET_DIR_RUST_LINUX=gnirehtet-rust-linux64
+TARGET_DIR_RUST_WIN=gnirehtet-rust-win64
 
 version=$(git describe --tags --always)
-"$GRADLE" checkJava releaseJava
-mkdir -p "$DIST"
+TARGET_JAVA="$TARGET_DIR_JAVA-$version".zip
+TARGET_RUST_LINUX="$TARGET_DIR_RUST_LINUX-$version".zip
+TARGET_RUST_WIN="$TARGET_DIR_RUST_WIN-$version".zip
+
+"$GRADLE" checkAll releaseAll
+
+rm -rf "$DIST"
+
+for dir in "$TARGET_DIR_JAVA" "$TARGET_DIR_RUST_LINUX" "$TARGET_DIR_RUST_WIN"
+do
+    mkdir -p "$DIST/$dir"
+    cp app/build/outputs/apk/gnirehtet-release.apk "$DIST/$dir"/gnirehtet.apk
+done
+
+cp relay/build/libs/gnirehtet.jar relay/gnirehtet relay/gnirehtet.cmd "$DIST/$TARGET_DIR_JAVA"/
+cp rustrelay/target/release/gnirehtet "$DIST/$TARGET_DIR_RUST_LINUX"/
+strip "$DIST/$TARGET_DIR_RUST_LINUX"/gnirehtet  # remove symbols for smaller binary
+cp rustrelay/target/x86_64-pc-windows-gnu/release/gnirehtet.exe "$DIST/$TARGET_DIR_RUST_WIN"/
+
 cd "$DIST"
-cp ../app/build/outputs/apk/gnirehtet-release.apk gnirehtet.apk
-cp ../relay/build/libs/gnirehtet.jar .
-cp ../relay/gnirehtet ../relay/gnirehtet.cmd .
-target=gnirehtet-"$version".zip
-rm -f "$target"
-zip "$target" gnirehtet.apk gnirehtet.jar gnirehtet gnirehtet.cmd
-sha256sum "$target" > SHA256SUM.txt
+zip -r "$TARGET_JAVA" "$TARGET_DIR_JAVA"
+zip -r "$TARGET_RUST_LINUX" "$TARGET_DIR_RUST_LINUX"
+zip -r "$TARGET_RUST_WIN" "$TARGET_DIR_RUST_WIN"
+sha256sum "$TARGET_JAVA" "$TARGET_RUST_LINUX" "$TARGET_RUST_WIN" > SHA256SUM.txt
