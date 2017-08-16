@@ -197,6 +197,7 @@ impl UdpConnection {
         } else {
             Ready::readable() | Ready::writable()
         };
+        cx_debug!(target: TAG, self.id, "interests: {:?}", ready);
         selector
             .reregister(&self.socket, self.token, ready, PollOpt::level())
             .expect("Cannot register on poll");
