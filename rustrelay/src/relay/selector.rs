@@ -36,15 +36,12 @@ pub struct Selector {
 
 struct SelectionHandler {
     handler: Rc<RefCell<Box<EventHandler>>>,
-    // registered on Poll, true when !interest.is_empty()
-    registered: bool,
 }
 
 impl SelectionHandler {
     fn new(handler: Box<EventHandler>) -> Self {
         Self {
             handler: Rc::new(RefCell::new(handler)),
-            registered: true,
         }
     }
 }
@@ -87,33 +84,14 @@ impl Selector {
     where
         E: Evented + ?Sized,
     {
-        // a Poll does not accept to register an empty Ready
-        // for simplifying its usage, expose an API that does
-        let selection_handler = self.handlers.get_mut(token).expect("Token not found");
-        if interest.is_empty() {
-            if selection_handler.registered {
-                selection_handler.registered = false;
-                self.poll.deregister(handle)?;
-            }
-            Ok(())
-        } else {
-            if !selection_handler.registered {
-                selection_handler.registered = true;
-                self.poll.register(handle, token, interest, opts)
-            } else {
-                self.poll.reregister(handle, token, interest, opts)
-            }
-        }
+        self.poll.reregister(handle, token, interest, opts)
     }
 
     pub fn deregister<E>(&mut self, handle: &E, token: Token) -> io::Result<()>
     where
         E: Evented + ?Sized,
     {
-        let selection_handler = self.handlers.get_mut(token).expect("Token not found");
-        if selection_handler.registered {
-            self.poll.deregister(handle)?;
-        }
+        self.poll.deregister(handle)?;
         // remove them before next poll()
         self.tokens_to_remove.push(token);
         Ok(())

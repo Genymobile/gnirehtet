@@ -170,20 +170,27 @@ impl TcpConnection {
     fn process(&mut self, selector: &mut Selector, event: Event) -> io::Result<()> {
         if !self.closed {
             let ready = event.readiness();
-            if ready.is_writable() {
-                if self.tcb.state == TcpState::SynSent {
-                    // writable is first triggered when the stream is connected
-                    self.process_connect(selector);
-                } else {
-                    self.process_send(selector)?;
+            if ready.is_readable() || ready.is_writable() {
+                if ready.is_writable() {
+                    if self.tcb.state == TcpState::SynSent {
+                        // writable is first triggered when the stream is connected
+                        self.process_connect(selector);
+                    } else {
+                        self.process_send(selector)?;
+                    }
                 }
-            }
-            if !self.closed && ready.is_readable() {
-                self.process_receive(selector)?;
-            }
-            if !self.closed {
-                self.update_interests(selector);
+                if !self.closed && ready.is_readable() {
+                    self.process_receive(selector)?;
+                }
+                if !self.closed {
+                    self.update_interests(selector);
+                }
             } else {
+                cx_info!(target: TAG, self.id, "received ready = {:?}", ready);
+                // error or hup
+                self.close(selector);
+            }
+            if self.closed {
                 // on_ready is not called from the router, so the connection must remove itself
                 self.remove_from_router();
             }

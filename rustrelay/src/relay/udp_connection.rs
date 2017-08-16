@@ -89,15 +89,21 @@ impl UdpConnection {
         if !self.closed {
             self.touch();
             let ready = event.readiness();
-            if ready.is_writable() {
-                self.process_send(selector)?;
-            }
-            if !self.closed && ready.is_readable() {
-                self.process_receive(selector)?;
-            }
-            if !self.closed {
-                self.update_interests(selector);
+            if ready.is_readable() || ready.is_writable() {
+                if ready.is_writable() {
+                    self.process_send(selector)?;
+                }
+                if !self.closed && ready.is_readable() {
+                    self.process_receive(selector)?;
+                }
+                if !self.closed {
+                    self.update_interests(selector);
+                }
             } else {
+                // error or hup
+                self.close(selector);
+            }
+            if self.closed {
                 // on_ready is not called from the router, so the connection must remove itself
                 self.remove_from_router();
             }

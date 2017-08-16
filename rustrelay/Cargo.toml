@@ -18,3 +18,6 @@ ctrlc = { version = "3.0", features = ["termination"] }     # for handling Ctrl+
 
 [profile.release]
 lto = true     # link-time optimization
+
+[replace]
+"mio:0.6.10" = { git = 'https://github.com/rom1v/mio', branch='empty_interest' }
