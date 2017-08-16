@@ -1,0 +1,20 @@
+[package]
+name = "gnirehtet"
+version = "0.1.0"
+authors = ["Romain Vimont <rvimont@genymobile.com>"]
+
+[lib]
+name = "relaylib"
+path = "src/lib.rs"
+
+[dependencies]
+mio = "0.6"       # for async I/O
+slab = "0.3"      # helper for mio Tokens
+log = "0.3"       # for logs
+chrono = "0.3"    # for formatting timestamp in logs
+byteorder = "1.0" # for reading/writing binary
+rand = "0.3"      # for random TCP sequence number
+ctrlc = { version = "3.0", features = ["termination"] }     # for handling Ctrl+C
+
+[profile.release]
+lto = true     # link-time optimization

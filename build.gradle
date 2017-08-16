@@ -27,8 +27,18 @@ task clean(type: Delete) {
     delete rootProject.buildDir
 }
 
-task debug(dependsOn: [':app:assembleDebug', ':relay:assembleDebug'])
-task release(dependsOn: [':app:assembleRelease', ':relay:assembleRelease'])
+task debugJava(dependsOn: [':app:assembleDebug', ':relay:assembleDebug'])
+task releaseJava(dependsOn: [':app:assembleRelease', ':relay:assembleRelease'])
+
+task debugRust(dependsOn: [':app:assembleDebug', ':rustrelay:debug'])
+task releaseRust(dependsOn: [':app:assembleRelease', ':rustrelay:release'])
+
+task debugAll(dependsOn: ['debugJava', 'debugRust'])
+task releaseAll(dependsOn: ['releaseJava', 'releaseRust'])
+
+task checkJava(dependsOn: [':app:check', ':relay:check'])
+task checkRust(dependsOn: ['app:check', ':rustrelay:check'])
+task checkAll(dependsOn: ['checkJava', 'checkRust'])
 
 task clientStart(type: Exec, dependsOn: ':app:installDebug') {
     // linux
