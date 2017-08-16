@@ -19,6 +19,8 @@ use std::process::{self, ExitStatus};
 use std::thread;
 use std::time::Duration;
 
+const TAG: &'static str = "Main";
+
 const COMMANDS: &[&'static Command] = &[
     &InstallCommand,
     &UninstallCommand,
@@ -149,7 +151,18 @@ impl Command for RtCommand {
             eprintln!("Cannot stop gnirehtet: {}", err);
         }).expect("Error setting Ctrl-C handler");
 
-        relay()
+        match relay() {
+            Err(CommandExecutionError::Io(ref err)) if err.kind() == io::ErrorKind::Interrupted => {
+                warn!(target: TAG, "Relay server interrupted");
+                // wait a bit so that the ctrlc handler is executed
+                thread::sleep(Duration::from_secs(1));
+                Ok(())
+            }
+            Err(ref err) => {
+                panic!("Cannot relay: {}", err);
+            }
+            ok => ok,
+        }
     }
 }
 

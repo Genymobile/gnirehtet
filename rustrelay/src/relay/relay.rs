@@ -25,11 +25,14 @@ impl Relay {
         info!(target: TAG, "Starting server...");
         let mut selector = Selector::new().unwrap();
         let tunnel_server = TunnelServer::new(self.port, &mut selector)?;
-        self.poll_loop(&mut selector, &tunnel_server);
-        Ok(())
+        self.poll_loop(&mut selector, &tunnel_server)
     }
 
-    fn poll_loop(&self, selector: &mut Selector, tunnel_server: &Rc<RefCell<TunnelServer>>) {
+    fn poll_loop(
+        &self,
+        selector: &mut Selector,
+        tunnel_server: &Rc<RefCell<TunnelServer>>,
+    ) -> io::Result<()> {
         let mut events = Events::with_capacity(1024);
         // no connection may expire before the UDP idle timeout delay
         let mut next_cleaning_deadline = Local::now().timestamp() + IDLE_TIMEOUT_SECONDS as i64;
@@ -40,14 +43,7 @@ impl Relay {
             } else {
                 None
             };
-            if let Err(err) = selector.poll(&mut events, timeout) {
-                if err.kind() == io::ErrorKind::Interrupted {
-                    warn!(target: TAG, "Relay server interrupted");
-                    break;
-                } else {
-                    panic!("Cannot poll: {}", err);
-                }
-            }
+            selector.poll(&mut events, timeout)?;
 
             let now = Local::now().timestamp();
             if now >= next_cleaning_deadline {
