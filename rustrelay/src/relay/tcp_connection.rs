@@ -100,6 +100,7 @@ impl TcpConnection {
         ipv4_header: Ipv4Header,
         transport_header: TransportHeader,
     ) -> io::Result<Rc<RefCell<Self>>> {
+        cx_info!(target: TAG, id, "Open");
         let stream = Self::create_stream(&id)?;
 
         let tcp_header = Self::tcp_header_of_transport(transport_header);
