@@ -16,6 +16,7 @@ use std::fmt;
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
 use std::process::{self, ExitStatus};
+use std::sync::{Arc, Mutex, Condvar};
 use std::thread;
 use std::time::Duration;
 
@@ -146,16 +147,29 @@ impl Command for RtCommand {
             });
         }
 
+        let pair = Arc::new((Mutex::new(false), Condvar::new()));
+
         let serial = args.serial().cloned();
-        ctrlc::set_handler(move || if let Err(err) = stop_gnirehtet(serial.as_ref()) {
-            eprintln!("Cannot stop gnirehtet: {}", err);
+        let handler_pair = pair.clone();
+        ctrlc::set_handler(move || {
+            if let Err(err) = stop_gnirehtet(serial.as_ref()) {
+                eprintln!("Cannot stop gnirehtet: {}", err);
+            }
+
+            let (ref lock, ref cvar) = *handler_pair;
+            *lock.lock().unwrap() = true;
+            cvar.notify_one();
         }).expect("Error setting Ctrl-C handler");
 
         match relay() {
             Err(CommandExecutionError::Io(ref err)) if err.kind() == io::ErrorKind::Interrupted => {
                 warn!(target: TAG, "Relay server interrupted");
-                // wait a bit so that the ctrlc handler is executed
-                thread::sleep(Duration::from_secs(1));
+                // wait the ctrlc handler to complete
+                let (ref lock, ref cvar) = *pair;
+                let mut complete = lock.lock().unwrap();
+                while !*complete {
+                    complete = cvar.wait(complete).unwrap();
+                }
                 Ok(())
             }
             Err(ref err) => {
