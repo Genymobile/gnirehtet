@@ -72,12 +72,11 @@ impl Router {
         ipv4_header: Ipv4Header,
         transport_header: TransportHeader,
     ) -> io::Result<usize> {
-        // TODO avoid cloning transport_header
         let id = ConnectionId::from_headers(ipv4_header.data(), &transport_header.data_clone());
         let index = match self.find_index(&id) {
             Some(index) => index,
             None => {
-                let connection = Router::create_connection(
+                let connection = Self::create_connection(
                     selector,
                     id,
                     self.client.clone(),

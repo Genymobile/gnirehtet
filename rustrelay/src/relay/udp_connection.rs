@@ -40,7 +40,7 @@ impl UdpConnection {
         ipv4_header: Ipv4Header,
         transport_header: TransportHeader,
     ) -> io::Result<Rc<RefCell<Self>>> {
-        let socket = UdpConnection::create_socket(&id)?;
+        let socket = Self::create_socket(&id)?;
         let packetizer = Packetizer::new(&ipv4_header, &transport_header);
         let rc = Rc::new(RefCell::new(Self {
             id: id,
