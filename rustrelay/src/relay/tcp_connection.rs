@@ -645,8 +645,18 @@ impl TcpConnection {
     }
 
     fn may_read(&self) -> bool {
-        !self.tcb.remote_closed && self.packet_for_client_length.is_none() &&
-            self.tcb.remaining_client_window() > 0
+        if self.tcb.remote_closed {
+            return false;
+        }
+        if self.tcb.state == TcpState::SynSent || self.tcb.state == TcpState::SynReceived {
+            // not connected yet
+            return false;
+        }
+        if self.packet_for_client_length.is_some() {
+            // a packet is already pending
+            return false;
+        }
+        self.tcb.remaining_client_window() > 0
     }
 
     fn may_write(&self) -> bool {

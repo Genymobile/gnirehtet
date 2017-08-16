@@ -366,7 +366,18 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     }
 
     private boolean mayRead() {
-        return !remoteClosed && packetForClient == null && getRemainingClientWindow() > 0;
+        if (remoteClosed) {
+            return false;
+        }
+        if (state == State.SYN_SENT || state == State.SYN_RECEIVED) {
+            // not connected yet
+            return false;
+        }
+        if (packetForClient != null) {
+            // a packet is already pending
+            return false;
+        }
+        return getRemainingClientWindow() > 0;
     }
 
     private boolean mayWrite() {
