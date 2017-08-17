@@ -71,7 +71,7 @@ impl Tcb {
         }
     }
 
-    fn get_remaining_client_window(&self) -> u16 {
+    fn remaining_client_window(&self) -> u16 {
         let wrapped_remaining = Wrapping(self.their_acknowledgement_number) +
             Wrapping(self.client_window as u32) -
             self.sequence_number;
@@ -231,7 +231,7 @@ impl TcpConnection {
             self.packet_for_client_length.is_none(),
             "A pending packet was not sent"
         );
-        let remaining_client_window = self.tcb.get_remaining_client_window();
+        let remaining_client_window = self.tcb.remaining_client_window();
         assert!(
             remaining_client_window > 0,
             "process_received() must not be called when window == 0"
@@ -646,7 +646,7 @@ impl TcpConnection {
 
     fn may_read(&self) -> bool {
         !self.tcb.remote_closed && self.packet_for_client_length.is_none() &&
-            self.tcb.get_remaining_client_window() > 0
+            self.tcb.remaining_client_window() > 0
     }
 
     fn may_write(&self) -> bool {
