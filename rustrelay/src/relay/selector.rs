@@ -40,9 +40,7 @@ struct SelectionHandler {
 
 impl SelectionHandler {
     fn new(handler: Box<EventHandler>) -> Self {
-        Self {
-            handler: Rc::new(RefCell::new(handler)),
-        }
+        Self { handler: Rc::new(RefCell::new(handler)) }
     }
 }
 
