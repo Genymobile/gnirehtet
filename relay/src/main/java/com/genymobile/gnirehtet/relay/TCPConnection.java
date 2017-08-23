@@ -22,8 +22,6 @@ import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.Random;
 
-import static java.nio.channels.SelectionKey.OP_READ;
-
 public class TCPConnection extends AbstractConnection implements PacketSource {
 
     private static final String TAG = TCPConnection.class.getSimpleName();
@@ -80,7 +78,8 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
             updateInterests();
         };
         channel = createChannel();
-        selectionKey = channel.register(selector, OP_READ | SelectionKey.OP_CONNECT, selectionHandler);
+        // register, but interests will be set on the first packet received
+        selectionKey = channel.register(selector, 0, selectionHandler);
     }
 
     @Override

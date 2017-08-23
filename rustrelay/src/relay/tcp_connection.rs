@@ -143,11 +143,11 @@ impl TcpConnection {
 
             // rc is an EventHandler, register() expects a Box<EventHandler>
             let handler = Box::new(rc.clone());
-            // writable to detect when the stream is connected
+            // register, but interests will be set on the first packet received
             let token = selector.register(
                 &self_ref.stream,
                 handler,
-                Ready::writable(),
+                Ready::empty(),
                 PollOpt::level(),
             )?;
             self_ref.token = token;
