@@ -186,7 +186,7 @@ impl TcpConnection {
                     self.update_interests(selector);
                 }
             } else {
-                cx_info!(target: TAG, self.id, "received ready = {:?}", ready);
+                cx_debug!(target: TAG, self.id, "received ready = {:?}", ready);
                 // error or hup
                 self.close(selector);
             }
