@@ -351,17 +351,17 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         if (!selectionKey.isValid()) {
             return;
         }
-        int interestingOps = 0;
+        int interestOps = 0;
         if (mayRead()) {
-            interestingOps |= SelectionKey.OP_READ;
+            interestOps |= SelectionKey.OP_READ;
         }
         if (mayWrite()) {
-            interestingOps |= SelectionKey.OP_WRITE;
+            interestOps |= SelectionKey.OP_WRITE;
         }
         if (mayConnect()) {
-            interestingOps |= SelectionKey.OP_CONNECT;
+            interestOps |= SelectionKey.OP_CONNECT;
         }
-        selectionKey.interestOps(interestingOps);
+        selectionKey.interestOps(interestOps);
     }
 
     private boolean mayRead() {

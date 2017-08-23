@@ -168,11 +168,11 @@ public class Client {
     }
 
     private void updateInterests() {
-        int interestingOps = SelectionKey.OP_READ; // we always want to read
+        int interestOps = SelectionKey.OP_READ; // we always want to read
         if (!networkToClient.isEmpty()) {
-            interestingOps |= SelectionKey.OP_WRITE;
+            interestOps |= SelectionKey.OP_WRITE;
         }
-        selectionKey.interestOps(interestingOps);
+        selectionKey.interestOps(interestOps);
     }
 
     public boolean sendToClient(IPv4Packet packet) {

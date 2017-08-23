@@ -143,11 +143,11 @@ public class UDPConnection extends AbstractConnection {
         if (!selectionKey.isValid()) {
             return;
         }
-        int interestingOps = SelectionKey.OP_READ;
+        int interestOps = SelectionKey.OP_READ;
         if (mayWrite()) {
-            interestingOps |= SelectionKey.OP_WRITE;
+            interestOps |= SelectionKey.OP_WRITE;
         }
-        selectionKey.interestOps(interestingOps);
+        selectionKey.interestOps(interestOps);
     }
 
     private boolean mayWrite() {
