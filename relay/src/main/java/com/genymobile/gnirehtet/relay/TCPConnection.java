@@ -44,6 +44,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
     private final SocketChannel channel;
     private final SelectionKey selectionKey;
+    private int interests;
 
     private State state;
     private int synSequenceNumber;
@@ -78,8 +79,10 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
             updateInterests();
         };
         channel = createChannel();
-        // register, but interests will be set on the first packet received
-        selectionKey = channel.register(selector, 0, selectionHandler);
+        // interests will be set on the first packet received
+        // set the initial value now so that they won't need to be updated
+        interests = SelectionKey.OP_CONNECT;
+        selectionKey = channel.register(selector, interests, selectionHandler);
     }
 
     @Override
@@ -361,7 +364,11 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         if (mayConnect()) {
             interestOps |= SelectionKey.OP_CONNECT;
         }
-        selectionKey.interestOps(interestOps);
+        if (interests != interestOps) {
+            // interests must be changed
+            interests = interestOps;
+            selectionKey.interestOps(interestOps);
+        }
     }
 
     private boolean mayRead() {

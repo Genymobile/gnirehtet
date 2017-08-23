@@ -29,6 +29,7 @@ pub struct TcpConnection {
     id: ConnectionId,
     client: Weak<RefCell<Client>>,
     stream: TcpStream,
+    interests: Ready,
     token: Token,
     client_to_network: StreamBuffer,
     network_to_client: Packetizer,
@@ -122,11 +123,15 @@ impl TcpConnection {
 
         let packetizer = Packetizer::new(&ipv4_header, &shrinked_transport_header);
 
+        // interests will be set on the first packet received
+        // set the initial value now so that they won't need to be updated
+        let interests = Ready::writable();
         let rc = Rc::new(RefCell::new(Self {
             self_weak: Weak::new(),
             id: id,
             client: client,
             stream: stream,
+            interests: interests,
             token: Token(0), // default value, will be set afterwards
             client_to_network: StreamBuffer::new(4 * MAX_PACKET_LENGTH),
             network_to_client: packetizer,
@@ -143,11 +148,10 @@ impl TcpConnection {
 
             // rc is an EventHandler, register() expects a Box<EventHandler>
             let handler = Box::new(rc.clone());
-            // register, but interests will be set on the first packet received
             let token = selector.register(
                 &self_ref.stream,
                 handler,
-                Ready::empty(),
+                interests,
                 PollOpt::level(),
             )?;
             self_ref.token = token;
@@ -639,9 +643,13 @@ impl TcpConnection {
             }
         }
         cx_debug!(target: TAG, self.id, "interests: {:?}", ready);
-        selector
-            .reregister(&self.stream, self.token, ready, PollOpt::level())
-            .expect("Cannot register on poll");
+        if self.interests != ready {
+            // interests must be changed
+            self.interests = ready;
+            selector
+                .reregister(&self.stream, self.token, ready, PollOpt::level())
+                .expect("Cannot register on poll");
+        }
     }
 
     fn may_read(&self) -> bool {

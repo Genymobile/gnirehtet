@@ -32,6 +32,7 @@ public class UDPConnection extends AbstractConnection {
 
     private final DatagramChannel channel;
     private final SelectionKey selectionKey;
+    private int interests;
 
     private long idleSince;
 
@@ -55,7 +56,8 @@ public class UDPConnection extends AbstractConnection {
             updateInterests();
         };
         channel = createChannel();
-        selectionKey = channel.register(selector, SelectionKey.OP_READ, selectionHandler);
+        interests = SelectionKey.OP_READ;
+        selectionKey = channel.register(selector, interests, selectionHandler);
     }
 
     @Override
@@ -147,7 +149,11 @@ public class UDPConnection extends AbstractConnection {
         if (mayWrite()) {
             interestOps |= SelectionKey.OP_WRITE;
         }
-        selectionKey.interestOps(interestOps);
+        if (interests != interestOps) {
+            // interests must be changed
+            interests = interestOps;
+            selectionKey.interestOps(interestOps);
+        }
     }
 
     private boolean mayWrite() {

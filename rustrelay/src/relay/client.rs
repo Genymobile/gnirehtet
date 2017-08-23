@@ -20,6 +20,7 @@ const TAG: &'static str = "Client";
 pub struct Client {
     id: u32,
     stream: TcpStream,
+    interests: Ready,
     token: Token,
     client_to_network: Ipv4PacketBuffer,
     network_to_client: StreamBuffer,
@@ -36,14 +37,21 @@ pub struct ClientChannel<'a> {
     network_to_client: &'a mut StreamBuffer,
     stream: &'a TcpStream,
     token: Token,
+    interests: &'a mut Ready,
 }
 
 impl<'a> ClientChannel<'a> {
-    fn new(network_to_client: &'a mut StreamBuffer, stream: &'a TcpStream, token: Token) -> Self {
+    fn new(
+        network_to_client: &'a mut StreamBuffer,
+        stream: &'a TcpStream,
+        token: Token,
+        interests: &'a mut Ready,
+    ) -> Self {
         Self {
             network_to_client: network_to_client,
             stream: stream,
             token: token,
+            interests: interests,
         }
     }
 
@@ -73,9 +81,13 @@ impl<'a> ClientChannel<'a> {
         } else {
             Ready::readable() | Ready::writable()
         };
-        selector
-            .reregister(self.stream, self.token, ready, PollOpt::level())
-            .expect("Cannot register on poll");
+        if *self.interests != ready {
+            // interests must be changed
+            *self.interests = ready;
+            selector
+                .reregister(self.stream, self.token, ready, PollOpt::level())
+                .expect("Cannot register on poll");
+        }
     }
 }
 
@@ -86,9 +98,12 @@ impl Client {
         stream: TcpStream,
         close_listener: Box<CloseListener<Client>>,
     ) -> io::Result<Rc<RefCell<Self>>> {
+        // on start, we are interested only in writing (we must first send the client id)
+        let interests = Ready::writable();
         let rc = Rc::new(RefCell::new(Self {
             id: id,
             stream: stream,
+            interests: interests,
             token: Token(0), // default value, will be set afterwards
             client_to_network: Ipv4PacketBuffer::new(),
             network_to_client: StreamBuffer::new(16 * MAX_PACKET_LENGTH),
@@ -106,11 +121,10 @@ impl Client {
 
             // rc is an EventHandler, register() expects a Box<EventHandler>
             let handler = Box::new(rc.clone());
-            // on start, we are interested only in writing (we must first send the client id)
             let token = selector.register(
                 &self_ref.stream,
                 handler,
-                Ready::writable(),
+                interests,
                 PollOpt::level(),
             )?;
             self_ref.token = token;
@@ -127,7 +141,12 @@ impl Client {
     }
 
     pub fn channel(&mut self) -> ClientChannel {
-        ClientChannel::new(&mut self.network_to_client, &self.stream, self.token)
+        ClientChannel::new(
+            &mut self.network_to_client,
+            &self.stream,
+            self.token,
+            &mut self.interests,
+        )
     }
 
     fn close(&mut self, selector: &mut Selector) {
@@ -260,8 +279,12 @@ impl Client {
     fn push_one_packet_to_network(&mut self, selector: &mut Selector) -> bool {
         match self.client_to_network.as_ipv4_packet() {
             Some(ref packet) => {
-                let mut client_channel =
-                    ClientChannel::new(&mut self.network_to_client, &self.stream, self.token);
+                let mut client_channel = ClientChannel::new(
+                    &mut self.network_to_client,
+                    &self.stream,
+                    self.token,
+                    &mut self.interests,
+                );
                 self.router.send_to_network(
                     selector,
                     &mut client_channel,

@@ -36,6 +36,7 @@ public class Client {
     private final SocketChannel clientChannel;
     private final SelectionKey selectionKey;
     private final CloseListener<Client> closeListener;
+    private int interests;
 
     private final IPv4PacketBuffer clientToNetwork = new IPv4PacketBuffer();
     private final StreamBuffer networkToClient = new StreamBuffer(16 * IPv4Packet.MAX_PACKET_LENGTH);
@@ -64,7 +65,8 @@ public class Client {
             }
         };
         // on start, we are interested only in writing (we must first send the client id)
-        selectionKey = clientChannel.register(selector, SelectionKey.OP_WRITE, selectionHandler);
+        interests = SelectionKey.OP_WRITE;
+        selectionKey = clientChannel.register(selector, interests, selectionHandler);
 
         this.closeListener = closeListener;
     }
@@ -172,7 +174,11 @@ public class Client {
         if (!networkToClient.isEmpty()) {
             interestOps |= SelectionKey.OP_WRITE;
         }
-        selectionKey.interestOps(interestOps);
+        if (interests != interestOps) {
+            // interests must be changed
+            interests = interestOps;
+            selectionKey.interestOps(interestOps);
+        }
     }
 
     public boolean sendToClient(IPv4Packet packet) {

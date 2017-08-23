@@ -25,6 +25,7 @@ pub struct UdpConnection {
     id: ConnectionId,
     client: Weak<RefCell<Client>>,
     socket: UdpSocket,
+    interests: Ready,
     token: Token,
     client_to_network: DatagramBuffer,
     network_to_client: Packetizer,
@@ -43,10 +44,12 @@ impl UdpConnection {
         cx_info!(target: TAG, id, "Open");
         let socket = Self::create_socket(&id)?;
         let packetizer = Packetizer::new(&ipv4_header, &transport_header);
+        let interests = Ready::readable();
         let rc = Rc::new(RefCell::new(Self {
             id: id,
             client: client,
             socket: socket,
+            interests: interests,
             token: Token(0), // default value, will be set afterwards
             client_to_network: DatagramBuffer::new(4 * MAX_PACKET_LENGTH),
             network_to_client: packetizer,
@@ -62,7 +65,7 @@ impl UdpConnection {
             let token = selector.register(
                 &self_ref.socket,
                 handler,
-                Ready::readable(),
+                interests,
                 PollOpt::level(),
             )?;
             self_ref.token = token;
@@ -198,9 +201,13 @@ impl UdpConnection {
             Ready::readable() | Ready::writable()
         };
         cx_debug!(target: TAG, self.id, "interests: {:?}", ready);
-        selector
-            .reregister(&self.socket, self.token, ready, PollOpt::level())
-            .expect("Cannot register on poll");
+        if self.interests != ready {
+            // interests must be changed
+            self.interests = ready;
+            selector
+                .reregister(&self.socket, self.token, ready, PollOpt::level())
+                .expect("Cannot register on poll");
+        }
     }
 
     fn touch(&mut self) {
