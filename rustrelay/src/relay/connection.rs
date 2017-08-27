@@ -47,6 +47,7 @@ pub struct ConnectionId {
     source_port: u16,
     destination_ip: u32,
     destination_port: u16,
+    id_string: String,
 }
 
 impl ConnectionId {
@@ -54,25 +55,27 @@ impl ConnectionId {
         ipv4_header_data: &Ipv4HeaderData,
         transport_header_data: &TransportHeaderData,
     ) -> Self {
+        let source_ip = ipv4_header_data.source();
+        let source_port = transport_header_data.source_port();
+        let destination_ip = ipv4_header_data.destination();
+        let destination_port = transport_header_data.destination_port();
+        let id_string = format!(
+            "{} -> {}",
+            net::to_socket_addr(source_ip, source_port),
+            net::to_socket_addr(destination_ip, destination_port)
+        );
         Self {
             protocol: ipv4_header_data.protocol(),
-            source_ip: ipv4_header_data.source(),
-            source_port: transport_header_data.source_port(),
-            destination_ip: ipv4_header_data.destination(),
-            destination_port: transport_header_data.destination_port(),
+            source_ip: source_ip,
+            source_port: source_port,
+            destination_ip: destination_ip,
+            destination_port: destination_port,
+            id_string: id_string,
         }
     }
 
     pub fn protocol(&self) -> Protocol {
         self.protocol
-    }
-
-    pub fn source(&self) -> SocketAddrV4 {
-        net::to_socket_addr(self.source_ip, self.source_port)
-    }
-
-    fn destination(&self) -> SocketAddrV4 {
-        net::to_socket_addr(self.destination_ip, self.destination_port)
     }
 
     pub fn rewritten_destination(&self) -> SocketAddrV4 {
@@ -87,7 +90,7 @@ impl ConnectionId {
 
 impl fmt::Display for ConnectionId {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} -> {}", self.source(), self.destination())
+        write!(f, "{}", self.id_string)
     }
 }
 

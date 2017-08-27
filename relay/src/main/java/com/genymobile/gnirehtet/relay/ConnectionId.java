@@ -16,8 +16,6 @@
 
 package com.genymobile.gnirehtet.relay;
 
-import java.net.InetSocketAddress;
-
 public class ConnectionId {
 
     private final IPv4Header.Protocol protocol;
@@ -25,6 +23,7 @@ public class ConnectionId {
     private final short sourcePort;
     private final int destIp;
     private final short destPort;
+    private final String idString;
 
     public ConnectionId(IPv4Header.Protocol protocol, int sourceIp, short sourcePort, int destIp, short destPort) {
         this.protocol = protocol;
@@ -32,18 +31,13 @@ public class ConnectionId {
         this.sourcePort = sourcePort;
         this.destIp = destIp;
         this.destPort = destPort;
+
+        // compute the String representation only once
+        idString = protocol + " " + Net.toString(sourceIp, sourcePort) + " -> " + Net.toString(destIp, destPort);
     }
 
     public IPv4Header.Protocol getProtocol() {
         return protocol;
-    }
-
-    private InetSocketAddress getSource() {
-        return new InetSocketAddress(Net.toInetAddress(sourceIp), Short.toUnsignedInt(sourcePort));
-    }
-
-    private InetSocketAddress getDestination() {
-        return new InetSocketAddress(Net.toInetAddress(destIp), Short.toUnsignedInt(destPort));
     }
 
     public int getSourceIp() {
@@ -92,7 +86,7 @@ public class ConnectionId {
 
     @Override
     public String toString() {
-        return protocol + " " + Net.toString(getSource()) + " -> " + Net.toString(getDestination());
+        return idString;
     }
 
     public static ConnectionId from(IPv4Header ipv4Header, TransportHeader transportHeader) {

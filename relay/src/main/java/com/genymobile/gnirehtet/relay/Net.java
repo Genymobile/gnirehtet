@@ -63,4 +63,8 @@ public final class Net {
     public static String toString(InetSocketAddress address) {
         return address.getAddress().getHostAddress() + ":" + address.getPort();
     }
+
+    public static String toString(int ip, short port) {
+        return toString(new InetSocketAddress(Net.toInetAddress(ip), Short.toUnsignedInt(port)));
+    }
 }
