@@ -161,7 +161,7 @@ impl Command for RtCommand {
                 dns_servers.as_ref(),
             )
             {
-                eprintln!("Cannot start gnirehtet: {}", err);
+                error!("Cannot start gnirehtet: {}", err);
             });
         }
 
@@ -171,7 +171,7 @@ impl Command for RtCommand {
         let handler_pair = pair.clone();
         ctrlc::set_handler(move || {
             if let Err(err) = stop_gnirehtet(serial.as_ref()) {
-                eprintln!("Cannot stop gnirehtet: {}", err);
+                error!("Cannot stop gnirehtet: {}", err);
             }
 
             let (ref lock, ref cvar) = *handler_pair;
@@ -520,17 +520,17 @@ fn main() {
                 match arguments {
                     Ok(arguments) => {
                         if let Err(err) = command.execute(&arguments) {
-                            eprintln!("[Error] Execution error: {}", err);
+                            error!("Execution error: {}", err);
                         }
                     }
                     Err(err) => {
-                        eprintln!("[Error] {}\n", err);
+                        error!("{}", err);
                         print_command_usage(command);
                     }
                 }
             }
             None => {
-                eprintln!("[Error] Unknown command: {}\n", command_name);
+                error!("Unknown command: {}", command_name);
                 print_usage();
             }
         }

@@ -28,7 +28,7 @@ import java.util.List;
 import java.util.Scanner;
 
 public final class Main {
-    private static final String TAG = Main.class.getSimpleName();
+    private static final String TAG = "Gnirehtet";
     private static final String NL = System.lineSeparator();
 
     private Main() {
@@ -303,8 +303,7 @@ public final class Main {
                 try {
                     arguments = CommandLineArguments.parse(command.acceptedParameters, commandArgs);
                 } catch (IllegalArgumentException e) {
-                    System.err.println("[Error] " + e.getMessage());
-                    System.err.println();
+                    Log.e(TAG, e.getMessage());
                     printCommandUsage(command);
                     return;
                 }
@@ -314,8 +313,7 @@ public final class Main {
             }
         }
 
-        System.err.println("Unknown command: " + cmd);
-        System.err.println();
+        Log.e(TAG, "Unknown command: " + cmd);
         printUsage();
     }
 }
