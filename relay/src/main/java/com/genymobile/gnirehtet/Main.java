@@ -147,6 +147,18 @@ public final class Main {
                 stopGnirehtet(args.getSerial());
             }
         },
+        RESTART("restart", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER) {
+            @Override
+            String getDescription() {
+                return "Stop then start.";
+            }
+
+            @Override
+            void execute(CommandLineArguments args) throws Exception {
+                STOP.execute(args);
+                START.execute(args);
+            }
+        },
         RELAY("relay", CommandLineArguments.PARAM_NONE) {
             @Override
             String getDescription() {

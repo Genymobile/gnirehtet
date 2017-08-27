@@ -45,6 +45,7 @@ const COMMANDS: &[&'static Command] = &[
     &RtCommand,
     &StartCommand,
     &StopCommand,
+    &RestartCommand,
     &RelayCommand,
 ];
 
@@ -61,6 +62,7 @@ struct ReinstallCommand;
 struct RtCommand;
 struct StartCommand;
 struct StopCommand;
+struct RestartCommand;
 struct RelayCommand;
 
 impl Command for InstallCommand {
@@ -238,6 +240,26 @@ impl Command for StopCommand {
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
         stop_gnirehtet(args.serial())
+    }
+}
+
+impl Command for RestartCommand {
+    fn command(&self) -> &'static str {
+        "restart"
+    }
+
+    fn accepted_parameters(&self) -> u8 {
+        cli_args::PARAM_SERIAL | cli_args::PARAM_DNS_SERVERS
+    }
+
+    fn description(&self) -> &'static str {
+        "Stop then start."
+    }
+
+    fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
+        StopCommand.execute(args)?;
+        StartCommand.execute(args)?;
+        Ok(())
     }
 }
 
