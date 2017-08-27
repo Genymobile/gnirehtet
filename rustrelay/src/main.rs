@@ -399,6 +399,7 @@ fn exec_adb<S: Into<String>>(
     args: Vec<S>,
 ) -> Result<(), CommandExecutionError> {
     let mut adb_args = create_adb_args(serial, args);
+    info!("Execute: adb {:?}", adb_args);
     let exit_status = process::Command::new("adb").args(&adb_args[..]).status()?;
     if exit_status.success() {
         Ok(())
