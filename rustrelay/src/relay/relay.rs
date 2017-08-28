@@ -15,6 +15,7 @@
  */
 
 use std::cell::RefCell;
+use std::cmp::max;
 use std::io;
 use std::rc::Rc;
 use std::time::Duration;
@@ -53,12 +54,8 @@ impl Relay {
         // no connection may expire before the UDP idle timeout delay
         let mut next_cleaning_deadline = Local::now().timestamp() + IDLE_TIMEOUT_SECONDS as i64;
         loop {
-            let timeout_seconds = next_cleaning_deadline - Local::now().timestamp();
-            let timeout = if timeout_seconds > 0 {
-                Some(Duration::new(timeout_seconds as u64, 0))
-            } else {
-                None
-            };
+            let timeout_seconds = max(0, next_cleaning_deadline - Local::now().timestamp());
+            let timeout = Some(Duration::new(timeout_seconds as u64, 0));
             selector.poll(&mut events, timeout)?;
 
             let now = Local::now().timestamp();
