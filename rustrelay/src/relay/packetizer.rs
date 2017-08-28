@@ -163,7 +163,7 @@ mod tests {
 
     #[test]
     fn merge_headers_and_payload() {
-        let mut raw = &mut create_packet()[..];
+        let raw = &mut create_packet()[..];
         let reference_packet = Ipv4Packet::parse(raw);
 
         let data = [0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88];
@@ -180,7 +180,7 @@ mod tests {
 
     #[test]
     fn last_packet() {
-        let mut raw = &mut create_packet()[..];
+        let raw = &mut create_packet()[..];
         let reference_packet = Ipv4Packet::parse(raw);
 
         let data = [0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88];
@@ -198,7 +198,7 @@ mod tests {
 
     #[test]
     fn packetize_chunks() {
-        let mut raw = &mut create_packet()[..];
+        let raw = &mut create_packet()[..];
         let reference_packet = Ipv4Packet::parse(raw);
 
         let data = [0x11u8, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77, 0x88];
