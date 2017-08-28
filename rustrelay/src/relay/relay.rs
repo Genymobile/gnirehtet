@@ -54,9 +54,11 @@ impl Relay {
         // no connection may expire before the UDP idle timeout delay
         let mut next_cleaning_deadline = Local::now().timestamp() + IDLE_TIMEOUT_SECONDS as i64;
         loop {
-            let timeout_seconds = max(0, next_cleaning_deadline - Local::now().timestamp());
-            let timeout = Some(Duration::new(timeout_seconds as u64, 0));
-            selector.poll(&mut events, timeout)?;
+            retry_on_intr!({
+                let timeout_seconds = max(0, next_cleaning_deadline - Local::now().timestamp());
+                let timeout = Some(Duration::new(timeout_seconds as u64, 0));
+                selector.poll(&mut events, timeout)
+            })?;
 
             let now = Local::now().timestamp();
             if now >= next_cleaning_deadline {

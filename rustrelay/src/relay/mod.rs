@@ -15,6 +15,8 @@
  */
 
 pub use self::relay::*;
+#[macro_use]
+pub mod interrupt;
 
 mod binary;
 mod client;

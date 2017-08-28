@@ -27,6 +27,8 @@ mod relay;
 use std::io;
 use relay::Relay;
 
+pub use relay::interrupt;
+
 pub fn relay() -> io::Result<()> {
     const PORT: u16 = 31416;
     Relay::new(PORT).run()

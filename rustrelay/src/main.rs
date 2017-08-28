@@ -170,6 +170,7 @@ impl Command for RtCommand {
         let serial = args.serial().cloned();
         let handler_pair = pair.clone();
         ctrlc::set_handler(move || {
+            relaylib::interrupt::set_interrupted_by_user();
             if let Err(err) = stop_gnirehtet(serial.as_ref()) {
                 error!("Cannot stop gnirehtet: {}", err);
             }
