@@ -38,7 +38,10 @@ use super::transport_header::{TransportHeader, TransportHeaderMut};
 
 const TAG: &'static str = "TcpConnection";
 
-const MAX_PAYLOAD_LENGTH: u16 = 1400;
+// same value as GnirehtetService.MTU in the client
+const MTU: u16 = 0x4000;
+// 20 bytes for IP headers, 20 bytes for TCP headers
+const MAX_PAYLOAD_LENGTH: u16 = MTU - 20 - 20 as u16;
 
 pub struct TcpConnection {
     self_weak: Weak<RefCell<TcpConnection>>,

@@ -26,7 +26,10 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
     private static final String TAG = TCPConnection.class.getSimpleName();
 
-    private static final int MAX_PAYLOAD_SIZE = 1400;
+    // same value as GnirehtetService.MTU in the client
+    private static final int MTU = 0x4000;
+    // 20 bytes for IP headers, 20 bytes for TCP headers
+    private static final int MAX_PAYLOAD_SIZE = MTU - 20 - 20;
 
     private static final Random RANDOM = new Random();
 

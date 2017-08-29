@@ -45,6 +45,8 @@ public class GnirehtetService extends VpnService {
 
     private static final InetAddress VPN_ADDRESS = Net.toInetAddress(new byte[] {10, 0, 0, 2});
     private static final InetAddress VPN_ROUTE = Net.toInetAddress(new byte[] {0, 0, 0, 0}); // intercept everything
+    // magic value: higher (like 0x8000 or 0xffff) or lower (like 1500) values show poorer performances
+    private static final int MTU = 0x4000;
 
     private final DisconnectionNotifier disconnectionNotifier = new DisconnectionNotifier(this);
     private final Handler handler = new RelayTunnelConnectionStateHandler(this);
@@ -119,6 +121,7 @@ public class GnirehtetService extends VpnService {
         // non-blocking by default, but FileChannel is not selectable, that's stupid!
         // so switch to synchronous I/O to avoid polling
         builder.setBlocking(true);
+        builder.setMtu(MTU);
 
         vpnInterface = builder.establish();
         if (vpnInterface == null) {
