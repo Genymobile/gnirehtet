@@ -316,10 +316,15 @@ impl<'a> TcpHeaderMut<'a> {
         let header_length = ipv4_header_data.header_length();
         debug_assert!(header_length % 2 == 0 && header_length >= 20);
 
+        // checksum computation is the most CPU-intensive task in gnirehtet
+        // prefer optimization over readability/safety
+
         let mut hsum = 0; // high-order bytes sum
         for i in 0..header_length / 2 {
-            sum += self.raw[(2 * i + 1) as usize] as u32; // low-order bytes
-            hsum += self.raw[(2 * i) as usize] as u32; // high-order bytes
+            unsafe {
+                sum += *self.raw.get_unchecked((2 * i + 1) as usize) as u32; // low-order bytes
+                hsum += *self.raw.get_unchecked((2 * i) as usize) as u32; // high-order bytes
+            }
         }
 
         let payload_length = transport_length - header_length as u16;
@@ -329,13 +334,17 @@ impl<'a> TcpHeaderMut<'a> {
             "Payload length does not match"
         );
         for i in 0..payload_length / 2 {
-            sum += payload[(2 * i + 1) as usize] as u32; // low-order bytes
-            hsum += payload[(2 * i) as usize] as u32; // high-order bytes
+            unsafe {
+                sum += *payload.get_unchecked((2 * i + 1) as usize) as u32; // low-order bytes
+                hsum += *payload.get_unchecked((2 * i) as usize) as u32; // high-order bytes
+            }
         }
 
         if payload_length % 2 != 0 {
-            // if payload length is odd, the last byte is considered high-order
-            hsum += payload[(payload_length - 1) as usize] as u32;
+            unsafe {
+                // if payload length is odd, the last byte is considered high-order
+                hsum += *payload.get_unchecked((payload_length - 1) as usize) as u32;
+            }
         }
 
         // add high-order bytes sum to the global sum
