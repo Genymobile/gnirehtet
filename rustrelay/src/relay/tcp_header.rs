@@ -541,4 +541,58 @@ mod tests {
             panic!("Not a TCP packet");
         }
     }
+
+    fn create_long_packet() -> Vec<u8> {
+        let mut raw = Vec::new();
+        raw.reserve(45);
+
+        raw.write_u8(4u8 << 4 | 5).unwrap(); // version_and_ihl
+        raw.write_u8(0).unwrap(); //ToS
+        raw.write_u16::<BigEndian>(1240).unwrap(); // total length
+        raw.write_u32::<BigEndian>(0).unwrap(); // id_flags_fragment_offset
+        raw.write_u8(0).unwrap(); // TTL
+        raw.write_u8(6).unwrap(); // protocol (TCP)
+        raw.write_u16::<BigEndian>(0).unwrap(); // checksum
+        raw.write_u32::<BigEndian>(0x12345678).unwrap(); // source address
+        raw.write_u32::<BigEndian>(0xA2A24242).unwrap(); // destination address
+
+        raw.write_u16::<BigEndian>(0x1234).unwrap(); // source port
+        raw.write_u16::<BigEndian>(0x5678).unwrap(); // destination port
+        raw.write_u32::<BigEndian>(0x111).unwrap(); // sequence number
+        raw.write_u32::<BigEndian>(0x222).unwrap(); // acknowledgement number
+        raw.write_u16::<BigEndian>(5 << 12).unwrap(); // data offset + flags(0)
+        raw.write_u16::<BigEndian>(0).unwrap(); // window (don't care for these tests)
+        raw.write_u16::<BigEndian>(0).unwrap(); // checksum
+        raw.write_u16::<BigEndian>(0).unwrap(); // urgent pointer
+
+        // payload
+        for i in 0u16..1200 {
+            raw.write_u8(i as u8).unwrap();
+        }
+
+        raw
+    }
+
+    // built-in rust bench is still unstable, use a simple test instead
+    // run with: cargo test bench_checksum --release -- --nocapture
+    // manual benchmark
+    #[ignore]
+    #[test]
+    fn bench_checksum() {
+        let raw = &mut create_long_packet()[..];
+        let mut ipv4_packet = Ipv4Packet::parse(raw);
+        let (ipv4_header, mut transport) = ipv4_packet.split_mut();
+        if let Some((TransportHeaderMut::Tcp(ref mut tcp_header), ref payload)) = transport {
+            use std::time::Instant;
+            let start = Instant::now();
+            for _ in 0..5000000 {
+                tcp_header.update_checksum(ipv4_header.data(), payload);
+            }
+            let duration = start.elapsed();
+            let ms = duration.as_secs() * 1000 + duration.subsec_nanos() as u64 / 1000000;
+            println!("5000000 TCP checksums: {}ms", ms);
+        } else {
+            panic!("Not a TCP packet");
+        }
+    }
 }
