@@ -20,3 +20,8 @@ task assembleDebug(dependsOn: 'jar')
 task assembleRelease(dependsOn: ['build', 'jar'])
 
 apply from: "$project.rootDir/config/java-checkstyle.gradle"
+
+test {
+    // to log using System.out.println(…) in tests
+    testLogging.showStandardStreams = true
+}

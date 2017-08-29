@@ -17,6 +17,7 @@
 package com.genymobile.gnirehtet.relay;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -210,6 +211,51 @@ public class TCPHeaderTest {
         Assert.assertEquals(32, target.position());
         Assert.assertEquals("Header must modify target", 9999, target.getShort(12));
         Assert.assertEquals("Header must not modify buffer", 0x1234, buffer.getShort(0));
+    }
 
+    private static ByteBuffer createLongPacket() {
+        ByteBuffer buffer = ByteBuffer.allocate(2048);
+
+        buffer.put((byte) ((4 << 4) | 5)); // versionAndIHL
+        buffer.put((byte) 0); // ToS
+        buffer.putShort((short) 1240); // total length 20 + 20 + 1200
+        buffer.putInt(0); // IdFlagsFragmentOffset
+        buffer.put((byte) 0); // TTL
+        buffer.put((byte) 6); // protocol (TCP)
+        buffer.putShort((short) 0); // checksum
+        buffer.putInt(0x12345678); // source address
+        buffer.putInt(0xa2a24242); // destination address
+
+        buffer.putShort((short) 0x1234); // source port
+        buffer.putShort((short) 0x5678); // destination port
+        buffer.putInt(0x111); // sequence number
+        buffer.putInt(0x222); // acknowledgment number
+        buffer.putShort((short) (5 << 12)); // data offset + flags(0)
+        buffer.putShort((short) 0); // window (don't care for these tests)
+        buffer.putShort((short) 0); // checksum
+        buffer.putShort((short) 0); // urgent pointer
+
+        // payload
+        for (int i = 0; i < 1200; ++i) {
+            buffer.put((byte) i);
+        }
+
+        return buffer;
+    }
+
+    @Ignore // manual benchmark
+    @Test
+    public void benchComputeChecksum() {
+        ByteBuffer buffer = createLongPacket();
+        buffer.flip();
+        IPv4Packet packet = new IPv4Packet(buffer);
+        TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
+
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < 5000000; ++i) {
+            tcpHeader.computeChecksum(packet.getIpv4Header(), packet.getPayload());
+        }
+        long duration = System.currentTimeMillis() - start;
+        System.out.println("5000000 TCP checksums: " + duration + "ms");
     }
 }
