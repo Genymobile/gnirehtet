@@ -175,14 +175,19 @@ public class TCPHeader implements TransportHeader {
 
     @Override
     public void computeChecksum(IPv4Header ipv4Header, ByteBuffer payload) {
-        raw.rewind();
-        payload.rewind();
+        // checksum computation is the most CPU-intensive task in gnirehtet
+        // prefer optimization over readability
+        byte[] rawArray = raw.array();
+        int rawOffset = raw.arrayOffset();
+
+        byte[] payloadArray = payload.array();
+        int payloadOffset = payload.arrayOffset();
 
         // pseudo-header checksum (cf rfc793 section 3.1)
 
         int source = ipv4Header.getSource();
         int destination = ipv4Header.getDestination();
-        int length = getHeaderLength() + payload.remaining();
+        int length = ipv4Header.getTotalLength() - ipv4Header.getHeaderLength();
         assert (length & ~0xffff) == 0 : "Length cannot take more than 16 bits"; // by design
 
         int sum = source >>> 16;
@@ -195,15 +200,19 @@ public class TCPHeader implements TransportHeader {
         // reset checksum field
         setChecksum((short) 0);
 
-        while (raw.hasRemaining()) {
-            sum += Short.toUnsignedInt(raw.getShort());
+        for (int i = 0; i < headerLength / 2; ++i) {
+            // compute a 16-bit value from two 8-bit values manually
+            sum += ((rawArray[rawOffset + 2 * i] & 0xff) << 8) | (rawArray[rawOffset + 2 * i + 1] & 0xff);
         }
-        while (payload.remaining() > 1) {
-            sum += Short.toUnsignedInt(payload.getShort());
+
+        int payloadLength = length - headerLength;
+        assert payloadLength == payload.limit() : "Payload length does not match";
+        for (int i = 0; i < payloadLength / 2; ++i) {
+            // compute a 16-bit value from two 8-bit values manually
+            sum += ((payloadArray[payloadOffset + 2 * i] & 0xff) << 8) | (payloadArray[payloadOffset + 2 * i + 1] & 0xff);
         }
-        // if payload length is odd, pad last short with 0
-        if (payload.hasRemaining()) {
-            sum += Byte.toUnsignedInt(payload.get()) << 8;
+        if (payloadLength % 2 != 0) {
+            sum += (payloadArray[payloadOffset + payloadLength - 1] & 0xff) << 8;
         }
 
         while ((sum & ~0xffff) != 0) {
