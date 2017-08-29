@@ -144,10 +144,15 @@ public class IPv4Header {
         // reset checksum field
         setChecksum((short) 0);
 
+        // checksum computation is the most CPU-intensive task in gnirehtet
+        // prefer optimization over readability
+        byte[] rawArray = raw.array();
+        int rawArrayOffset = raw.arrayOffset();
+
         int sum = 0;
-        raw.rewind();
-        while (raw.hasRemaining()) {
-            sum += Short.toUnsignedInt(raw.getShort());
+        for (int i = 0; i < headerLength / 2; ++i) {
+            // compute a 16-bit value from two 8-bit values manually
+            sum += (rawArray[rawArrayOffset + 2 * i] & 0xff) << 8 | (rawArray[rawArrayOffset + 2 * i + 1] & 0xff);
         }
         while ((sum & ~0xffff) != 0) {
             sum = (sum & 0xffff) + (sum >> 16);
