@@ -377,7 +377,7 @@ mod tests {
         raw.write_u16::<BigEndian>(0).unwrap(); // checksum
         raw.write_u16::<BigEndian>(0).unwrap(); // urgent pointer
 
-        raw.write_u32::<BigEndian>(0x11223344).unwrap(); // payload
+        raw.write_u32::<BigEndian>(0x1122EEFF).unwrap(); // payload
 
         raw
     }
@@ -406,8 +406,8 @@ mod tests {
         raw.write_u16::<BigEndian>(0).unwrap(); // urgent pointer
 
         // payload
-        raw.write_u32::<BigEndian>(0x11223344).unwrap();
-        raw.write_u8(0x55).unwrap();
+        raw.write_u32::<BigEndian>(0x1122EEFF).unwrap();
+        raw.write_u8(0x88).unwrap();
 
         raw
     }
@@ -494,7 +494,7 @@ mod tests {
                     0x0000 + 0x0000;
 
                 // payload
-                sum += 0x1122 + 0x3344;
+                sum += 0x1122 + 0xEEFF;
 
                 while (sum & !0xFFFF) != 0 {
                     sum = (sum & 0xFFFF) + (sum >> 16);
@@ -528,7 +528,7 @@ mod tests {
                     0x0000 + 0x0000;
 
                 // payload
-                sum += 0x1122 + 0x3344 + 0x5500;
+                sum += 0x1122 + 0xEEFF + 0x8800;
 
                 while (sum & !0xFFFF) != 0 {
                     sum = (sum & 0xFFFF) + (sum >> 16);

@@ -46,7 +46,7 @@ public class TCPHeaderTest {
         buffer.putShort((short) 0); // checksum
         buffer.putShort((short) 0); // urgent pointer
 
-        buffer.putInt(0x11223344); // payload
+        buffer.putInt(0x1122eeff); // payload
 
         return buffer;
     }
@@ -74,8 +74,8 @@ public class TCPHeaderTest {
         buffer.putShort((short) 0); // urgent pointer
 
         // payload
-        buffer.putInt(0x11223344);
-        buffer.put((byte) 0x55);
+        buffer.putInt(0x1122eeff);
+        buffer.put((byte) 0x88);
 
         return buffer;
     }
@@ -157,7 +157,7 @@ public class TCPHeaderTest {
         sum += 0x1234 + 0x5678 + 0x0000 + 0x0111 + 0x0000 + 0x0222 + 0x5000 + 0x0000 + 0x0000 + 0x0000;
 
         // payload
-        sum += 0x1122 + 0x3344;
+        sum += 0x1122 + 0xeeff;
 
         while ((sum & ~0xffff) != 0) {
             sum = (sum & 0xffff) + (sum >> 16);
@@ -187,7 +187,7 @@ public class TCPHeaderTest {
         sum += 0x1234 + 0x5678 + 0x0000 + 0x0111 + 0x0000 + 0x0222 + 0x5000 + 0x0000 + 0x0000 + 0x0000;
 
         // payload
-        sum += 0x1122 + 0x3344 + 0x5500;
+        sum += 0x1122 + 0xeeff + 0x8800;
 
         while ((sum & ~0xffff) != 0) {
             sum = (sum & 0xffff) + (sum >> 16);
