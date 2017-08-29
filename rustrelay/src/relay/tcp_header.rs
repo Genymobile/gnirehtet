@@ -14,8 +14,7 @@
  * limitations under the License.
  */
 
-use byteorder::{BigEndian, ByteOrder, ReadBytesExt};
-use std::io::Cursor;
+use byteorder::{BigEndian, ByteOrder};
 use std::mem;
 use super::ipv4_header::Ipv4HeaderData;
 
@@ -311,34 +310,36 @@ impl<'a> TcpHeaderMut<'a> {
         sum += destination & 0xFFFF;
         sum += transport_length as u32;
 
-        // reset checksum field
+        // reset checksum field, so that it can be added with other bytes
         self.set_checksum(0);
 
         let header_length = ipv4_header_data.header_length();
-        assert!(header_length % 2 == 0 && header_length >= 20);
+        debug_assert!(header_length % 2 == 0 && header_length >= 20);
 
-        {
-            let mut cursor = Cursor::new(&self.raw[..]);
-            // skip checksum field at 16..18
-            for _ in (0..8).chain(9..header_length / 2) {
-                sum += cursor.read_u16::<BigEndian>().unwrap() as u32;
-            }
-
-            let payload_length = transport_length - header_length as u16;
-            assert_eq!(
-                payload_length as usize,
-                payload.len(),
-                "Payload length does not match"
-            );
-            let mut cursor = Cursor::new(&payload);
-            for _ in 0..payload_length / 2 {
-                sum += cursor.read_u16::<BigEndian>().unwrap() as u32;
-            }
-            if payload_length % 2 != 0 {
-                // if payload length is odd, pad last u16 with 0
-                sum += (cursor.read_u8().unwrap() as u32) << 8;
-            }
+        let mut hsum = 0; // high-order bytes sum
+        for i in 0..header_length / 2 {
+            sum += self.raw[(2 * i + 1) as usize] as u32; // low-order bytes
+            hsum += self.raw[(2 * i) as usize] as u32; // high-order bytes
         }
+
+        let payload_length = transport_length - header_length as u16;
+        debug_assert_eq!(
+            payload_length as usize,
+            payload.len(),
+            "Payload length does not match"
+        );
+        for i in 0..payload_length / 2 {
+            sum += payload[(2 * i + 1) as usize] as u32; // low-order bytes
+            hsum += payload[(2 * i) as usize] as u32; // high-order bytes
+        }
+
+        if payload_length % 2 != 0 {
+            // if payload length is odd, the last byte is considered high-order
+            hsum += payload[(payload_length - 1) as usize] as u32;
+        }
+
+        // add high-order bytes sum to the global sum
+        sum += hsum << 8;
 
         while (sum & !0xFFFF) != 0 {
             sum = (sum & 0xFFFF) + (sum >> 16);
