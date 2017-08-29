@@ -17,6 +17,7 @@
 package com.genymobile.gnirehtet.relay;
 
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.nio.ByteBuffer;
@@ -141,5 +142,19 @@ public class IPv4HeaderTest {
         short checksum = (short) ~sum;
 
         Assert.assertEquals(checksum, header.getChecksum());
+    }
+
+    @Ignore // manual benchmark
+    @Test
+    public void benchComputeChecksum() {
+        ByteBuffer buffer = createMockHeaders();
+        IPv4Header header = new IPv4Header(buffer);
+
+        long start = System.currentTimeMillis();
+        for (int i = 0; i < 5000000; ++i) {
+            header.computeChecksum();
+        }
+        long duration = System.currentTimeMillis() - start;
+        System.out.println("5000000 IP checksums: " + duration + "ms");
     }
 }
