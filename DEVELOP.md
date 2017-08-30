@@ -108,7 +108,7 @@ of [`IPPacketOutputStream`].
 
 ## Relay server
 
-The relay server is a _Java 8_ project located in [`relay/`](relay/).
+The relay server is a _Java 8_ project located in [`relay-java/`](relay-java/).
 
 It is implemented using [asynchronous I/O] through [Java NIO]. As a
 consequence, it is essentially monothreaded, so there is no need for
@@ -126,10 +126,10 @@ accepted client.
 [Java NIO]: https://en.wikipedia.org/wiki/New_I/O_%28Java%29
 [SelectableChannel]: https://docs.oracle.com/javase/8/docs/api/java/nio/channels/SelectableChannel.html
 [Selector]: https://docs.oracle.com/javase/8/docs/api/java/nio/channels/Selector.html
-[`Relay`]: relay/src/main/java/com/genymobile/relay/Relay.java
-[`SelectionHandler`]: relay/src/main/java/com/genymobile/relay/SelectionHandler.java
+[`Relay`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/Relay.java
+[`SelectionHandler`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/SelectionHandler.java
 [attachment]: https://docs.oracle.com/javase/8/docs/api/java/nio/channels/SelectionKey.html#attachment--
-[`Client`]: relay/src/main/java/com/genymobile/relay/Client.java
+[`Client`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/Client.java
 
 ![archi](assets/archi.png)
 
@@ -174,13 +174,13 @@ The class [`Packetizer`] converts from level 5 to level 3 by appending correct
 IP and transport headers.
 
 
-[`IPv4Packet`]: relay/src/main/java/com/genymobile/relay/IPv4Packet.java
-[`Router`]: relay/src/main/java/com/genymobile/relay/Router.java
-[`Connection`]: relay/src/main/java/com/genymobile/relay/Connection.java
-[`TCPConnection`]: relay/src/main/java/com/genymobile/relay/TCPConnection.java
-[`UDPConnection`]: relay/src/main/java/com/genymobile/relay/UDPConnection.java
+[`IPv4Packet`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/IPv4Packet.java
+[`Router`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/Router.java
+[`Connection`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/Connection.java
+[`TCPConnection`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/TCPConnection.java
+[`UDPConnection`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/UDPConnection.java
 [RFC 793]: https://tools.ietf.org/html/rfc793
-[`Packetizer`]: relay/src/main/java/com/genymobile/relay/Packetizer.java
+[`Packetizer`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/Packetizer.java
 
 
 ### UDP connection
@@ -198,8 +198,8 @@ Since UDP is not a connected protocol, [`SelectorAlarm`] wake up the selector
 once per minute to clean expired (in practice, unused for more than 2 minutes)
 UDP connections.
 
-[`DatagramChannel`]: relay/src/main/java/com/genymobile/relay/DatagramChannel.java
-[`SelectorAlarm`]: relay/src/main/java/com/genymobile/relay/SelectorAlarm.java
+[`DatagramChannel`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/DatagramChannel.java
+[`SelectorAlarm`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/SelectorAlarm.java
 
 
 ### TCP connection
@@ -250,7 +250,7 @@ available, the client then _pulls_ the available packets from the
 [`TCPConnection`]s (that implements [`PacketSource`]).
 
 [interestOps]: https://developer.android.com/reference/java/nio/channels/SelectionKey.html#interestOps%28int%29
-[`PacketSource`]: relay/src/main/java/com/genymobile/relay/PacketSource.java
+[`PacketSource`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/PacketSource.java
 
 
 ## Hack

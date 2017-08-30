@@ -27,31 +27,17 @@ task clean(type: Delete) {
     delete rootProject.buildDir
 }
 
-task debugJava(dependsOn: [':app:assembleDebug', ':relay:assembleDebug'])
-task releaseJava(dependsOn: [':app:assembleRelease', ':relay:assembleRelease'])
+task debugJava(dependsOn: [':app:assembleDebug', ':relay-java:assembleDebug'])
+task releaseJava(dependsOn: [':app:assembleRelease', ':relay-java:assembleRelease'])
 
-task debugRust(dependsOn: [':app:assembleDebug', ':rustrelay:debug'])
-task releaseRust(dependsOn: [':app:assembleRelease', ':rustrelay:release'])
+task debugRust(dependsOn: [':app:assembleDebug', ':relay-rust:debug'])
+task releaseRust(dependsOn: [':app:assembleRelease', ':relay-rust:release'])
 
-task releaseRustWindows(dependsOn: [':app:assembleRelease', 'rustrelay:releaseCrossToWindows'])
+task releaseRustWindows(dependsOn: [':app:assembleRelease', 'relay-rust:releaseCrossToWindows'])
 
 task debugAll(dependsOn: ['debugJava', 'debugRust'])
 task releaseAll(dependsOn: ['releaseJava', 'releaseRust', 'releaseRustWindows'])
 
-task checkJava(dependsOn: [':app:check', ':relay:check'])
-task checkRust(dependsOn: ['app:check', ':rustrelay:check'])
+task checkJava(dependsOn: [':app:check', ':relay-java:check'])
+task checkRust(dependsOn: ['app:check', ':relay-rust:check'])
 task checkAll(dependsOn: ['checkJava', 'checkRust'])
-
-task clientStart(type: Exec, dependsOn: ':app:installDebug') {
-    // linux
-    commandLine './gnirehtet', 'start'
-}
-
-task clientStop(type: Exec) {
-    // linux
-    commandLine './gnirehtet', 'stop'
-}
-
-task serverStart(dependsOn: ':relay:run');
-
-task start(dependsOn: ['clientStart', 'serverStart'])

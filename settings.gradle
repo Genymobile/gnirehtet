@@ -1,1 +1,1 @@
-include ':app', ':relay', ':rustrelay'
+include ':app', ':relay-java', ':relay-rust'
