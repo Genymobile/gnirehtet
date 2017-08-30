@@ -14,12 +14,30 @@ support [IPv6] (yet?).
 [IPv6]: https://en.wikipedia.org/wiki/IPv6
 
 
+## Flavors
+
+Two implementations of _Gnirehtet_ are available:
+ - one in **Java**;
+ - one in **Rust**.
+
+
+### Which one to choose?
+
+Use the **Rust** implementation. The native binary consumes less CPU and memory,
+and does not require a _Java_ runtime environment.
+
+The relay server of _Gnirehtet_ was initially only implemented in Java. As a
+benefit, the same "binary" runs on every platform having _Java 8_ runtime
+installed. It is still maintained to provide a working alternative in case of
+problems with the Rust version.
+
+
 ## Requirements
 
 The Android application requires at least API 21 (Android 5.0).
 
-_Java 8_ is required on your computer. On Debian-based distros, install the
-package `openjdk-8-jre`.
+For the _Java_ version only, _Java 8_ is required on your computer. On
+Debian-based distros, install the package `openjdk-8-jre`.
 
 You need a recent version of [adb] (where `adb reverse` is implemented, it
 works with 1.0.36). On Debian-based distros, check for `android-tools-adb` or
@@ -33,19 +51,40 @@ Make sure you [enabled adb debugging][enable-adb] on your device(s).
 
 ## Download
 
-Download the [latest release][latest]:
-
-[`gnirehtet-v1.1.1.zip`][direct]
-(SHA-256: _5bff4dbd11abd5b87211d25c36d715166b341f230f1f7614bbd1b570660980e1_)
+Download the [latest release][latest] in the flavor you want.
 
 [latest]: https://github.com/Genymobile/gnirehtet/releases/latest
-[direct]: https://github.com/Genymobile/gnirehtet/releases/download/v1.1.1/gnirehtet-v1.1.1.zip
 
+### Rust
 
-Then extract it. You get three files:
+ - **Linux:** [`gnirehtet-rust-linux64-v2.0.zip`][direct-rust-linux64]
+   (SHA-256: _not-available-yet_)
+ - **Windows:** [`gnirehtet-rust-win64-v2.0.zip`][direct-rust-win64]
+   (SHA-256: _not-available-yet_)
+ - **MacOS:** [`gnirehtet-rust-macos-v2.0.zip`][direct-rust-macos]
+   (SHA-256: _not-available-yet_)
+
+[direct-rust-linux64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.0/gnirehtet-rust-linux64-v2.0.zip
+[direct-rust-win64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.0/gnirehtet-rust-win64-v2.0.zip
+[direct-rust-macos]: https://github.com/Genymobile/gnirehtet/releases/download/v2.0/gnirehtet-rust-macos-v2.0.zip
+
+Then extract it. You get two files:
+ - `gnirehtet.apk`
  - `gnirehtet`
+
+
+### Java
+
+ - **All platforms:** [`gnirehtet-java-v2.0.zip`][direct-java]
+   (SHA-256: _not-available-yet_)
+
+[direct-java]: https://github.com/Genymobile/gnirehtet/releases/download/v2.0/gnirehtet-java-v2.0.zip
+
+Then extract it. You get four files:
  - `gnirehtet.apk`
  - `gnirehtet.jar`
+ - `gnirehtet`
+ - `gnirehtet.cmd`
 
 
 ## Run (simple)
