@@ -531,8 +531,15 @@ fn main() {
                 }
             }
             None => {
-                error!("Unknown command: {}", command_name);
-                print_usage();
+                if command_name == "rt" {
+                    error!(
+                        "The 'rt' command has been renamed to 'run'. Try 'gnirehtet run' instead."
+                    );
+                    print_command_usage(&RunCommand);
+                } else {
+                    error!("Unknown command: {}", command_name);
+                    print_usage();
+                }
             }
         }
     } else {

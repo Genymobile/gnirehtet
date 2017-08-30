@@ -313,7 +313,12 @@ public final class Main {
             }
         }
 
-        Log.e(TAG, "Unknown command: " + cmd);
-        printUsage();
+        if ("rt".equals(cmd)) {
+            Log.e(TAG, "The 'rt' command has been renamed to 'run'. Try 'gnirehtet run' instead.");
+            printCommandUsage(Command.RUN);
+        } else {
+            Log.e(TAG, "Unknown command: " + cmd);
+            printUsage();
+        }
     }
 }
