@@ -19,6 +19,7 @@ task clean(type: Exec) {
 }
 
 task check(dependsOn: 'test')
+task build(dependsOn: ['test', 'debug', 'release'])
 
 // Requirements:
 //
