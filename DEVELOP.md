@@ -194,12 +194,11 @@ The relaying is simple for UDP: each packet received from one side must be sent
 to the other side, without any splitting or merging (datagram boundaries must be
 preserved for UDP).
 
-Since UDP is not a connected protocol, [`SelectorAlarm`] wake up the selector
-once per minute to clean expired (in practice, unused for more than 2 minutes)
-UDP connections.
+Since UDP is not a connected protocol, the selector wakes up once per
+minute (using a timeout) to clean expired (in practice, unused for more than 2
+minutes) UDP connections.
 
 [`DatagramChannel`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/DatagramChannel.java
-[`SelectorAlarm`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/SelectorAlarm.java
 
 
 ### TCP connection
