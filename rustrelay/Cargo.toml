@@ -20,4 +20,4 @@ ctrlc = { version = "3.0", features = ["termination"] }     # for handling Ctrl+
 lto = true     # link-time optimization
 
 [replace]
-"mio:0.6.10" = { git = 'https://github.com/rom1v/mio', branch='empty_interest' }
+"mio:0.6.10" = { git = 'https://github.com/rom1v/mio', tag='for_gnirehtet_20170823' }
