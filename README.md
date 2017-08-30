@@ -58,7 +58,7 @@ only.
 
 If you want to activate reverse tethering for exactly one device, just execute:
 
-    ./gnirehtet rt
+    ./gnirehtet run
 
 Reverse tethering remains active until you press _Ctrl+C_.
 

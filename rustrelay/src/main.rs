@@ -42,7 +42,7 @@ const COMMANDS: &[&'static Command] = &[
     &InstallCommand,
     &UninstallCommand,
     &ReinstallCommand,
-    &RtCommand,
+    &RunCommand,
     &StartCommand,
     &StopCommand,
     &RestartCommand,
@@ -59,7 +59,7 @@ trait Command {
 struct InstallCommand;
 struct UninstallCommand;
 struct ReinstallCommand;
-struct RtCommand;
+struct RunCommand;
 struct StartCommand;
 struct StopCommand;
 struct RestartCommand;
@@ -127,9 +127,9 @@ impl Command for ReinstallCommand {
     }
 }
 
-impl Command for RtCommand {
+impl Command for RunCommand {
     fn command(&self) -> &'static str {
-        "rt"
+        "run"
     }
 
     fn accepted_parameters(&self) -> u8 {

@@ -76,7 +76,7 @@ public final class Main {
                 INSTALL.execute(args);
             }
         },
-        RT("rt", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER) {
+        RUN("run", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER) {
             @Override
             String getDescription() {
                 return "Enable reverse tethering for exactly one device:\n"
