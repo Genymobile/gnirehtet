@@ -1,14 +1,26 @@
 # Gnirehtet for developers
 
 
-## Requirements
+## Getting started
+
+### Requirements
 
 You need the [Android SDK] (_Android Studio_) and the JDK 8 (`openjdk-8-jdk`).
 
+You also need the [Rust] environment (currently 1.19) to build the Rust version:
+
+```bash
+wget https://sh.rustup.rs -O rustup-init
+sh rustup-init --default-toolchain 1.19.0
+```
+
 [Android SDK]: https://developer.android.com/studio/index.html
+[Rust]: https://www.rust-lang.org/
 
 
-## Build
+### Build
+
+#### Everything
 
 If `gradle` is installed on your computer:
 
@@ -18,9 +30,60 @@ Otherwise, you can call the [gradle wrapper]:
 
     ./gradlew build
 
-You can also import the project in _Android Studio_: File → Import…
+This will build the Android application, the Java and Rust relay servers, both
+in debug and release versions.
 
 [gradle wrapper]: https://docs.gradle.org/current/userguide/gradle_wrapper.html
+
+
+#### Specific parts
+
+Several _gradle_ tasks are exposed in the root project. For instance:
+
+ - `debugJava` and `releaseJava` build the Android application and the Java
+   relay server;
+ - `debugRust` and `releaseRust` build the Android application and the Rust
+   relay server.
+
+Even if the Rust build tasks are exposed through `gradle` (which wraps calls to
+`cargo`), it is often more convenient to use `cargo` directly.
+
+For instance, to build a release version of the Rust relay server:
+
+    cd relay-rust
+    cargo build --release
+
+It will generate the binary in `target/release/gnirehtet`.
+
+
+#### Cross-compile the Rust relay server from Linux to Windows
+
+To build `gnirehtet.exe` from Linux, install the cross-compile toolchain (on
+Debian):
+
+    sudo apt install gcc-mingw-w64-x86-64
+    rustup target add x86_64-pc-windows-gnu
+
+Add the following lines to `~/.cargo/config`:
+
+    [target.x86_64-pc-windows-gnu]
+    linker = "x86_64-w64-mingw32-gcc"
+    ar = "x86_64-w64-mingw32-gcc-ar"
+
+Then build:
+
+    cargo build --release --target=x86_64-pc-windows-gnu
+
+It will generate `target/x86_64-pc-windows-gnu/release/gnirehtet.exe`.
+
+
+### Android Studio
+
+To import the project in _Android Studio_: File → Import…
+
+From there, you can develop on the Android application and the Java relay
+server. You can also execute any _gradle_ tasks, and run the tests with visual
+results.
 
 
 ## Overview
@@ -108,34 +171,68 @@ of [`IPPacketOutputStream`].
 
 ## Relay server
 
-The relay server is a _Java 8_ project located in [`relay-java/`](relay-java/).
+The relay server comes in two flavors:
+ - the **Java** version is a _Java 8_ project located in
+   [`relay-java/`](relay-java/);
+ - the **Rust** version is a _Rust_ project located in
+   [`relay-rust/`](relay-rust/).
 
-It is implemented using [asynchronous I/O] through [Java NIO]. As a
-consequence, it is essentially monothreaded, so there is no need for
+It is implemented using [asynchronous I/O] (through [Java NIO] and [Rust mio]).
+As a consequence, it is essentially monothreaded, so there is no need for
 synchronization to handle packets.
-
-Every [channel][SelectableChannel] (represented by yellow arrows on the schema
-below) is registered to a unique [selector], defined in [`Relay`], with its
-[`SelectionHandler`] as [attachment] (for better decoupling).
-
-At the beginning, only the channel of the server socket, listening on port
-31416, is registered. Then, a [`Client`] instance is created for every
-accepted client.
 
 [asynchronous I/O]: https://en.wikipedia.org/wiki/Asynchronous_I/O
 [Java NIO]: https://en.wikipedia.org/wiki/New_I/O_%28Java%29
-[SelectableChannel]: https://docs.oracle.com/javase/8/docs/api/java/nio/channels/SelectableChannel.html
-[Selector]: https://docs.oracle.com/javase/8/docs/api/java/nio/channels/Selector.html
-[`Relay`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/Relay.java
-[`SelectionHandler`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/SelectionHandler.java
-[attachment]: https://docs.oracle.com/javase/8/docs/api/java/nio/channels/SelectionKey.html#attachment--
-[`Client`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/Client.java
+[Rust mio]: https://docs.rs/mio/0.6.10/mio/
+
+
+### Selector
+
+There are different _socket channels_ registered to a unique _selector_:
+ - one for the server socket, listening on port 31416;
+ - one for each _client_, accepted by the server socket;
+ - one for each _TCP connection_ to the network;
+ - one for each _UDP connection_ to the network.
+
+Initially, only the server socket _channel_ is registered.
+
+In **Java**, the _channels_ ([`SelectableChannel`][nio/SelectableChannel]) are
+registered to the _selector_ ([`Selector`][nio/Selector]) defined in
+[`Relay`][java/Relay], with their [`SelectionHandler`][java/SelectionHandler] as
+[attachment][nio/attachment] (for better decoupling). A [`Client`][java/Client]
+is created for every accepted _client_.
+
+[nio/Selector]: https://docs.oracle.com/javase/8/docs/api/java/nio/channels/Selector.html
+[nio/SelectableChannel]: https://docs.oracle.com/javase/8/docs/api/java/nio/channels/SelectableChannel.html
+[java/Relay]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/Relay.java
+[java/SelectionHandler]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/SelectionHandler.java
+[nio/attachment]: https://docs.oracle.com/javase/8/docs/api/java/nio/channels/SelectionKey.html#attachment--
+[java/Client]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/Client.java
+
+In **Rust**, our own [`Selector`][rust/selector] class wraps the
+[`Poll`][mio/Poll] from _mio_ to expose an API accepting event handlers instead
+of low-level [tokens][mio/Token]. The _selector_ instance is created in
+[`Relay`][rust/relay]. The _channels_ are called _"handles"_ in _mio_; they are
+simply the socket instances themselves ([`TcpListener`][mio/TcpListener],
+[`TcpStream`][mio/TcpStream] and [`UdpSocket`][mio/UdpSocket]). A
+[`Client`][rust/client] is created for every accepted _client_.
+
+[mio/Poll]: https://docs.rs/mio/0.6.10/mio/struct.Poll.html
+[mio/Token]: https://docs.rs/mio/0.6.10/mio/struct.Token.html
+[mio/TcpListener]: https://docs.rs/mio/0.6.10/mio/net/struct.TcpListener.html
+[mio/TcpStream]: https://docs.rs/mio/0.6.10/mio/net/struct.TcpStream.html
+[mio/UdpSocket]: https://docs.rs/mio/0.6.10/mio/net/struct.UdpSocket.html
+[rust/selector]: relay-rust/src/relay/selector.rs
+[rust/relay]: relay-rust/src/relay/relay.rs
+[rust/client]: relay-rust/src/relay/client.rs
 
 ![archi](assets/archi.png)
 
-Each [`Client`] manages a TCP socket, used to transmit raw IP packets from and
-to the _Gnirehtet_ Android client. Thus, these IP packets are encapsulated into
-TCP (they are transmitted as the TCP payload).
+### Client
+
+Each _client_ manages a TCP socket, used to transmit raw IP packets from and to
+the _Gnirehtet_ Android client. Thus, these IP packets are encapsulated into TCP
+(they are transmitted as the TCP payload).
 
 When a client connects, the relay server assigns an integer id to it, which it
 writes to the TCP socket. The client considers itself connected to the relay
@@ -145,48 +242,123 @@ by a client succeeds whenever a port redirection is enabled (typically through
 `adb reverse`), even if the relay server is not listening. In that case, the
 first _read_ will fail.
 
-The [`IPv4Packet`] class provides a structured view to read and write packet
-data, which is physically stored in the buffers (the little squares on the
-schema). Since we handle one packet at a time with asynchronous I/O, there is no
-need to copy or synchronize access to the packets data: the [`IPv4Packet`]s
-just point to the buffer where they are stored.
 
-Each [`Client`] holds a [`Router`], responsible to send the packets to the
-right [`Connection`], identified by these 4 properties available in the IP and
-transport headers:
+### Packets
 
+A class representing an _IPv4 packet_
+([`IPv4Packet`][java/IPv4Packet] | [`Ipv4Packet`][rust/ipv4-packet]) provides a
+structured view to read and write packet data, which is physically stored in the
+buffers (the little squares on the schema). Since we handle one packet at a time
+with asynchronous I/O, there is no need to copy or synchronize access to the
+packets data: the packets just point to the buffer where they are stored.
+
+[java/IPv4Packet]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/IPv4Packet.java
+[rust/ipv4-packet]: relay-rust/src/relay/ipv4\_packet.rs
+
+Each packet contains an instance of _IPv4 headers_ and _transport headers_
+(which might be _TCP_ or _UDP_ headers).
+
+In **Java**, this is straightforward: [`IPv4Header`][java/IPv4Header],
+[`TCPHeader`][java/TCPHeader] and [`UDPHeader`][java/UDPHeader] just share a
+slice of the raw packet buffer.
+
+[java/IPv4Header]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/IPv4Header.java
+[java/TCPHeader]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/TCPHeader.java
+[java/UDPHeader]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/UDPHeader.java
+
+In **Rust**, the borrowing rules prevent to share a mutable reference.
+Therefore, _header data_ classes (`*HeaderData`) are used to store the fields,
+and lifetime-bound views (`*Header<'a>` and `*HeaderMut<'a>`) reference both
+the raw array and the _header data_:
+
+ - [`ipv4_header`][rust/ipv4-header]:
+   - data: `Ipv4HeaderData`
+   - view: `Ipv4Header<'a>`
+   - mutable view: `Ipv4HeaderMut<'a>`
+ - [`tcp_header`][rust/tcp-header]:
+   - data: `TcpHeaderData`
+   - view: `TcpHeader<'a>`
+   - mutable view: `TcpHeaderMut<'a>`
+ - [`udp_header`][rust/udp-header]:
+   - data: `UdpHeaderData`
+   - view: `UdpHeader<'a>`
+   - mutable view: `UdpHeaderMut<'a>`
+
+In addition, we use [enums][rust-enums] for _transport headers_ to statically
+dispatch calls to _UDP_ and _TCP_ header classes:
+
+ - [`transport_header`][rust/transport-header]:
+   - data: `TransportHeaderData`
+   - view: `TransportHeader<'a>`
+   - mutable view: `TransportHeaderMut<'a>`
+
+[rust/ipv4-header]: relay-rust/src/relay/ipv4\_header.rs
+[rust/tcp-header]: relay-rust/src/relay/tcp\_header.rs
+[rust/udp-header]: relay-rust/src/relay/udp\_header.rs
+[rust/transport-header]: relay-rust/src/relay/transport\_header.rs
+[rust-enums]: https://doc.rust-lang.org/book/first-edition/enums.html
+
+
+### Router
+
+Each _client_ holds a _router_
+([`Router`][java/Router] | [`Router`][rust/router]), responsible for sending the
+packets to the right _connection_, identified by these 5 properties available in
+the IP and transport headers:
+
+ - protocol
  - source address
  - source port
  - destination address
  - destination port
 
-A [`Connection`] is either a [`TCPConnection`] or a [`UDPConnection`]
-to the requested destination. It registers its own channel to the selector.
+These identifiers are stored in a _connection id_
+([`ConnectionId`][java/ConnectionId] | [`ConnectionId`][rust/connection]),
+used as a key to find or create the associated _connection_.
+
+[java/Router]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/Router.java
+[java/ConnectionId]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/ConnectionId.java
+[rust/Router]: relay-rust/src/relay/router.rs
+[rust/connection]: relay-rust/src/relay/connection.rs
+
+
+### Connections
+
+A _connection_ ([`Connection`][java/Connection] |
+[`Connection`][rust/connection]) is either a _TCP connection_
+([`TCPConnection`][java/TCPConnection] | [`TcpConnection`][rust/tcp-connection])
+or a _UDP connection_ ([`UDPConnection`][java/UDPConnection] |
+[`UdpConnection`][rust/udp-connection]) to the requested destination. It
+registers its own _channel_ to the _selector_.
+
+[java/Connection]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/Connection.java
+[java/TCPConnection]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/TCPConnection.java
+[java/UDPConnection]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/UDPConnection.java
+[rust/connection]: relay-rust/src/relay/connection.rs
+[rust/tcp-connection]: relay-rust/src/relay/tcp\_connection.rs
+[rust/udp-connection]: relay-rust/src/relay/udp\_connection.rs
 
 The connection is responsible for converting data from level 3 to level 5 for
 device-to-network packets, and from level 5 to level 3 for network-to-device
-packets. For [UDP][`UDPConnection`], it consists essentially in removing or
-adding IP and transport headers. For [TCP][`TCPConnection`], however, it
+packets. For _UDP connections_, it consists essentially in removing or
+adding IP and transport headers. For _TCP connections_, however, it
 requires to respond to the client according to the TCP protocol ([RFC 793]),
 in such a way as to ensure a correct end-to-end communication.
 
-The class [`Packetizer`] converts from level 5 to level 3 by appending correct
-IP and transport headers.
-
-
-[`IPv4Packet`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/IPv4Packet.java
-[`Router`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/Router.java
-[`Connection`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/Connection.java
-[`TCPConnection`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/TCPConnection.java
-[`UDPConnection`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/UDPConnection.java
 [RFC 793]: https://tools.ietf.org/html/rfc793
-[`Packetizer`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/Packetizer.java
+
+A _packetizer_ ([`Packetizer`][java/Packetizer] |
+[`Packetizer`][rust/packetizer]) converts from level 5 to level 3 by appending
+correct IP and transport headers.
+
+[java/Packetizer]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/Packetizer.java
+[rust/packetizer]: relay-rust/src/relay/packetizer.rs
 
 
-### UDP connection
+#### UDP connection
 
 When the first packet for a specific UDP connection is received from the device,
-a new [`UDPConnection`] is created. It keeps a copy of the IP and UDP headers
+a new `UdpConnection` is created. It keeps a copy of the IP and UDP headers
 of this first packet, swapping the source and the destination, in order to use
 them as headers for all response packets.
 
@@ -194,16 +366,14 @@ The relaying is simple for UDP: each packet received from one side must be sent
 to the other side, without any splitting or merging (datagram boundaries must be
 preserved for UDP).
 
-Since UDP is not a connected protocol, the selector wakes up once per
-minute (using a timeout) to clean expired (in practice, unused for more than 2
-minutes) UDP connections.
-
-[`DatagramChannel`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/DatagramChannel.java
+Since UDP is not a connected protocol, a UDP connection is never "closed".
+Therefore, the _selector_ wakes up once per minute (using a timeout) to clean
+expired (in practice, unused for more than 2 minutes) UDP connections.
 
 
-### TCP connection
+#### TCP connection
 
-[`TCPConnection`] also keeps, as a reference, a copy of the IP and TCP headers
+`TcpConnection` also keeps, as a reference, a copy of the IP and TCP headers
 of the first packet received.
 
 However, contrary to UDP, TCP must provide reliable delivery. In particular,
@@ -243,13 +413,17 @@ retransmission mechanism**.
 [contraposition]: https://en.wikipedia.org/wiki/Contraposition
 
 To prevent retrieving a packet while our buffers are full, we indicate that we
-are not [interested in reading][interestOps] the TCP channel when some pending
-data remain to be written to the client buffer. Once some space becomes
-available, the client then _pulls_ the available packets from the
-[`TCPConnection`]s (that implements [`PacketSource`]).
+are not interested in reading ([`interestOps`][nio/interestOps] |
+[`interest`][mio/reregister]) the TCP channel when some pending data remain to
+be written to the client buffer. Once some space becomes available, the client
+then _pulls_ the available packets from the `TcpConnection`s, which are _packet
+sources_ ([`PacketSource`][java/PacketSource] |
+[`PacketSource`][rust/packet-source]).
 
-[interestOps]: https://developer.android.com/reference/java/nio/channels/SelectionKey.html#interestOps%28int%29
-[`PacketSource`]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/PacketSource.java
+[nio/interestOps]: https://developer.android.com/reference/java/nio/channels/SelectionKey.html#interestOps%28int%29
+[mio/reregister]: https://docs.rs/mio/0.6.10/mio/struct.Poll.html#method.reregister
+[java/PacketSource]: relay-java/src/main/java/com/genymobile/gnirehtet/relay/PacketSource.java
+[rust/packet-source]: relay-rust/src/relay/packet\_source.rs
 
 
 ## Hack
