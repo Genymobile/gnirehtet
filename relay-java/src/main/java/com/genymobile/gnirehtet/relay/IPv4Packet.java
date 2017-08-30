@@ -18,7 +18,6 @@ package com.genymobile.gnirehtet.relay;
 
 import java.nio.ByteBuffer;
 
-
 public class IPv4Packet {
 
     private static final String TAG = IPv4Packet.class.getSimpleName();
