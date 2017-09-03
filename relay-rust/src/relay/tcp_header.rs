@@ -320,10 +320,10 @@ impl<'a> TcpHeaderMut<'a> {
         // prefer optimization over readability/safety
 
         let mut hsum = 0; // high-order bytes sum
-        for i in 0..header_length / 2 {
+        for i in 0..(header_length / 2) as usize {
             unsafe {
-                sum += *self.raw.get_unchecked((2 * i + 1) as usize) as u32; // low-order bytes
-                hsum += *self.raw.get_unchecked((2 * i) as usize) as u32; // high-order bytes
+                sum += *self.raw.get_unchecked(2 * i + 1) as u32; // low-order bytes
+                hsum += *self.raw.get_unchecked(2 * i) as u32; // high-order bytes
             }
         }
 
@@ -333,10 +333,10 @@ impl<'a> TcpHeaderMut<'a> {
             payload.len(),
             "Payload length does not match"
         );
-        for i in 0..payload_length / 2 {
+        for i in 0..(payload_length / 2) as usize {
             unsafe {
-                sum += *payload.get_unchecked((2 * i + 1) as usize) as u32; // low-order bytes
-                hsum += *payload.get_unchecked((2 * i) as usize) as u32; // high-order bytes
+                sum += *payload.get_unchecked(2 * i + 1) as u32; // low-order bytes
+                hsum += *payload.get_unchecked(2 * i) as u32; // high-order bytes
             }
         }
 
