@@ -303,6 +303,16 @@ impl<'a> TcpHeaderMut<'a> {
         let transport_length = ipv4_header_data.total_length() -
             ipv4_header_data.header_length() as u16;
 
+        let header_length = self.header_length();
+        debug_assert!(header_length % 2 == 0 && header_length >= 20);
+
+        let payload_length = transport_length - header_length as u16;
+        debug_assert_eq!(
+            payload_length as usize,
+            payload.len(),
+            "Payload length does not match"
+        );
+
         let mut sum = 6u32; // protocol: TCP = 6
         sum += source >> 16;
         sum += source & 0xFFFF;
@@ -313,35 +323,29 @@ impl<'a> TcpHeaderMut<'a> {
         // reset checksum field, so that it can be added with other bytes
         self.set_checksum(0);
 
-        let header_length = self.header_length();
-        debug_assert!(header_length % 2 == 0 && header_length >= 20);
-
         // checksum computation is the most CPU-intensive task in gnirehtet
         // prefer optimization over readability/safety
 
         let mut hsum = 0; // high-order bytes sum
-        for i in 0..(header_length / 2) as usize {
-            unsafe {
-                sum += *self.raw.get_unchecked(2 * i + 1) as u32; // low-order bytes
-                hsum += *self.raw.get_unchecked(2 * i) as u32; // high-order bytes
-            }
-        }
 
-        let payload_length = transport_length - header_length as u16;
-        debug_assert_eq!(
-            payload_length as usize,
-            payload.len(),
-            "Payload length does not match"
-        );
-        for i in 0..(payload_length / 2) as usize {
-            unsafe {
-                sum += *payload.get_unchecked(2 * i + 1) as u32; // low-order bytes
-                hsum += *payload.get_unchecked(2 * i) as u32; // high-order bytes
+        unsafe {
+            let mut p = self.raw.as_ptr();
+            let end = p.offset(header_length as isize);
+            while p < end {
+                hsum += *p as u32;
+                sum += *p.offset(1) as u32;
+                p = p.offset(2);
             }
-        }
 
-        if payload_length % 2 != 0 {
-            unsafe {
+            let mut p = payload.as_ptr();
+            // -1 to ignore the last if payload_length is odd
+            let end = p.offset((payload_length - 1) as isize);
+            while p < end {
+                hsum += *p as u32;
+                sum += *p.offset(1) as u32;
+                p = p.offset(2);
+            }
+            if payload_length % 2 != 0 {
                 // if payload length is odd, the last byte is considered high-order
                 hsum += *payload.get_unchecked((payload_length - 1) as usize) as u32;
             }
