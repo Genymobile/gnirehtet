@@ -313,7 +313,7 @@ impl<'a> TcpHeaderMut<'a> {
         // reset checksum field, so that it can be added with other bytes
         self.set_checksum(0);
 
-        let header_length = ipv4_header_data.header_length();
+        let header_length = self.header_length();
         debug_assert!(header_length % 2 == 0 && header_length >= 20);
 
         // checksum computation is the most CPU-intensive task in gnirehtet
