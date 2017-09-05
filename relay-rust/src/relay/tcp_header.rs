@@ -339,7 +339,7 @@ impl<'a> TcpHeaderMut<'a> {
 
             let mut p = payload.as_ptr();
             // -1 to ignore the last if payload_length is odd
-            let end = p.offset((payload_length - 1) as isize);
+            let end = p.offset(payload_length as isize - 1);
             while p < end {
                 hsum += *p as u32;
                 sum += *p.offset(1) as u32;
@@ -422,6 +422,32 @@ mod tests {
         // payload
         raw.write_u32::<BigEndian>(0x1122EEFF).unwrap();
         raw.write_u8(0x88).unwrap();
+
+        raw
+    }
+
+    fn create_empty_packet() -> Vec<u8> {
+        let mut raw = Vec::new();
+        raw.reserve(40);
+
+        raw.write_u8(4u8 << 4 | 5).unwrap(); // version_and_ihl
+        raw.write_u8(0).unwrap(); //ToS
+        raw.write_u16::<BigEndian>(40).unwrap(); // total length
+        raw.write_u32::<BigEndian>(0).unwrap(); // id_flags_fragment_offset
+        raw.write_u8(0).unwrap(); // TTL
+        raw.write_u8(6).unwrap(); // protocol (TCP)
+        raw.write_u16::<BigEndian>(0).unwrap(); // checksum
+        raw.write_u32::<BigEndian>(0x12345678).unwrap(); // source address
+        raw.write_u32::<BigEndian>(0xA2A24242).unwrap(); // destination address
+
+        raw.write_u16::<BigEndian>(0x1234).unwrap(); // source port
+        raw.write_u16::<BigEndian>(0x5678).unwrap(); // destination port
+        raw.write_u32::<BigEndian>(0x111).unwrap(); // sequence number
+        raw.write_u32::<BigEndian>(0x222).unwrap(); // acknowledgement number
+        raw.write_u16::<BigEndian>(5 << 12).unwrap(); // data offset + flags(0)
+        raw.write_u16::<BigEndian>(0).unwrap(); // window (don't care for these tests)
+        raw.write_u16::<BigEndian>(0).unwrap(); // checksum
+        raw.write_u16::<BigEndian>(0).unwrap(); // urgent pointer
 
         raw
     }
@@ -543,6 +569,37 @@ mod tests {
 
                 // payload
                 sum += 0x1122 + 0xEEFF + 0x8800;
+
+                while (sum & !0xFFFF) != 0 {
+                    sum = (sum & 0xFFFF) + (sum >> 16);
+                }
+                !sum as u16
+            };
+
+            assert_eq!(expected_checksum, checksum);
+        } else {
+            panic!("Not a TCP packet");
+        }
+    }
+
+    #[test]
+    fn compute_checksum_empty_payload() {
+        let raw = &mut create_empty_packet()[..];
+        let mut ipv4_packet = Ipv4Packet::parse(raw);
+        let (ipv4_header, mut transport) = ipv4_packet.split_mut();
+        if let Some((TransportHeaderMut::Tcp(ref mut tcp_header), ref payload)) = transport {
+            // set a fake checksum value to assert that it is correctly computed
+            tcp_header.set_checksum(0x79);
+            tcp_header.update_checksum(ipv4_header.data(), payload);
+            let checksum = tcp_header.checksum();
+
+            let expected_checksum = {
+                // pseudo-header
+                let mut sum: u32 = 0x1234 + 0x5678 + 0xA2A2 + 0x4242 + 0x0006 + 0x0014;
+
+                // header
+                sum += 0x1234 + 0x5678 + 0x0000 + 0x0111 + 0x0000 + 0x0222 + 0x5000 + 0x0000 +
+                    0x0000 + 0x0000;
 
                 while (sum & !0xFFFF) != 0 {
                     sum = (sum & 0xFFFF) + (sum >> 16);
