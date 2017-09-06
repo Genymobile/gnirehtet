@@ -18,8 +18,12 @@ task clean(type: Exec) {
     commandLine 'cargo', 'clean'
 }
 
-task check(dependsOn: 'test')
-task build(dependsOn: ['test', 'debug', 'release'])
+task checkstyle(type: Exec) {
+    commandLine 'cargo', 'fmt', '--', '--write-mode=diff'
+}
+
+task check(dependsOn: ['checkstyle', 'test'])
+task build(dependsOn: ['check', 'debug', 'release'])
 
 // Requirements:
 //
