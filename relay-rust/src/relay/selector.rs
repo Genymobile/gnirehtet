@@ -45,7 +45,7 @@ impl<T: EventHandler> EventHandler for Rc<RefCell<T>> {
 
 pub struct Selector {
     poll: Poll,
-    handlers: Slab<SelectionHandler, Token>,
+    handlers: Slab<SelectionHandler>,
     // tokens to be removed after all the current poll events are executed
     tokens_to_remove: Vec<Token>,
 }
@@ -79,11 +79,8 @@ impl Selector {
     where
         E: Evented + ?Sized,
     {
-        let token = self.handlers
-            .insert(SelectionHandler::new(handler))
-            .map_err(|_| {
-                io::Error::new(io::ErrorKind::Other, "Cannot allocate slab slot")
-            })?;
+        let selection_handler = SelectionHandler::new(handler);
+        let token = Token(self.handlers.insert(selection_handler));
         self.poll.register(handle, token, interest, opts)?;
         Ok(token)
     }
@@ -113,7 +110,7 @@ impl Selector {
 
     fn clean_removed_tokens(&mut self) {
         for &token in &self.tokens_to_remove {
-            self.handlers.remove(token).expect("Token not found");
+            self.handlers.remove(token.0);
         }
         self.tokens_to_remove.clear();
     }
@@ -126,7 +123,7 @@ impl Selector {
         for event in events {
             debug!(target: TAG, "event={:?}", event);
             let handler = self.handlers
-                .get_mut(event.token())
+                .get_mut(event.token().0)
                 .expect("Token not found")
                 .handler
                 .clone();
