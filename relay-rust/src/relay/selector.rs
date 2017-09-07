@@ -15,7 +15,6 @@
  */
 
 use mio::*;
-use std::cell::RefCell;
 use std::io;
 use std::rc::Rc;
 use std::time::Duration;
@@ -24,40 +23,23 @@ use slab::Slab;
 const TAG: &'static str = "Selector";
 
 pub trait EventHandler {
-    fn on_ready(&mut self, selector: &mut Selector, event: Event);
+    fn on_ready(&self, selector: &mut Selector, event: Event);
 }
 
 impl<F> EventHandler for F
 where
-    F: FnMut(&mut Selector, Event),
+    F: Fn(&mut Selector, Event),
 {
-    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
+    fn on_ready(&self, selector: &mut Selector, event: Event) {
         self(selector, event);
-    }
-}
-
-// for convenience
-impl<T: EventHandler> EventHandler for Rc<RefCell<T>> {
-    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
-        self.borrow_mut().on_ready(selector, event);
     }
 }
 
 pub struct Selector {
     poll: Poll,
-    handlers: Slab<SelectionHandler>,
+    handlers: Slab<Rc<EventHandler>>,
     // tokens to be removed after all the current poll events are executed
     tokens_to_remove: Vec<Token>,
-}
-
-struct SelectionHandler {
-    handler: Rc<RefCell<Box<EventHandler>>>,
-}
-
-impl SelectionHandler {
-    fn new(handler: Box<EventHandler>) -> Self {
-        Self { handler: Rc::new(RefCell::new(handler)) }
-    }
 }
 
 impl Selector {
@@ -69,18 +51,18 @@ impl Selector {
         })
     }
 
-    pub fn register<E>(
+    pub fn register<E, H>(
         &mut self,
         handle: &E,
-        handler: Box<EventHandler>,
+        handler: H,
         interest: Ready,
         opts: PollOpt,
     ) -> io::Result<Token>
     where
         E: Evented + ?Sized,
+        H: EventHandler + 'static,
     {
-        let selection_handler = SelectionHandler::new(handler);
-        let token = Token(self.handlers.insert(selection_handler));
+        let token = Token(self.handlers.insert(Rc::new(handler)));
         self.poll.register(handle, token, interest, opts)?;
         Ok(token)
     }
@@ -125,9 +107,8 @@ impl Selector {
             let handler = self.handlers
                 .get_mut(event.token().0)
                 .expect("Token not found")
-                .handler
                 .clone();
-            handler.borrow_mut().on_ready(self, event);
+            handler.on_ready(self, event);
         }
 
         // remove the tokens marked as removed

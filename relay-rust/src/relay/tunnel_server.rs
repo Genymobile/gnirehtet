@@ -23,7 +23,7 @@ use mio::tcp::TcpListener;
 
 use super::binary;
 use super::client::Client;
-use super::selector::{EventHandler, Selector};
+use super::selector::Selector;
 
 const TAG: &'static str = "TunnelServer";
 
@@ -47,8 +47,10 @@ impl TunnelServer {
         // keep a shared reference to this
         rc.borrow_mut().self_weak = Rc::downgrade(&rc);
 
-        // rc is an EventHandler, register() expects a Box<EventHandler>
-        let handler = Box::new(rc.clone());
+        let rc2 = rc.clone();
+        // must anotate selector type: https://stackoverflow.com/a/44004103/1987178
+        let handler =
+            move |selector: &mut Selector, event| rc2.borrow_mut().on_ready(selector, event);
         selector.register(
             &rc.borrow().tcp_listener,
             handler,
@@ -63,6 +65,16 @@ impl TunnelServer {
         let addr = SocketAddr::new(localhost, port);
         let server = TcpListener::bind(&addr)?;
         Ok(server)
+    }
+
+    fn on_ready(&mut self, selector: &mut Selector, _: Event) {
+        match self.accept_client(selector) {
+            Ok(_) => debug!(target: TAG, "New client accepted"),
+            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
+                debug!(target: TAG, "Spurious event, ignoring");
+            }
+            Err(err) => error!(target: TAG, "Cannot accept client: {}", err),
+        }
     }
 
     fn accept_client(&mut self, selector: &mut Selector) -> io::Result<()> {
@@ -100,18 +112,6 @@ impl TunnelServer {
     pub fn clean_up(&mut self, selector: &mut Selector) {
         for client in &self.clients {
             client.borrow_mut().clean_expired_connections(selector);
-        }
-    }
-}
-
-impl EventHandler for TunnelServer {
-    fn on_ready(&mut self, selector: &mut Selector, _: Event) {
-        match self.accept_client(selector) {
-            Ok(_) => debug!(target: TAG, "New client accepted"),
-            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
-                debug!(target: TAG, "Spurious event, ignoring");
-            }
-            Err(err) => error!(target: TAG, "Cannot accept client: {}", err),
         }
     }
 }

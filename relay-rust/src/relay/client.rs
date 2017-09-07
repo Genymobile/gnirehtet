@@ -28,7 +28,7 @@ use super::ipv4_packet::{Ipv4Packet, MAX_PACKET_LENGTH};
 use super::ipv4_packet_buffer::Ipv4PacketBuffer;
 use super::packet_source::PacketSource;
 use super::router::Router;
-use super::selector::{EventHandler, Selector};
+use super::selector::Selector;
 use super::stream_buffer::StreamBuffer;
 
 const TAG: &'static str = "Client";
@@ -135,8 +135,10 @@ impl Client {
             // set client as router owner
             self_ref.router.set_client(Rc::downgrade(&rc));
 
-            // rc is an EventHandler, register() expects a Box<EventHandler>
-            let handler = Box::new(rc.clone());
+            let rc2 = rc.clone();
+            // must anotate selector type: https://stackoverflow.com/a/44004103/1987178
+            let handler =
+                move |selector: &mut Selector, event| rc2.borrow_mut().on_ready(selector, event);
             let token = selector.register(
                 &self_ref.stream,
                 handler,
@@ -174,6 +176,16 @@ impl Client {
         }
         self.router.clear(selector);
         self.close_listener.on_closed(self);
+    }
+
+    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
+        match self.process(selector, event) {
+            Ok(_) => (),
+            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
+                debug!(target: TAG, "Spurious event, ignoring")
+            }
+            Err(_) => panic!("Unexpected unhandled error"),
+        }
     }
 
     // return Err(err) with err.kind() == io::ErrorKind::WouldBlock on spurious event
@@ -348,17 +360,5 @@ impl Client {
 
     fn must_send_id(&self) -> bool {
         self.pending_id_bytes > 0
-    }
-}
-
-impl EventHandler for Client {
-    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
-        match self.process(selector, event) {
-            Ok(_) => (),
-            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
-                debug!(target: TAG, "Spurious event, ignoring")
-            }
-            Err(_) => panic!("Unexpected unhandled error"),
-        }
     }
 }

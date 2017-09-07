@@ -30,7 +30,7 @@ use super::datagram_buffer::DatagramBuffer;
 use super::ipv4_header::Ipv4Header;
 use super::ipv4_packet::{Ipv4Packet, MAX_PACKET_LENGTH};
 use super::packetizer::Packetizer;
-use super::selector::{EventHandler, Selector};
+use super::selector::Selector;
 use super::transport_header::TransportHeader;
 
 const TAG: &'static str = "UdpConnection";
@@ -76,8 +76,10 @@ impl UdpConnection {
         {
             let mut self_ref = rc.borrow_mut();
 
-            // rc is an EventHandler, register() expects a Box<EventHandler>
-            let handler = Box::new(rc.clone());
+            let rc2 = rc.clone();
+            // must anotate selector type: https://stackoverflow.com/a/44004103/1987178
+            let handler =
+                move |selector: &mut Selector, event| rc2.borrow_mut().on_ready(selector, event);
             let token = selector.register(
                 &self_ref.socket,
                 handler,
@@ -101,6 +103,16 @@ impl UdpConnection {
         let client_rc = self.client.upgrade().expect("Expected client not found");
         let mut client = client_rc.borrow_mut();
         client.router().remove(self);
+    }
+
+    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
+        match self.process(selector, event) {
+            Ok(_) => (),
+            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
+                cx_debug!(target: TAG, self.id, "Spurious event, ignoring")
+            }
+            Err(_) => panic!("Unexpected unhandled error"),
+        }
     }
 
     // return Err(err) with err.kind() == io::ErrorKind::WouldBlock on spurious event
@@ -274,17 +286,5 @@ impl Connection for UdpConnection {
 
     fn is_closed(&self) -> bool {
         self.closed
-    }
-}
-
-impl EventHandler for UdpConnection {
-    fn on_ready(&mut self, selector: &mut Selector, event: Event) {
-        match self.process(selector, event) {
-            Ok(_) => (),
-            Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
-                cx_debug!(target: TAG, self.id, "Spurious event, ignoring")
-            }
-            Err(_) => panic!("Unexpected unhandled error"),
-        }
     }
 }
