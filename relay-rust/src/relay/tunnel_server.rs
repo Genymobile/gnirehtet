@@ -88,7 +88,7 @@ impl TunnelServer {
         } else {
             warn!(
                 target: TAG,
-                "on_client_closed called but no client available"
+                "on_client_closed called but no tunnel_server available"
             );
         });
         let client = Client::new(client_id, selector, stream, on_client_closed)?;
