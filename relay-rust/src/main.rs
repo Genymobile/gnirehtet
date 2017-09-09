@@ -35,6 +35,8 @@ use std::process::{self, ExitStatus, exit};
 use std::thread;
 use std::time::Duration;
 
+const TAG: &'static str = "Main";
+
 const COMMANDS: &[&'static Command] = &[
     &InstallCommand,
     &UninstallCommand,
@@ -78,7 +80,7 @@ impl Command for InstallCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        info!("Installing gnirehtet...");
+        info!(target: TAG, "Installing gnirehtet...");
         exec_adb(args.serial(), vec!["install", "-r", "gnirehtet.apk"])
     }
 }
@@ -99,7 +101,7 @@ impl Command for UninstallCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        info!("Uninstalling gnirehtet...");
+        info!(target: TAG, "Uninstalling gnirehtet...");
         exec_adb(args.serial(), vec!["uninstall", "com.genymobile.gnirehtet"])
     }
 }
@@ -158,16 +160,16 @@ impl Command for RunCommand {
                 dns_servers.as_ref(),
             )
             {
-                error!("Cannot start gnirehtet: {}", err);
+                error!(target: TAG, "Cannot start gnirehtet: {}", err);
             });
         }
 
         let serial = args.serial().cloned();
         ctrlc::set_handler(move || {
-            info!("Interrupted");
+            info!(target: TAG, "Interrupted");
 
             if let Err(err) = stop_gnirehtet(serial.as_ref()) {
-                error!("Cannot stop gnirehtet: {}", err);
+                error!(target: TAG, "Cannot stop gnirehtet: {}", err);
             }
 
             exit(0);
@@ -383,7 +385,7 @@ fn exec_adb<S: Into<String>>(
     args: Vec<S>,
 ) -> Result<(), CommandExecutionError> {
     let mut adb_args = create_adb_args(serial, args);
-    info!("Execute: adb {:?}", adb_args);
+    info!(target: TAG, "Execute: adb {:?}", adb_args);
     let exit_status = process::Command::new("adb").args(&adb_args[..]).status()?;
     if exit_status.success() {
         Ok(())
@@ -414,7 +416,7 @@ fn start_gnirehtet(
     serial: Option<&String>,
     dns_servers: Option<&String>,
 ) -> Result<(), CommandExecutionError> {
-    info!("Starting gnirehtet...");
+    info!(target: TAG, "Starting gnirehtet...");
     exec_adb(serial, vec!["reverse", "tcp:31416", "tcp:31416"])?;
 
     let mut adb_args = vec![
@@ -431,7 +433,7 @@ fn start_gnirehtet(
 }
 
 fn stop_gnirehtet(serial: Option<&String>) -> Result<(), CommandExecutionError> {
-    info!("Stopping gnirehtet...");
+    info!(target: TAG, "Stopping gnirehtet...");
     exec_adb(
         serial,
         vec![
@@ -504,12 +506,12 @@ fn main() {
                 match arguments {
                     Ok(arguments) => {
                         if let Err(err) = command.execute(&arguments) {
-                            error!("Execution error: {}", err);
+                            error!(target: TAG, "Execution error: {}", err);
                             exit(3);
                         }
                     }
                     Err(err) => {
-                        error!("{}", err);
+                        error!(target: TAG, "{}", err);
                         print_command_usage(command);
                         exit(2);
                     }
@@ -518,11 +520,12 @@ fn main() {
             None => {
                 if command_name == "rt" {
                     error!(
+                        target: TAG,
                         "The 'rt' command has been renamed to 'run'. Try 'gnirehtet run' instead."
                     );
                     print_command_usage(&RunCommand);
                 } else {
-                    error!("Unknown command: {}", command_name);
+                    error!(target: TAG, "Unknown command: {}", command_name);
                     print_usage();
                 }
                 exit(1);
