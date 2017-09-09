@@ -31,7 +31,7 @@ use std::io;
 use std::fmt;
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
-use std::process::{self, ExitStatus};
+use std::process::{self, ExitStatus, exit};
 use std::sync::{Arc, Mutex, Condvar};
 use std::thread;
 use std::time::Duration;
@@ -522,11 +522,13 @@ fn main() {
                     Ok(arguments) => {
                         if let Err(err) = command.execute(&arguments) {
                             error!("Execution error: {}", err);
+                            exit(3);
                         }
                     }
                     Err(err) => {
                         error!("{}", err);
                         print_command_usage(command);
+                        exit(2);
                     }
                 }
             }
@@ -540,6 +542,7 @@ fn main() {
                     error!("Unknown command: {}", command_name);
                     print_usage();
                 }
+                exit(1);
             }
         }
     } else {
