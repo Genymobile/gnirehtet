@@ -32,11 +32,8 @@ use std::fmt;
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
 use std::process::{self, ExitStatus, exit};
-use std::sync::{Arc, Mutex, Condvar};
 use std::thread;
 use std::time::Duration;
-
-const TAG: &'static str = "Main";
 
 const COMMANDS: &[&'static Command] = &[
     &InstallCommand,
@@ -165,32 +162,18 @@ impl Command for RunCommand {
             });
         }
 
-        let pair = Arc::new((Mutex::new(false), Condvar::new()));
-
         let serial = args.serial().cloned();
-        let handler_pair = pair.clone();
         ctrlc::set_handler(move || {
-            relaylib::interrupt::set_interrupted_by_user();
+            info!("Interrupted");
+
             if let Err(err) = stop_gnirehtet(serial.as_ref()) {
                 error!("Cannot stop gnirehtet: {}", err);
             }
 
-            let (ref lock, ref cvar) = *handler_pair;
-            *lock.lock().unwrap() = true;
-            cvar.notify_one();
+            exit(0);
         }).expect("Error setting Ctrl-C handler");
 
         match relay() {
-            Err(CommandExecutionError::Io(ref err)) if err.kind() == io::ErrorKind::Interrupted => {
-                warn!(target: TAG, "Relay server interrupted");
-                // wait the ctrlc handler to complete
-                let (ref lock, ref cvar) = *pair;
-                let mut complete = lock.lock().unwrap();
-                while !*complete {
-                    complete = cvar.wait(complete).unwrap();
-                }
-                Ok(())
-            }
             Err(ref err) => {
                 panic!("Cannot relay: {}", err);
             }
