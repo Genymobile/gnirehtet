@@ -57,6 +57,28 @@ impl<'a> Ipv4Packet<'a> {
     }
 
     #[inline]
+    pub fn headers_data(&self) -> (&Ipv4HeaderData, Option<&TransportHeaderData>) {
+        (&self.ipv4_header_data, self.transport_header_data.as_ref())
+    }
+
+    pub fn headers(&self) -> (Ipv4Header, Option<TransportHeader>) {
+        let transport_index = self.ipv4_header_data.header_length() as usize;
+        if let Some(ref transport_header_data) = self.transport_header_data {
+            let (ipv4_header_slice, transport_slice) = self.raw.split_at(transport_index);
+            // payload_index is relative to transport
+            let payload_index = transport_header_data.header_length() as usize;
+            let transport_header_slice = &transport_slice[..payload_index];
+            let ipv4_header = self.ipv4_header_data.bind(ipv4_header_slice);
+            let transport_header = transport_header_data.bind(transport_header_slice);
+            (ipv4_header, Some(transport_header))
+        } else {
+            let ipv4_header_slice = &self.raw[..transport_index];
+            let ipv4_header = self.ipv4_header_data.bind(ipv4_header_slice);
+            (ipv4_header, None)
+        }
+    }
+
+    #[inline]
     #[allow(dead_code)]
     pub fn ipv4_header_data(&self) -> &Ipv4HeaderData {
         &self.ipv4_header_data
@@ -78,8 +100,8 @@ impl<'a> Ipv4Packet<'a> {
 
     #[inline]
     #[allow(dead_code)]
-    pub fn transport_header_data(&self) -> &Option<TransportHeaderData> {
-        &self.transport_header_data
+    pub fn transport_header_data(&self) -> Option<&TransportHeaderData> {
+        self.transport_header_data.as_ref()
     }
 
     #[inline]
@@ -123,6 +145,7 @@ impl<'a> Ipv4Packet<'a> {
     ///  - the IP v4 header
     ///  - the transport header (if any)
     ///  - the payload (if there is a transport at all)
+    #[allow(dead_code)]
     pub fn split(&self) -> (Ipv4Header, Option<(TransportHeader, &[u8])>) {
         let transport_index = self.ipv4_header_data.header_length() as usize;
         if let Some(ref transport_header_data) = self.transport_header_data {

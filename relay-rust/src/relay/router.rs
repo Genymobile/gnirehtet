@@ -22,11 +22,10 @@ use log::LogLevel;
 use super::binary;
 use super::client::{Client, ClientChannel};
 use super::connection::{Connection, ConnectionId};
-use super::ipv4_header::{Ipv4Header, Protocol};
+use super::ipv4_header::Protocol;
 use super::ipv4_packet::Ipv4Packet;
 use super::selector::Selector;
 use super::tcp_connection::TcpConnection;
-use super::transport_header::TransportHeader;
 use super::udp_connection::UdpConnection;
 
 const TAG: &'static str = "Router";
@@ -57,9 +56,7 @@ impl Router {
         ipv4_packet: &Ipv4Packet,
     ) {
         if ipv4_packet.is_valid() {
-            let (ipv4_header, transport) = ipv4_packet.split();
-            let (transport_header, _) = transport.expect("No transport");
-            match self.connection(selector, ipv4_header, transport_header) {
+            match self.connection(selector, ipv4_packet) {
                 Ok(index) => {
                     let closed = {
                         let connection_ref = self.connections.get_mut(index).unwrap();
@@ -85,10 +82,11 @@ impl Router {
     fn connection(
         &mut self,
         selector: &mut Selector,
-        ipv4_header: Ipv4Header,
-        transport_header: TransportHeader,
+        ipv4_packet: &Ipv4Packet,
     ) -> io::Result<usize> {
-        let id = ConnectionId::from_headers(ipv4_header.data(), &transport_header.data_clone());
+        let (ipv4_header_data, transport_header_data) = ipv4_packet.headers_data();
+        let transport_header_data = transport_header_data.expect("No transport");
+        let id = ConnectionId::from_headers(ipv4_header_data, transport_header_data);
         let index = match self.find_index(&id) {
             Some(index) => index,
             None => {
@@ -96,8 +94,7 @@ impl Router {
                     selector,
                     id,
                     self.client.clone(),
-                    ipv4_header,
-                    transport_header,
+                    ipv4_packet,
                 )?;
                 let index = self.connections.len();
                 self.connections.push(connection);
@@ -111,9 +108,10 @@ impl Router {
         selector: &mut Selector,
         id: ConnectionId,
         client: Weak<RefCell<Client>>,
-        ipv4_header: Ipv4Header,
-        transport_header: TransportHeader,
+        ipv4_packet: &Ipv4Packet,
     ) -> io::Result<Rc<RefCell<Connection>>> {
+        let (ipv4_header, transport_header) = ipv4_packet.headers();
+        let transport_header = transport_header.expect("No transport");
         match id.protocol() {
             Protocol::Tcp => Ok(TcpConnection::new(
                 selector,
