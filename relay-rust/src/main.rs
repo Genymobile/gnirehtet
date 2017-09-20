@@ -366,6 +366,7 @@ fn stop_gnirehtet(serial: Option<&String>) -> Result<(), CommandExecutionError> 
 }
 
 fn relay() -> Result<(), io::Error> {
+    info!(target: TAG, "Starting relay server...");
     relaylib::relay()?;
     Ok(())
 }

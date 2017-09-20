@@ -248,6 +248,7 @@ public final class Main {
     }
 
     private static void relay() throws IOException {
+        Log.i(TAG, "Starting relay server...");
         new Relay().run();
     }
 
