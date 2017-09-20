@@ -206,7 +206,7 @@ public final class Main {
     }
 
     private static void execSync(List<String> command) throws InterruptedException, IOException, CommandExecutionException {
-        Log.i(TAG, "Execute: " + command);
+        Log.d(TAG, "Execute: " + command);
         ProcessBuilder processBuilder = new ProcessBuilder(command);
         processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT).redirectError(ProcessBuilder.Redirect.INHERIT);
         Process process = processBuilder.start();
@@ -217,8 +217,9 @@ public final class Main {
     }
 
     private static boolean isGnirehtetInstalled(String serial) throws InterruptedException, IOException, CommandExecutionException {
+        Log.i(TAG, "Checking client...");
         List<String> command = createAdbCommand(serial, "shell", "pm", "list", "packages", "com.genymobile.gnirehtet");
-        Log.i(TAG, "Execute: " + command);
+        Log.d(TAG, "Execute: " + command);
         Process process = new ProcessBuilder(command).start();
         int exitCode = process.waitFor();
         if (exitCode != 0) {

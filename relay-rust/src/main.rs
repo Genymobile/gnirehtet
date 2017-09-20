@@ -284,7 +284,7 @@ fn exec_adb<S: Into<String>>(
     args: Vec<S>,
 ) -> Result<(), CommandExecutionError> {
     let adb_args = create_adb_args(serial, args);
-    info!(target: TAG, "Execute: adb {:?}", adb_args);
+    debug!(target: TAG, "Execute: adb {:?}", adb_args);
     match process::Command::new("adb").args(&adb_args[..]).status() {
         Ok(exit_status) => {
             if exit_status.success() {
@@ -302,6 +302,7 @@ fn exec_adb<S: Into<String>>(
 }
 
 fn is_gnirehtet_installed(serial: Option<&String>) -> Result<bool, CommandExecutionError> {
+    info!(target: TAG, "Checking client...");
     let args = create_adb_args(
         serial,
         vec![
@@ -312,7 +313,7 @@ fn is_gnirehtet_installed(serial: Option<&String>) -> Result<bool, CommandExecut
             "com.genymobile.gnirehtet",
         ],
     );
-    info!(target: TAG, "Execute: adb {:?}", args);
+    debug!(target: TAG, "Execute: adb {:?}", args);
     match process::Command::new("adb").args(&args[..]).output() {
         Ok(output) => {
             if output.status.success() {
