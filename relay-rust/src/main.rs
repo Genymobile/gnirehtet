@@ -407,7 +407,8 @@ fn is_gnirehtet_installed(serial: Option<&String>) -> Result<bool, CommandExecut
             "com.genymobile.gnirehtet",
         ],
     );
-    let output = process::Command::new("adb").args(&args[..]).output()?;
+    info!(target: TAG, "Execute: adb {:?}", args);
+    let output = process::Command::new("adb").args(args).output()?;
     // empty output when not found
     Ok(!output.stdout.is_empty())
 }
