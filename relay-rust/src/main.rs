@@ -21,17 +21,15 @@ extern crate log;
 extern crate relaylib;
 
 mod cli_args;
+mod execution_error;
 mod logger;
 
 use std::env;
 use cli_args::CommandLineArguments;
+use execution_error::{Cmd, CommandExecutionError, ProcessStatusError, ProcessIoError};
 use logger::SimpleLogger;
-use std::error;
 use std::io;
-use std::fmt;
-#[cfg(unix)]
-use std::os::unix::process::ExitStatusExt;
-use std::process::{self, ExitStatus, exit};
+use std::process::{self, exit};
 use std::thread;
 use std::time::Duration;
 
@@ -179,7 +177,7 @@ impl Command for RunCommand {
             Err(ref err) => {
                 panic!("Cannot relay: {}", err);
             }
-            ok => ok,
+            _ => Ok(()),
         }
     }
 }
@@ -263,110 +261,11 @@ impl Command for RelayCommand {
     }
 
     fn execute(&self, _: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        relay()
+        relay()?;
+        Ok(())
     }
 }
 
-#[derive(Debug)]
-enum Termination {
-    Value(i32),
-    #[cfg(unix)]
-    Signal(i32),
-}
-
-impl Termination {
-    fn from(status: ExitStatus) -> Self {
-        match status.code() {
-            Some(code) => Termination::Value(code),
-            #[cfg(unix)]
-            None => Termination::Signal(status.signal().unwrap()),
-            #[cfg(not(unix))]
-            None => panic!("Unexpected signal termination on non-unix system"),
-        }
-    }
-}
-
-#[derive(Debug)]
-struct CommandStatusError {
-    command: Vec<String>,
-    termination: Termination,
-}
-
-impl CommandStatusError {
-    fn new(command: Vec<String>, status: ExitStatus) -> Self {
-        Self {
-            command: command,
-            termination: Termination::from(status),
-        }
-    }
-}
-
-impl fmt::Display for CommandStatusError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match self.termination {
-            Termination::Value(code) => {
-                write!(f, "Command {:?} returned with value {}", self.command, code)
-            }
-            #[cfg(unix)]
-            Termination::Signal(sig) => {
-                write!(f, "Command {:?} terminated by signal {}", self.command, sig)
-            }
-        }
-    }
-}
-
-impl error::Error for CommandStatusError {
-    fn description(&self) -> &str {
-        "Execution terminated with failure"
-    }
-
-    fn cause(&self) -> Option<&error::Error> {
-        None
-    }
-}
-
-#[derive(Debug)]
-enum CommandExecutionError {
-    Io(io::Error),
-    Status(CommandStatusError),
-}
-
-impl fmt::Display for CommandExecutionError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        match *self {
-            CommandExecutionError::Io(ref err) => write!(f, "IO error: {}", err),
-            CommandExecutionError::Status(ref err) => write!(f, "Status in error: {}", err),
-        }
-    }
-}
-
-impl error::Error for CommandExecutionError {
-    fn description(&self) -> &str {
-        match *self {
-            CommandExecutionError::Io(ref err) => err.description(),
-            CommandExecutionError::Status(ref err) => err.description(),
-        }
-    }
-
-    fn cause(&self) -> Option<&error::Error> {
-        match *self {
-            CommandExecutionError::Io(ref err) => Some(err),
-            CommandExecutionError::Status(ref err) => Some(err),
-        }
-    }
-}
-
-impl From<io::Error> for CommandExecutionError {
-    fn from(error: io::Error) -> Self {
-        CommandExecutionError::Io(error)
-    }
-}
-
-impl From<CommandStatusError> for CommandExecutionError {
-    fn from(error: CommandStatusError) -> Self {
-        CommandExecutionError::Status(error)
-    }
-}
 
 fn create_adb_args<S: Into<String>>(serial: Option<&String>, args: Vec<S>) -> Vec<String> {
     let mut command = Vec::<String>::new();
@@ -384,15 +283,21 @@ fn exec_adb<S: Into<String>>(
     serial: Option<&String>,
     args: Vec<S>,
 ) -> Result<(), CommandExecutionError> {
-    let mut adb_args = create_adb_args(serial, args);
+    let adb_args = create_adb_args(serial, args);
     info!(target: TAG, "Execute: adb {:?}", adb_args);
-    let exit_status = process::Command::new("adb").args(&adb_args[..]).status()?;
-    if exit_status.success() {
-        Ok(())
-    } else {
-        let mut cmd = vec!["adb".to_string()];
-        cmd.append(&mut adb_args);
-        Err(CommandStatusError::new(cmd, exit_status).into())
+    match process::Command::new("adb").args(&adb_args[..]).status() {
+        Ok(exit_status) => {
+            if exit_status.success() {
+                Ok(())
+            } else {
+                let cmd = Cmd::new("adb", adb_args);
+                Err(ProcessStatusError::new(cmd, exit_status).into())
+            }
+        }
+        Err(err) => {
+            let cmd = Cmd::new("adb", adb_args);
+            Err(ProcessIoError::new(cmd, err).into())
+        }
     }
 }
 
@@ -408,9 +313,16 @@ fn is_gnirehtet_installed(serial: Option<&String>) -> Result<bool, CommandExecut
         ],
     );
     info!(target: TAG, "Execute: adb {:?}", args);
-    let output = process::Command::new("adb").args(args).output()?;
-    // empty output when not found
-    Ok(!output.stdout.is_empty())
+    match process::Command::new("adb").args(&args[..]).output() {
+        Ok(output) => {
+            // empty output when not found
+            Ok(!output.stdout.is_empty())
+        }
+        Err(err) => {
+            let cmd = Cmd::new("adb", args);
+            Err(ProcessIoError::new(cmd, err).into())
+        }
+    }
 }
 
 fn start_gnirehtet(
@@ -447,7 +359,7 @@ fn stop_gnirehtet(serial: Option<&String>) -> Result<(), CommandExecutionError> 
     )
 }
 
-fn relay() -> Result<(), CommandExecutionError> {
+fn relay() -> Result<(), io::Error> {
     relaylib::relay()?;
     Ok(())
 }
