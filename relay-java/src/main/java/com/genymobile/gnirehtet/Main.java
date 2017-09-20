@@ -216,10 +216,14 @@ public final class Main {
         }
     }
 
-    private static boolean isGnirehtetInstalled(String serial) throws IOException {
+    private static boolean isGnirehtetInstalled(String serial) throws InterruptedException, IOException, CommandExecutionException {
         List<String> command = createAdbCommand(serial, "shell", "pm", "list", "packages", "com.genymobile.gnirehtet");
         Log.i(TAG, "Execute: " + command);
         Process process = new ProcessBuilder(command).start();
+        int exitCode = process.waitFor();
+        if (exitCode != 0) {
+            throw new CommandExecutionException(command, exitCode);
+        }
         Scanner scanner = new Scanner(process.getInputStream());
         // empty output when not found
         return scanner.hasNextLine();

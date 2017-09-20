@@ -315,8 +315,13 @@ fn is_gnirehtet_installed(serial: Option<&String>) -> Result<bool, CommandExecut
     info!(target: TAG, "Execute: adb {:?}", args);
     match process::Command::new("adb").args(&args[..]).output() {
         Ok(output) => {
-            // empty output when not found
-            Ok(!output.stdout.is_empty())
+            if output.status.success() {
+                // empty output when not found
+                Ok(!output.stdout.is_empty())
+            } else {
+                let cmd = Cmd::new("adb", args);
+                Err(ProcessStatusError::new(cmd, output.status).into())
+            }
         }
         Err(err) => {
             let cmd = Cmd::new("adb", args);
