@@ -265,8 +265,8 @@ mod tests {
             assert_eq!(0x12345678, ipv4_header.source());
             assert_eq!(0x42424242, ipv4_header.destination());
 
-            if let Some(TransportHeaderData::Udp(ref udp_header)) =
-                *ipv4_packet.transport_header_data()
+            if let Some(&TransportHeaderData::Udp(ref udp_header)) =
+                ipv4_packet.transport_header_data()
             {
                 assert_eq!(1234, udp_header.source_port());
                 assert_eq!(5678, udp_header.destination_port());
