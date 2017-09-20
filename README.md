@@ -39,14 +39,27 @@ The Android application requires at least API 21 (Android 5.0).
 For the _Java_ version only, _Java 8_ is required on your computer. On
 Debian-based distros, install the package `openjdk-8-jre`.
 
+### adb
+
 You need a recent version of [adb] (where `adb reverse` is implemented, it
-works with 1.0.36). On Debian-based distros, check for `android-tools-adb` or
-`adb`.
+works with 1.0.36).
+
+On Debian-based distros, install the package `android-tools-adb`.
+
+On Windows, if you need `adb` only for this application, you can just download
+the [Android SDK platform tools][platform-tools] ([direct
+link][platform-tools-windows]), and extract the following files to the
+_gnirehtet_ directory:
+ - `adb.exe`
+ - `AdbWinApi.dll`
+ - `AdbWinUsbApi.dll`
 
 Make sure you [enabled adb debugging][enable-adb] on your device(s).
 
 [adb]: https://developer.android.com/studio/command-line/adb.html
 [enable-adb]: https://developer.android.com/studio/command-line/adb.html#Enabling
+[platform-tools]: https://developer.android.com/studio/releases/platform-tools.html
+[platform-tools-windows]: https://dl.google.com/android/repository/platform-tools-latest-windows.zip
 
 
 ## Download
