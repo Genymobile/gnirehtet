@@ -44,11 +44,13 @@ Debian-based distros, install the package `openjdk-8-jre`.
 You need a recent version of [adb] (where `adb reverse` is implemented, it
 works with 1.0.36).
 
-On Debian-based distros, install the package `android-tools-adb`.
+It is available in the [Android SDK platform tools][platform-tools].
 
-On Windows, if you need `adb` only for this application, you can just download
-the [Android SDK platform tools][platform-tools] ([direct
-link][platform-tools-windows]), and extract the following files to the
+On Debian-based distros, you can alternatively install the package
+`android-tools-adb`.
+
+On Windows, if you need `adb` only for this application, just download the
+[platform-tools][platform-tools-windows] and extract the following files to the
 _gnirehtet_ directory:
  - `adb.exe`
  - `AdbWinApi.dll`
