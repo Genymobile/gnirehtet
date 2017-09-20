@@ -1,1 +1,0 @@
-@java -jar gnirehtet.jar %*

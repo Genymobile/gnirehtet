@@ -68,9 +68,16 @@ Download the [latest release][latest] in the flavor you want.
 [direct-rust-win64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.0/gnirehtet-rust-win64-v2.0.zip
 [direct-rust-macos]: https://github.com/Genymobile/gnirehtet/releases/download/v2.0/gnirehtet-rust-macos-v2.0.zip
 
-Then extract it. You get two files:
+Then extract it.
+
+The Linux and MacOS archives contain:
  - `gnirehtet.apk`
  - `gnirehtet`
+
+The Windows archive contains:
+ - `gnirehtet.apk`
+ - `gnirehtet.exe`
+ - `gnirehtet-run.cmd`
 
 
 ### Java
@@ -80,11 +87,12 @@ Then extract it. You get two files:
 
 [direct-java]: https://github.com/Genymobile/gnirehtet/releases/download/v2.0/gnirehtet-java-v2.0.zip
 
-Then extract it. You get four files:
+Then extract it. The archive contains:
  - `gnirehtet.apk`
  - `gnirehtet.jar`
  - `gnirehtet`
  - `gnirehtet.cmd`
+ - `gnirehtet-run.cmd`
 
 
 ## Run (simple)
@@ -100,6 +108,10 @@ If you want to activate reverse tethering for exactly one device, just execute:
     ./gnirehtet run
 
 Reverse tethering remains active until you press _Ctrl+C_.
+
+On Windows, for convenience, you can double-click on `gnirehtet-run.cmd`
+instead (it just executes `gnirehtet run`, without requiring to open a
+terminal).
 
 The very first start should open a popup to request permission:
 

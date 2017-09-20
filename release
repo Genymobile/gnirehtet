@@ -27,10 +27,16 @@ do
     cp app/build/outputs/apk/gnirehtet-release.apk "$DIST/$dir"/gnirehtet.apk
 done
 
-cp relay-java/build/libs/gnirehtet.jar relay-java/gnirehtet relay-java/gnirehtet.cmd "$DIST/$TARGET_DIR_JAVA"/
+cp relay-java/build/libs/gnirehtet.jar \
+   relay-java/scripts/gnirehtet \
+   relay-java/scripts/gnirehtet.cmd \
+   relay-java/scripts/gnirehtet-run.cmd \
+   "$DIST/$TARGET_DIR_JAVA"/
 cp relay-rust/target/release/gnirehtet "$DIST/$TARGET_DIR_RUST_LINUX"/
 strip "$DIST/$TARGET_DIR_RUST_LINUX"/gnirehtet  # remove symbols for smaller binary
-cp relay-rust/target/x86_64-pc-windows-gnu/release/gnirehtet.exe "$DIST/$TARGET_DIR_RUST_WIN"/
+cp relay-rust/target/x86_64-pc-windows-gnu/release/gnirehtet.exe \
+   relay-rust/scripts/gnirehtet-run.cmd \
+   "$DIST/$TARGET_DIR_RUST_WIN"/
 
 cd "$DIST"
 zip -r "$TARGET_JAVA" "$TARGET_DIR_JAVA"
