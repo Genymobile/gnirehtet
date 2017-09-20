@@ -46,7 +46,7 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                Log.i(TAG, "Installing gnirehtet...");
+                Log.i(TAG, "Installing gnirehtet client...");
                 execAdb(args.getSerial(), "install", "-r", "gnirehtet.apk");
             }
         },
@@ -60,7 +60,7 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                Log.i(TAG, "Uninstalling gnirehtet...");
+                Log.i(TAG, "Uninstalling gnirehtet client...");
                 execAdb(args.getSerial(), "uninstall", "com.genymobile.gnirehtet");
             }
         },
@@ -98,18 +98,18 @@ public final class Main {
                 // start in parallel so that the relay server is ready when the client connects
                 new Thread(() -> {
                     try {
-                        startGnirehtet(args.getSerial(), args.getDnsServers());
+                        startClient(args.getSerial(), args.getDnsServers());
                     } catch (Exception e) {
-                        Log.e(TAG, "Cannot start gnirehtet", e);
+                        Log.e(TAG, "Cannot start client", e);
                     }
                 }).start();
 
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     // executed on Ctrl+C
                     try {
-                        stopGnirehtet(args.getSerial());
+                        stopClient(args.getSerial());
                     } catch (Exception e) {
-                        Log.e(TAG, "Cannot stop gnirehtet", e);
+                        Log.e(TAG, "Cannot stop client", e);
                     }
                 }));
 
@@ -131,7 +131,7 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                startGnirehtet(args.getSerial(), args.getDnsServers());
+                startClient(args.getSerial(), args.getDnsServers());
             }
         },
         STOP("stop", CommandLineArguments.PARAM_SERIAL) {
@@ -144,7 +144,7 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                stopGnirehtet(args.getSerial());
+                stopClient(args.getSerial());
             }
         },
         RESTART("restart", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER) {
@@ -217,7 +217,7 @@ public final class Main {
     }
 
     private static boolean isGnirehtetInstalled(String serial) throws InterruptedException, IOException, CommandExecutionException {
-        Log.i(TAG, "Checking client...");
+        Log.i(TAG, "Checking gnirehtet client...");
         List<String> command = createAdbCommand(serial, "shell", "pm", "list", "packages", "com.genymobile.gnirehtet");
         Log.d(TAG, "Execute: " + command);
         Process process = new ProcessBuilder(command).start();
@@ -230,8 +230,8 @@ public final class Main {
         return scanner.hasNextLine();
     }
 
-    private static void startGnirehtet(String serial, String dns) throws InterruptedException, IOException, CommandExecutionException {
-        Log.i(TAG, "Starting gnirehtet...");
+    private static void startClient(String serial, String dns) throws InterruptedException, IOException, CommandExecutionException {
+        Log.i(TAG, "Starting client...");
         execAdb(serial, "reverse", "tcp:31416", "tcp:31416");
 
         List<String> cmd = new ArrayList<>();
@@ -242,8 +242,8 @@ public final class Main {
         execAdb(serial, cmd);
     }
 
-    private static void stopGnirehtet(String serial) throws InterruptedException, IOException, CommandExecutionException {
-        Log.i(TAG, "Stopping gnirehtet...");
+    private static void stopClient(String serial) throws InterruptedException, IOException, CommandExecutionException {
+        Log.i(TAG, "Stopping client...");
         execAdb(serial, "shell", "am", "startservice", "-a", "com.genymobile.gnirehtet.STOP");
     }
 

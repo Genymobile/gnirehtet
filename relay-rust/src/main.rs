@@ -78,7 +78,7 @@ impl Command for InstallCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        info!(target: TAG, "Installing gnirehtet...");
+        info!(target: TAG, "Installing gnirehtet client...");
         exec_adb(args.serial(), vec!["install", "-r", "gnirehtet.apk"])
     }
 }
@@ -99,7 +99,7 @@ impl Command for UninstallCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        info!(target: TAG, "Uninstalling gnirehtet...");
+        info!(target: TAG, "Uninstalling gnirehtet client...");
         exec_adb(args.serial(), vec!["uninstall", "com.genymobile.gnirehtet"])
     }
 }
@@ -153,12 +153,12 @@ impl Command for RunCommand {
             // start in parallel so that the relay server is ready when the client connects
             let serial = args.serial().cloned();
             let dns_servers = args.dns_servers().cloned();
-            thread::spawn(move || if let Err(err) = start_gnirehtet(
+            thread::spawn(move || if let Err(err) = start_client(
                 serial.as_ref(),
                 dns_servers.as_ref(),
             )
             {
-                error!(target: TAG, "Cannot start gnirehtet: {}", err);
+                error!(target: TAG, "Cannot start client: {}", err);
             });
         }
 
@@ -166,8 +166,8 @@ impl Command for RunCommand {
         ctrlc::set_handler(move || {
             info!(target: TAG, "Interrupted");
 
-            if let Err(err) = stop_gnirehtet(serial.as_ref()) {
-                error!(target: TAG, "Cannot stop gnirehtet: {}", err);
+            if let Err(err) = stop_client(serial.as_ref()) {
+                error!(target: TAG, "Cannot stop client: {}", err);
             }
 
             exit(0);
@@ -203,7 +203,7 @@ impl Command for StartCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        start_gnirehtet(args.serial(), args.dns_servers())
+        start_client(args.serial(), args.dns_servers())
     }
 }
 
@@ -223,7 +223,7 @@ impl Command for StopCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        stop_gnirehtet(args.serial())
+        stop_client(args.serial())
     }
 }
 
@@ -302,7 +302,7 @@ fn exec_adb<S: Into<String>>(
 }
 
 fn is_gnirehtet_installed(serial: Option<&String>) -> Result<bool, CommandExecutionError> {
-    info!(target: TAG, "Checking client...");
+    info!(target: TAG, "Checking gnirehtet client...");
     let args = create_adb_args(
         serial,
         vec![
@@ -331,11 +331,11 @@ fn is_gnirehtet_installed(serial: Option<&String>) -> Result<bool, CommandExecut
     }
 }
 
-fn start_gnirehtet(
+fn start_client(
     serial: Option<&String>,
     dns_servers: Option<&String>,
 ) -> Result<(), CommandExecutionError> {
-    info!(target: TAG, "Starting gnirehtet...");
+    info!(target: TAG, "Starting client...");
     exec_adb(serial, vec!["reverse", "tcp:31416", "tcp:31416"])?;
 
     let mut adb_args = vec![
@@ -351,8 +351,8 @@ fn start_gnirehtet(
     exec_adb(serial, adb_args)
 }
 
-fn stop_gnirehtet(serial: Option<&String>) -> Result<(), CommandExecutionError> {
-    info!(target: TAG, "Stopping gnirehtet...");
+fn stop_client(serial: Option<&String>) -> Result<(), CommandExecutionError> {
+    info!(target: TAG, "Stopping client...");
     exec_adb(
         serial,
         vec![
