@@ -90,12 +90,8 @@ impl Router {
         let index = match self.find_index(&id) {
             Some(index) => index,
             None => {
-                let connection = Self::create_connection(
-                    selector,
-                    id,
-                    self.client.clone(),
-                    ipv4_packet,
-                )?;
+                let connection =
+                    Self::create_connection(selector, id, self.client.clone(), ipv4_packet)?;
                 let index = self.connections.len();
                 self.connections.push(connection);
                 index
