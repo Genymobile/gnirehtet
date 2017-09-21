@@ -221,8 +221,14 @@ Read the [developers page].
     limitations under the License.
 
 
-## Our blog posts introducing gnirehtet
+## Articles
 
-- <https://medium.com/@rom1v/gnirehtet-reverse-tethering-android-2afacdbdaec7> (in
-English)
-- <http://blog.rom1v.com/2017/03/gnirehtet/> (in French)
+- [Introducing “gnirehtet”, a reverse tethering tool for Android][medium-1] ([French version][blog-1])
+- [Gnirehtet 2: our reverse tethering tool for Android now available in Rust][medium-2]
+- [Gnirehtet rewritten in Rust][blog-2-en] ([French version][blog-2-fr])
+
+[medium-1]: https://medium.com/@rom1v/gnirehtet-reverse-tethering-android-2afacdbdaec7
+[blog-1]: https://blog.rom1v.com/2017/03/gnirehtet/
+[medium-2]: https://medium.com/genymobile/gnirehtet-2-our-reverse-tethering-tool-for-android-now-available-in-rust-999960483d5a
+[blog-2-en]: https://blog.rom1v.com/2017/09/gnirehtet-rewritten-in-rust/
+[blog-2-fr]: https://blog.rom1v.com/2017/09/gnirehtet-reecrit-en-rust/
