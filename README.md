@@ -136,11 +136,6 @@ A "key" logo appears in the status bar whenever _Gnirehtet_ is active:
 
 ![key](assets/key.png)
 
-If an older version of _gnirehtet_ was already installed on your device, you
-have to install the new one first:
-
-    ./gnirehtet install
-
 
 ## Run
 
@@ -154,6 +149,9 @@ Start the relay server and keep it open:
 Install the `apk` on your Android device:
 
     ./gnirehtet install [serial]
+
+_(if an older version of _gnirehtet_ was already installed, you must install the
+new one first)_
 
 In another terminal, for each client, execute:
 

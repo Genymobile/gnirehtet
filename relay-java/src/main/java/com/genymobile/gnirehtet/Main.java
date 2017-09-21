@@ -26,10 +26,13 @@ import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public final class Main {
     private static final String TAG = "Gnirehtet";
     private static final String NL = System.lineSeparator();
+    private static final String REQUIRED_APK_VERSION_CODE = "2";
 
     private Main() {
         // not instantiable
@@ -89,7 +92,7 @@ public final class Main {
             @Override
             @SuppressWarnings("checkstyle:MagicNumber")
             void execute(CommandLineArguments args) throws Exception {
-                if (!isGnirehtetInstalled(args.getSerial())) {
+                if (mustInstallApk(args.getSerial())) {
                     INSTALL.execute(args);
                     // wait a bit after the app is installed so that intent actions are correctly registered
                     Thread.sleep(500); // ms
@@ -216,9 +219,9 @@ public final class Main {
         }
     }
 
-    private static boolean isGnirehtetInstalled(String serial) throws InterruptedException, IOException, CommandExecutionException {
+    private static boolean mustInstallApk(String serial) throws InterruptedException, IOException, CommandExecutionException {
         Log.i(TAG, "Checking gnirehtet client...");
-        List<String> command = createAdbCommand(serial, "shell", "pm", "list", "packages", "com.genymobile.gnirehtet");
+        List<String> command = createAdbCommand(serial, "shell", "dumpsys", "package", "com.genymobile.gnirehtet");
         Log.d(TAG, "Execute: " + command);
         Process process = new ProcessBuilder(command).start();
         int exitCode = process.waitFor();
@@ -226,8 +229,16 @@ public final class Main {
             throw new CommandExecutionException(command, exitCode);
         }
         Scanner scanner = new Scanner(process.getInputStream());
-        // empty output when not found
-        return scanner.hasNextLine();
+        // read the versionCode of the installed package
+        Pattern pattern = Pattern.compile("^    versionCode=(\\p{Digit}+).*");
+        while (scanner.hasNextLine()) {
+            Matcher matcher = pattern.matcher(scanner.nextLine());
+            if (matcher.matches()) {
+                String installedVersionCode = matcher.group(1);
+                return !REQUIRED_APK_VERSION_CODE.equals(installedVersionCode);
+            }
+        }
+        return true;
     }
 
     private static void startClient(String serial, String dns) throws InterruptedException, IOException, CommandExecutionException {

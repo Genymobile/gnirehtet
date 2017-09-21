@@ -34,6 +34,7 @@ use std::thread;
 use std::time::Duration;
 
 const TAG: &'static str = "Main";
+const REQUIRED_APK_VERSION_CODE: &'static str = "2";
 
 const COMMANDS: &[&'static Command] = &[
     &InstallCommand,
@@ -142,7 +143,7 @@ impl Command for RunCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        if !is_gnirehtet_installed(args.serial())? {
+        if must_install_gnirehtet(args.serial())? {
             InstallCommand.execute(args)?;
             // wait a bit after the app is installed so that intent actions are correctly
             // registered
@@ -301,24 +302,33 @@ fn exec_adb<S: Into<String>>(
     }
 }
 
-fn is_gnirehtet_installed(serial: Option<&String>) -> Result<bool, CommandExecutionError> {
+fn must_install_gnirehtet(serial: Option<&String>) -> Result<bool, CommandExecutionError> {
     info!(target: TAG, "Checking gnirehtet client...");
     let args = create_adb_args(
         serial,
-        vec![
-            "shell",
-            "pm",
-            "list",
-            "packages",
-            "com.genymobile.gnirehtet",
-        ],
+        vec!["shell", "dumpsys", "package", "com.genymobile.gnirehtet"],
     );
     debug!(target: TAG, "Execute: adb {:?}", args);
     match process::Command::new("adb").args(&args[..]).output() {
         Ok(output) => {
             if output.status.success() {
-                // empty output when not found
-                Ok(!output.stdout.is_empty())
+                // the "regex" crate makes the binary far bigger, so just parse the versionCode
+                // manually
+                let dumpsys = String::from_utf8_lossy(&output.stdout[..]);
+                // read the versionCode of the installed package
+                if let Some(index) = dumpsys.find("    versionCode=") {
+                    let start = index + 16; // size of "    versionCode=\""
+                    if let Some(end) = (&dumpsys[start..]).find(" ") {
+                        let installed_version_code = &dumpsys[start..start + end];
+                        Ok(installed_version_code != REQUIRED_APK_VERSION_CODE)
+                    } else {
+                        // end of versionCode value not found
+                        Ok(true)
+                    }
+                } else {
+                    // versionCode not found
+                    Ok(true)
+                }
             } else {
                 let cmd = Cmd::new("adb", args);
                 Err(ProcessStatusError::new(cmd, output.status).into())
