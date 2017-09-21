@@ -36,7 +36,7 @@ task releaseRust(dependsOn: [':app:assembleRelease', ':relay-rust:release'])
 task releaseRustWindows(dependsOn: [':app:assembleRelease', 'relay-rust:releaseCrossToWindows'])
 
 task debugAll(dependsOn: ['debugJava', 'debugRust'])
-task releaseAll(dependsOn: ['releaseJava', 'releaseRust', 'releaseRustWindows'])
+task releaseAll(dependsOn: ['releaseJava', 'releaseRust'])
 
 task checkJava(dependsOn: [':app:check', ':relay-java:check'])
 task checkRust(dependsOn: ['app:check', ':relay-rust:check'])

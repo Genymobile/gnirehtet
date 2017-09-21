@@ -17,7 +17,7 @@ TARGET_JAVA="$TARGET_DIR_JAVA-$version".zip
 TARGET_RUST_LINUX="$TARGET_DIR_RUST_LINUX-$version".zip
 TARGET_RUST_WIN="$TARGET_DIR_RUST_WIN-$version".zip
 
-"$GRADLE" checkAll releaseAll
+"$GRADLE" checkAll releaseAll releaseRustWindows
 
 rm -rf "$DIST"
 
