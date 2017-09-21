@@ -72,16 +72,16 @@ Download the [latest release][latest] in the flavor you want.
 
 ### Rust
 
- - **Linux:** [`gnirehtet-rust-linux64-v2.0.zip`][direct-rust-linux64]
-   (SHA-256: _not-available-yet_)
- - **Windows:** [`gnirehtet-rust-win64-v2.0.zip`][direct-rust-win64]
-   (SHA-256: _not-available-yet_)
- - **MacOS:** [`gnirehtet-rust-macos-v2.0.zip`][direct-rust-macos]
-   (SHA-256: _not-available-yet_)
+ - **Linux:** [`gnirehtet-rust-linux64-v2.0.zip`][direct-rust-linux64]  
+   (SHA-256: _fa02d968a5b5b5233ead6c7cca7f8dc15c2ada1909c02c58fde8eb14632d2991_)
+ - **Windows:** [`gnirehtet-rust-win64-v2.0.zip`][direct-rust-win64]  
+   (SHA-256: _30bd2ef3ae5a899ad9a59a970e4b79ac4a4a04a3cff1bc10c00cd7704d8e9188_)
+ - **MacOS:** [`gnirehtet-rust-macos64-v2.0.zip`][direct-rust-macos64]  
+   (SHA-256: _f41f1e54063a7df04ac144a6457dadc7d0a99c1f10dc14597e1f9002ef2c31c5_)
 
 [direct-rust-linux64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.0/gnirehtet-rust-linux64-v2.0.zip
 [direct-rust-win64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.0/gnirehtet-rust-win64-v2.0.zip
-[direct-rust-macos]: https://github.com/Genymobile/gnirehtet/releases/download/v2.0/gnirehtet-rust-macos-v2.0.zip
+[direct-rust-macos64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.0/gnirehtet-rust-macos64-v2.0.zip
 
 Then extract it.
 
@@ -97,8 +97,8 @@ The Windows archive contains:
 
 ### Java
 
- - **All platforms:** [`gnirehtet-java-v2.0.zip`][direct-java]
-   (SHA-256: _not-available-yet_)
+ - **All platforms:** [`gnirehtet-java-v2.0.zip`][direct-java]  
+   (SHA-256: _c3bfb0bcf19bcbaa02b6a8b8374cc2f772d53f21a66dba68631a6e8110c84b35_)
 
 [direct-java]: https://github.com/Genymobile/gnirehtet/releases/download/v2.0/gnirehtet-java-v2.0.zip
 
