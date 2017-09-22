@@ -36,7 +36,7 @@ problems with the Rust version.
 
 The Android application requires at least API 21 (Android 5.0).
 
-For the _Java_ version only, _Java 8_ is required on your computer. On
+For the _Java_ version only, _Java 8_ (JRE) is required on your computer. On
 Debian-based distros, install the package `openjdk-8-jre`.
 
 ### adb
