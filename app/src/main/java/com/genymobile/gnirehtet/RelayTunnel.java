@@ -20,7 +20,6 @@ import android.net.VpnService;
 import android.util.Log;
 
 import java.io.IOException;
-import java.net.Inet4Address;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
@@ -46,7 +45,7 @@ public final class RelayTunnel implements Tunnel {
     }
 
     public void connect() throws IOException {
-        channel.connect(new InetSocketAddress(Inet4Address.getLocalHost(), DEFAULT_PORT));
+        channel.connect(new InetSocketAddress(Net.getLocalhostIPv4(), DEFAULT_PORT));
         readClientId(channel);
     }
 

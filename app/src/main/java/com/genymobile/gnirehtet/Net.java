@@ -16,6 +16,7 @@
 
 package com.genymobile.gnirehtet;
 
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 
@@ -46,5 +47,10 @@ public final class Net {
         } catch (UnknownHostException e) {
             throw new IllegalArgumentException(e);
         }
+    }
+
+    public static Inet4Address getLocalhostIPv4() {
+        byte[] localhost = {127, 0, 0, 1};
+        return (Inet4Address) toInetAddress(localhost);
     }
 }
