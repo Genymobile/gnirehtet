@@ -246,7 +246,8 @@ public final class Main {
         execAdb(serial, "reverse", "tcp:31416", "tcp:31416");
 
         List<String> cmd = new ArrayList<>();
-        Collections.addAll(cmd, "shell", "am", "startservice", "-a", "com.genymobile.gnirehtet.START");
+        Collections.addAll(cmd, "shell", "am", "broadcast", "-a", "com.genymobile.gnirehtet.START", "-n",
+                "com.genymobile.gnirehtet/.GnirehtetControlReceiver");
         if (dns != null) {
             Collections.addAll(cmd, "--esa", "dnsServers", dns);
         }
@@ -255,7 +256,8 @@ public final class Main {
 
     private static void stopClient(String serial) throws InterruptedException, IOException, CommandExecutionException {
         Log.i(TAG, "Stopping client...");
-        execAdb(serial, "shell", "am", "startservice", "-a", "com.genymobile.gnirehtet.STOP");
+        execAdb(serial, "shell", "am", "broadcast", "-a", "com.genymobile.gnirehtet.STOP", "-n",
+                "com.genymobile.gnirehtet/.GnirehtetControlReceiver");
     }
 
     private static void relay() throws IOException {

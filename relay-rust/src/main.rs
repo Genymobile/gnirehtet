@@ -351,9 +351,11 @@ fn start_client(
     let mut adb_args = vec![
         "shell",
         "am",
-        "startservice",
+        "broadcast",
         "-a",
         "com.genymobile.gnirehtet.START",
+        "-n",
+        "com.genymobile.gnirehtet/.GnirehtetControlReceiver",
     ];
     if let Some(dns_servers) = dns_servers {
         adb_args.append(&mut vec!["--esa", "dnsServers", dns_servers]);
@@ -368,9 +370,11 @@ fn stop_client(serial: Option<&String>) -> Result<(), CommandExecutionError> {
         vec![
             "shell",
             "am",
-            "startservice",
+            "broadcast",
             "-a",
             "com.genymobile.gnirehtet.STOP",
+            "-n",
+            "com.genymobile.gnirehtet/.GnirehtetControlReceiver",
         ],
     )
 }

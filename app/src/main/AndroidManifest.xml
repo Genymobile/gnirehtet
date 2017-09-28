@@ -13,15 +13,15 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
-        <service
-            android:name="com.genymobile.gnirehtet.GnirehtetControlService"
+        <receiver
+            android:name="com.genymobile.gnirehtet.GnirehtetControlReceiver"
             android:exported="true"
             android:permission="android.permission.WRITE_SECURE_SETTINGS">
             <intent-filter>
                 <action android:name="com.genymobile.gnirehtet.START" />
                 <action android:name="com.genymobile.gnirehtet.STOP" />
             </intent-filter>
-        </service>
+        </receiver>
         <service
             android:name="com.genymobile.gnirehtet.GnirehtetService"
             android:enabled="true"

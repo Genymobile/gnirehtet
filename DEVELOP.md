@@ -131,12 +131,11 @@ communicates with the clients (the private peers), by using a very specific
 
 The client is an _Android_ project located in [`app/`](app/).
 
-The [`VpnService`] is implemented by
-[`GnirehtetService`].
+The [`VpnService`] is implemented by [`GnirehtetService`].
 
-We control the application through intents received by
-[`GnirehtetControlService`] (these two services may not be merged, read
-comments in [`GnirehtetControlService`]).
+We control the application through broadcasts received by
+[`GnirehtetControlReceiver`] (we cannot send intents to `GnirehtetService`
+directly, read comments in [`GnirehtetControlReceiver`]).
 
 Some configuration options may be passed as extra parameters, converted to a
 [`VpnConfiguration`] instance. Currently, the user can configure the DNS servers
@@ -159,7 +158,7 @@ of [`IPPacketOutputStream`].
 
 [`VpnService`]: https://developer.android.com/reference/android/net/VpnService.html
 [`GnirehtetService`]: app/src/main/java/com/genymobile/gnirehtet/GnirehtetService.java
-[`GnirehtetControlService`]: app/src/main/java/com/genymobile/gnirehtet/GnirehtetControlService.java
+[`GnirehtetControlReceiver`]: app/src/main/java/com/genymobile/gnirehtet/GnirehtetControlReceiver.java
 [`VpnConfiguration`]: app/src/main/java/com/genymobile/gnirehtet/VpnConfiguration.java
 [`startActivityForResult`]: https://developer.android.com/reference/android/app/Activity.html#startActivityForResult%28android.content.Intent,%20int%29
 [`Activity`]: https://developer.android.com/reference/android/app/Activity.html
