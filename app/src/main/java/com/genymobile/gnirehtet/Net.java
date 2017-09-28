@@ -49,6 +49,7 @@ public final class Net {
         }
     }
 
+    @SuppressWarnings("checkstyle:MagicNumber")
     public static Inet4Address getLocalhostIPv4() {
         byte[] localhost = {127, 0, 0, 1};
         return (Inet4Address) toInetAddress(localhost);
