@@ -48,7 +48,7 @@ public class GnirehtetService extends VpnService {
     // magic value: higher (like 0x8000 or 0xffff) or lower (like 1500) values show poorer performances
     private static final int MTU = 0x4000;
 
-    private final DisconnectionNotifier disconnectionNotifier = new DisconnectionNotifier(this);
+    private final Notifier notifier = new Notifier(this);
     private final Handler handler = new RelayTunnelConnectionStateHandler(this);
 
     private ParcelFileDescriptor vpnInterface = null;
@@ -58,7 +58,11 @@ public class GnirehtetService extends VpnService {
         Intent intent = new Intent(context, GnirehtetService.class);
         intent.setAction(ACTION_START_VPN);
         intent.putExtra(GnirehtetService.EXTRA_VPN_CONFIGURATION, config);
-        context.startService(intent);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(intent);
+        } else {
+            context.startService(intent);
+        }
     }
 
     public static void stop(Context context) {
@@ -96,6 +100,7 @@ public class GnirehtetService extends VpnService {
     }
 
     private void startVpn(VpnConfiguration config) {
+        notifier.start();
         if (setupVpn(config)) {
             startForwarding();
         }
@@ -173,7 +178,7 @@ public class GnirehtetService extends VpnService {
             return;
         }
 
-        disconnectionNotifier.cancelNotification();
+        notifier.stop();
 
         try {
             forwarder.stop();
@@ -203,11 +208,11 @@ public class GnirehtetService extends VpnService {
             switch (message.what) {
                 case RelayTunnelListener.MSG_RELAY_TUNNEL_CONNECTED:
                     Log.d(TAG, "Relay tunnel connected");
-                    vpnService.disconnectionNotifier.cancelNotification();
+                    vpnService.notifier.setFailure(false);
                     break;
                 case RelayTunnelListener.MSG_RELAY_TUNNEL_DISCONNECTED:
                     Log.d(TAG, "Relay tunnel disconnected");
-                    vpnService.disconnectionNotifier.showNotification();
+                    vpnService.notifier.setFailure(true);
                     break;
                 default:
             }

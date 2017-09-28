@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <string name="relay_connected">Reverse tethering activé</string>
     <string name="relay_disconnected">Déconnecté du serveur relais</string>
     <string name="stop_vpn">Arrêter Gnirehtet</string>
 </resources>
