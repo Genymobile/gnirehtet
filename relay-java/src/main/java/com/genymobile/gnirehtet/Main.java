@@ -92,7 +92,7 @@ public final class Main {
             @Override
             @SuppressWarnings("checkstyle:MagicNumber")
             void execute(CommandLineArguments args) throws Exception {
-                if (mustInstallApk(args.getSerial())) {
+                if (mustInstallClient(args.getSerial())) {
                     INSTALL.execute(args);
                     // wait a bit after the app is installed so that intent actions are correctly registered
                     Thread.sleep(500); // ms
@@ -219,7 +219,7 @@ public final class Main {
         }
     }
 
-    private static boolean mustInstallApk(String serial) throws InterruptedException, IOException, CommandExecutionException {
+    private static boolean mustInstallClient(String serial) throws InterruptedException, IOException, CommandExecutionException {
         Log.i(TAG, "Checking gnirehtet client...");
         List<String> command = createAdbCommand(serial, "shell", "dumpsys", "package", "com.genymobile.gnirehtet");
         Log.d(TAG, "Execute: " + command);

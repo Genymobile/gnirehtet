@@ -143,7 +143,7 @@ impl Command for RunCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        if must_install_gnirehtet(args.serial())? {
+        if must_install_client(args.serial())? {
             InstallCommand.execute(args)?;
             // wait a bit after the app is installed so that intent actions are correctly
             // registered
@@ -302,7 +302,7 @@ fn exec_adb<S: Into<String>>(
     }
 }
 
-fn must_install_gnirehtet(serial: Option<&String>) -> Result<bool, CommandExecutionError> {
+fn must_install_client(serial: Option<&String>) -> Result<bool, CommandExecutionError> {
     info!(target: TAG, "Checking gnirehtet client...");
     let args = create_adb_args(
         serial,
