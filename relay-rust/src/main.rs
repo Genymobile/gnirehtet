@@ -346,7 +346,10 @@ fn start_client(
     dns_servers: Option<&String>,
 ) -> Result<(), CommandExecutionError> {
     info!(target: TAG, "Starting client...");
-    exec_adb(serial, vec!["reverse", "tcp:31416", "tcp:31416"])?;
+    exec_adb(
+        serial,
+        vec!["reverse", "localabstract:gnirehtet", "tcp:31416"],
+    )?;
 
     let mut adb_args = vec![
         "shell",

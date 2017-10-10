@@ -243,7 +243,7 @@ public final class Main {
 
     private static void startClient(String serial, String dns) throws InterruptedException, IOException, CommandExecutionException {
         Log.i(TAG, "Starting client...");
-        execAdb(serial, "reverse", "tcp:31416", "tcp:31416");
+        execAdb(serial, "reverse", "localabstract:gnirehtet", "tcp:31416");
 
         List<String> cmd = new ArrayList<>();
         Collections.addAll(cmd, "shell", "am", "broadcast", "-a", "com.genymobile.gnirehtet.START", "-n",

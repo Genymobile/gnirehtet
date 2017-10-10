@@ -101,7 +101,7 @@ the relay server, and sends the raw packets to it.
 This TCP connection is established over _adb_, after we started a reverse
 port redirection:
 
-    adb reverse tcp:31416 tcp:31416
+    adb reverse localabstract:gnirehtet tcp:31416
 
 This means that every connection initiated to `localhost:31416` from the device
 will be redirected to the port `31416` on the computer, on which the relay
