@@ -161,6 +161,11 @@ To stop a client:
 
     ./gnirehtet stop [serial]
 
+To reset the tunnel (useful to get the connection back when a device is
+unplugged and plugged back while gnirehtet is active):
+
+    ./gnirehtet tunnel [serial]
+
 The _serial_ parameter is required only if `adb devices` outputs more than one
 device.
 

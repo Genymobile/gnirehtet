@@ -44,6 +44,7 @@ const COMMANDS: &[&'static Command] = &[
     &StartCommand,
     &StopCommand,
     &RestartCommand,
+    &TunnelCommand,
     &RelayCommand,
 ];
 
@@ -61,6 +62,7 @@ struct RunCommand;
 struct StartCommand;
 struct StopCommand;
 struct RestartCommand;
+struct TunnelCommand;
 struct RelayCommand;
 
 impl Command for InstallCommand {
@@ -248,6 +250,27 @@ impl Command for RestartCommand {
     }
 }
 
+impl Command for TunnelCommand {
+    fn command(&self) -> &'static str {
+        "tunnel"
+    }
+
+    fn accepted_parameters(&self) -> u8 {
+        cli_args::PARAM_SERIAL
+    }
+
+    fn description(&self) -> &'static str {
+        "Set up the 'adb reverse' tunnel.\n\
+        If a device is unplugged then plugged back while gnirehtet is\n\
+        active, resetting the tunnel is sufficient to get the\n\
+        connection back."
+    }
+
+    fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
+        setup_tunnel(args.serial())
+    }
+}
+
 impl Command for RelayCommand {
     fn command(&self) -> &'static str {
         "relay"
@@ -341,15 +364,19 @@ fn must_install_client(serial: Option<&String>) -> Result<bool, CommandExecution
     }
 }
 
+fn setup_tunnel(serial: Option<&String>) -> Result<(), CommandExecutionError> {
+    exec_adb(
+        serial,
+        vec!["reverse", "localabstract:gnirehtet", "tcp:31416"],
+    )
+}
+
 fn start_client(
     serial: Option<&String>,
     dns_servers: Option<&String>,
 ) -> Result<(), CommandExecutionError> {
     info!(target: TAG, "Starting client...");
-    exec_adb(
-        serial,
-        vec!["reverse", "localabstract:gnirehtet", "tcp:31416"],
-    )?;
+    setup_tunnel(serial)?;
 
     let mut adb_args = vec![
         "shell",

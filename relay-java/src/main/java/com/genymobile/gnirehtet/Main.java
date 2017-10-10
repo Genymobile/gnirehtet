@@ -162,6 +162,20 @@ public final class Main {
                 START.execute(args);
             }
         },
+        TUNNEL("tunnel", CommandLineArguments.PARAM_SERIAL) {
+            @Override
+            String getDescription() {
+                return "Set up the 'adb reverse' tunnel.\n"
+                        + "If a device is unplugged then plugged back while gnirehtet is\n"
+                        + "active, resetting the tunnel is sufficient to get the\n"
+                        + "connection back.";
+            }
+
+            @Override
+            void execute(CommandLineArguments args) throws Exception {
+                setupTunnel(args.getSerial());
+            }
+        },
         RELAY("relay", CommandLineArguments.PARAM_NONE) {
             @Override
             String getDescription() {
@@ -241,9 +255,13 @@ public final class Main {
         return true;
     }
 
+    private static void setupTunnel(String serial) throws InterruptedException, IOException, CommandExecutionException {
+        execAdb(serial, "reverse", "localabstract:gnirehtet", "tcp:31416");
+    }
+
     private static void startClient(String serial, String dns) throws InterruptedException, IOException, CommandExecutionException {
         Log.i(TAG, "Starting client...");
-        execAdb(serial, "reverse", "localabstract:gnirehtet", "tcp:31416");
+        setupTunnel(serial);
 
         List<String> cmd = new ArrayList<>();
         Collections.addAll(cmd, "shell", "am", "broadcast", "-a", "com.genymobile.gnirehtet.START", "-n",
