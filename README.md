@@ -183,11 +183,13 @@ To install the apk:
 To start a client:
 
     adb reverse tcp:31416 tcp:31416
-    adb shell am startservice -a com.genymobile.gnirehtet.START
+    adb shell am broadcast -a com.genymobile.gnirehtet.START \
+        -n com.genymobile.gnirehtet/.GnirehtetControlReceiver
 
 To stop a client:
 
-    adb shell am startservice -a com.genymobile.gnirehtet.STOP
+    adb shell am broadcast -a com.genymobile.gnirehtet.STOP \
+        -n com.genymobile.gnirehtet/.GnirehtetControlReceiver
 
 
 ## Why _gnirehtet_?
