@@ -18,8 +18,3 @@ ctrlc = { version = "3.0", features = ["termination"] }     # for handling Ctrl+
 
 [profile.release]
 lto = true     # link-time optimization
-
-[replace]
-# Current mio including this patch: https://github.com/carllerche/mio/pull/640
-# to be removed when mio 0.6.11 is released
-"mio:0.6.10" = { git = 'https://github.com/carllerche/mio', rev='5b9d20c4e01a63115ebdb6b87970fc9dd361a29b' }
