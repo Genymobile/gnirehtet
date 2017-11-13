@@ -37,7 +37,6 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         SYN_SENT,
         SYN_RECEIVED,
         ESTABLISHED,
-        CLOSE_WAIT,
         LAST_ACK
     }
 
@@ -131,11 +130,6 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
     private void eof() {
         remoteClosed = true;
-        if (state == State.CLOSE_WAIT) {
-            IPv4Packet packet = createEmptyResponsePacket(TCPHeader.FLAG_FIN);
-            ++sequenceNumber; // FIN counts for 1 byte
-            sendToClient(packet);
-        }
     }
 
     private int getRemainingClientWindow() {
@@ -260,17 +254,13 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     private void handleFin(IPv4Packet packet) {
         TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
         acknowledgementNumber = tcpHeader.getSequenceNumber() + 1;
-        if (remoteClosed) {
-            state = State.LAST_ACK;
-            logd(TAG, "Received a FIN from the client, sending ACK+FIN " + numbers());
-            IPv4Packet response = createEmptyResponsePacket(TCPHeader.FLAG_FIN | TCPHeader.FLAG_ACK);
-            ++sequenceNumber; // FIN counts for 1 byte
-            sendToClient(response);
-        } else {
-            state = State.CLOSE_WAIT;
-            IPv4Packet response = createEmptyResponsePacket(TCPHeader.FLAG_ACK);
-            sendToClient(response);
-        }
+        // consider the connection closed immediately (no need for CLOSE_WAIT)
+        state = State.LAST_ACK;
+        remoteClosed = true;
+        logd(TAG, "Received a FIN from the client, sending ACK+FIN " + numbers());
+        IPv4Packet response = createEmptyResponsePacket(TCPHeader.FLAG_FIN | TCPHeader.FLAG_ACK);
+        ++sequenceNumber; // FIN counts for 1 byte
+        sendToClient(response);
     }
 
     private void handleAck(IPv4Packet packet) {

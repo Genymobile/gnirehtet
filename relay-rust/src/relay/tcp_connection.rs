@@ -74,7 +74,6 @@ enum TcpState {
     SynSent,
     SynReceived,
     Established,
-    CloseWait,
     LastAck,
 }
 
@@ -312,7 +311,7 @@ impl TcpConnection {
         };
         match non_lexical_lifetime_workaround {
             Ok(None) => {
-                self.eof(selector);
+                self.eof();
             }
             Err(err) => {
                 if err.kind() == io::ErrorKind::WouldBlock {
@@ -387,12 +386,8 @@ impl TcpConnection {
         }
     }
 
-    fn eof(&mut self, selector: &mut Selector) {
+    fn eof(&mut self) {
         self.tcb.remote_closed = true;
-        if self.tcb.state == TcpState::CloseWait {
-            self.send_empty_packet_to_client(selector, tcp_header::FLAG_FIN);
-            self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
-        }
     }
 
     #[inline]
@@ -563,24 +558,22 @@ impl TcpConnection {
     ) {
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         self.tcb.acknowledgement_number = Wrapping(tcp_header.sequence_number()) + Wrapping(1);
-        if self.tcb.remote_closed {
-            self.tcb.state = TcpState::LastAck;
-            cx_debug!(
-                target: TAG,
-                self.id,
-                "Received a FIN from the client, sending ACK+FIN {}",
-                self.tcb.numbers()
-            );
-            self.reply_empty_packet_to_client(
-                selector,
-                client_channel,
-                tcp_header::FLAG_FIN | tcp_header::FLAG_ACK,
-            );
-            self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
-        } else {
-            self.tcb.state = TcpState::CloseWait;
-            self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_ACK);
-        }
+
+        // consider the connection closed immediately (no need for CLOSE_WAIT)
+        self.tcb.state = TcpState::LastAck;
+        self.tcb.remote_closed = true;
+        cx_debug!(
+            target: TAG,
+            self.id,
+            "Received a FIN from the client, sending ACK+FIN {}",
+            self.tcb.numbers()
+        );
+        self.reply_empty_packet_to_client(
+            selector,
+            client_channel,
+            tcp_header::FLAG_FIN | tcp_header::FLAG_ACK,
+        );
+        self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
     }
 
     fn handle_ack(
