@@ -20,6 +20,7 @@ import com.genymobile.gnirehtet.relay.CommandExecutionException;
 import com.genymobile.gnirehtet.relay.Log;
 import com.genymobile.gnirehtet.relay.Relay;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -50,7 +51,12 @@ public final class Main {
             @Override
             void execute(CommandLineArguments args) throws Exception {
                 Log.i(TAG, "Installing gnirehtet client...");
-                execAdb(args.getSerial(), "install", "-r", "gnirehtet.apk");
+                File apk = new File("/opt/gnirehtet/gnirehtet.apk");
+                if (apk.exists() && apk.isFile()) {
+                    execAdb(args.getSerial(), "install", "-r", "/opt/gnirehtet/gnirehtet.apk");
+                } else {
+                    execAdb(args.getSerial(), "install", "-r", "gnirehtet.apk");
+                }
             }
         },
         UNINSTALL("uninstall", CommandLineArguments.PARAM_SERIAL) {
