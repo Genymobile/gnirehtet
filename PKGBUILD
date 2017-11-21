@@ -9,12 +9,12 @@ url="https://github.com/Genymobile/gnirehtet"
 license=('Apache-2.0')
 depends=('android-tools')
 source=("https://github.com/Genymobile/gnirehtet/releases/download/v$pkgver/gnirehtet-rust-linux64-v$pkgver.zip")
-md5sums=('8f7cc0d33248cd6d71591d90e51ebbc0')
+sha256sums=('0f2a694611270eaf8a18af9ebf713932e05e4be75d0a38774154804da4d60d4d')
 
 package() {
         cd "$srcdir/gnirehtet-rust-linux64"
         mkdir --parents $pkgdir/usr/bin
         cp gnirehtet $pkgdir/usr/bin
-        mkdir --parents $pkgdir/opt/gnirehtet
-        cp gnirehtet.apk $pkgdir/opt/gnirehtet
+        mkdir --parents $pkgdir/usr/share/gnirehtet
+        cp gnirehtet.apk $pkgdir/usr/share/gnirehtet
 }
