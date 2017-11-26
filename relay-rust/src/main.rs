@@ -29,13 +29,14 @@ use cli_args::CommandLineArguments;
 use execution_error::{Cmd, CommandExecutionError, ProcessStatusError, ProcessIoError};
 use logger::SimpleLogger;
 use std::io;
-use std::path::Path;
 use std::process::{self, exit};
 use std::thread;
 use std::time::Duration;
 
 const TAG: &'static str = "Main";
 const REQUIRED_APK_VERSION_CODE: &'static str = "4";
+
+
 
 const COMMANDS: &[&'static Command] = &[
     &InstallCommand,
@@ -83,11 +84,7 @@ impl Command for InstallCommand {
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
         info!(target: TAG, "Installing gnirehtet client...");
-        if Path::new("/opt/gnirehtet/gnirehtet.apk").exists() {
-            exec_adb(args.serial(), vec!["install", "-r", "/opt/gnirehtet/gnirehtet.apk"])
-        } else {
-            exec_adb(args.serial(), vec!["install", "-r", "gnirehtet.apk"])
-        }
+        exec_adb(args.serial(), vec!["install", "-r", env!("APKPATH")])
     }
 }
 
