@@ -63,8 +63,13 @@ impl Selector {
         H: EventHandler + 'static,
     {
         let token = Token(self.handlers.insert(Rc::new(handler)));
-        self.poll.register(handle, token, interest, opts)?;
-        Ok(token)
+        if let Err(err) = self.poll.register(handle, token, interest, opts) {
+            // remove the token we just added
+            self.handlers.remove(token.0);
+            Err(err)
+        } else {
+            Ok(token)
+        }
     }
 
     pub fn reregister<E>(
