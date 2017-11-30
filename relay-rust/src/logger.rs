@@ -30,13 +30,18 @@ impl Log for SimpleLogger {
         if self.enabled(record.metadata()) {
             let date = Local::now();
             let formatted_date = date.format("%Y-%m-%d %H:%M:%S%.3f");
-            println!(
+            let msg = format!(
                 "{} {} {}: {}",
                 formatted_date,
                 record.level(),
                 record.target(),
                 record.args()
             );
+            if record.level() == LogLevel::Error {
+                eprintln!("{}", msg);
+            } else {
+                println!("{}", msg);
+            }
         }
     }
 }
