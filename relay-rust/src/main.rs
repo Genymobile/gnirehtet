@@ -36,6 +36,8 @@ use std::time::Duration;
 const TAG: &'static str = "Main";
 const REQUIRED_APK_VERSION_CODE: &'static str = "4";
 
+
+
 const COMMANDS: &[&'static Command] = &[
     &InstallCommand,
     &UninstallCommand,
@@ -82,7 +84,7 @@ impl Command for InstallCommand {
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
         info!(target: TAG, "Installing gnirehtet client...");
-        exec_adb(args.serial(), vec!["install", "-r", "gnirehtet.apk"])
+        exec_adb(args.serial(), vec!["install", "-r", env!("APKPATH")])
     }
 }
 
