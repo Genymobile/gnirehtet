@@ -19,234 +19,111 @@ extern crate ctrlc;
 #[macro_use]
 extern crate log;
 extern crate relaylib;
+extern crate structopt;
+#[macro_use]
+extern crate structopt_derive;
 
-mod cli_args;
 mod execution_error;
 mod logger;
 
-use std::env;
-use cli_args::CommandLineArguments;
-use execution_error::{Cmd, CommandExecutionError, ProcessStatusError, ProcessIoError};
-use logger::SimpleLogger;
 use std::process::{self, exit};
 use std::thread;
 use std::time::Duration;
+use execution_error::{Cmd, CommandExecutionError, ProcessStatusError, ProcessIoError};
+use logger::SimpleLogger;
+use structopt::StructOpt;
 
 const TAG: &'static str = "Main";
 const REQUIRED_APK_VERSION_CODE: &'static str = "4";
 
-const COMMANDS: &[&'static Command] = &[
-    &InstallCommand,
-    &UninstallCommand,
-    &ReinstallCommand,
-    &RunCommand,
-    &StartCommand,
-    &StopCommand,
-    &RestartCommand,
-    &TunnelCommand,
-    &RelayCommand,
-];
+const GNIREHTET_NAME: &'static str = "gnirehtet";
+const GNIREHTET_VERSION: &'static str = "2.1";
+const GNIREHTET_AUTHOR: &'static str = "Romain Vimont <rvimont@genymobile.com>";
+const GNIREHTET_ABOUT: &'static str = "A reverse tethering tool for Android";
 
-trait Command {
-    fn command(&self) -> &'static str;
-    fn accepted_parameters(&self) -> u8;
-    fn description(&self) -> &'static str;
-    fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError>;
-}
+const PARAM_SERIAL_HELP: &'static str = "the device serial number";
+const PARAM_SERIAL_LONG_HELP: &'static str = "The device serial number as it appears in the \
+    output of \"adb devices\". Optional if only one device is available.";
 
-struct InstallCommand;
-struct UninstallCommand;
-struct ReinstallCommand;
-struct RunCommand;
-struct StartCommand;
-struct StopCommand;
-struct RestartCommand;
-struct TunnelCommand;
-struct RelayCommand;
+const PARAM_DNS_SERVERS_HELP: &'static str = "list of custom DNS server(s)";
+const PARAM_DNS_SERVERS_LONG_HELP: &'static str = "A comma-separated list of DNS server(s) to use \
+    instead of 8.8.8.8 (Google public DNS).\nTo use the host 'localhost' as DNS, use 10.0.2.2.";
 
-impl Command for InstallCommand {
-    fn command(&self) -> &'static str {
-        "install"
-    }
+#[derive(StructOpt, Debug)]
+#[structopt(name_raw = "GNIREHTET_NAME", author_raw = "GNIREHTET_AUTHOR",
+            about_raw = "GNIREHTET_ABOUT", version_raw = "GNIREHTET_VERSION")]
+enum Gnirehtet {
+    #[structopt(name = "install", about = "Install the client on the Android device and exit")]
+    Install {
+        #[structopt(help_raw = "PARAM_SERIAL_HELP", long_help_raw = "PARAM_SERIAL_LONG_HELP")]
+        serial: Option<String>,
+    },
 
-    fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_SERIAL
-    }
+    #[structopt(name = "uninstall",
+                about = "Uninstall the client from the Android device and exit")]
+    Uninstall {
+        #[structopt(help_raw = "PARAM_SERIAL_HELP", long_help_raw = "PARAM_SERIAL_LONG_HELP")]
+        serial: Option<String>,
+    },
 
-    fn description(&self) -> &'static str {
-        "Install the client on the Android device and exit.\n\
-        If several devices are connected via adb, then serial must be\n\
-        specified."
-    }
+    #[structopt(name = "reinstall", about = "Uninstall then install")]
+    Reinstall {
+        #[structopt(help_raw = "PARAM_SERIAL_HELP", long_help_raw = "PARAM_SERIAL_LONG_HELP")]
+        serial: Option<String>,
+    },
 
-    fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_install(args.serial())
-    }
-}
+    #[structopt(name = "run", alias = "rt",
+                about = "Enable reverse tethering for exactly one device",
+                long_about = "Enable reverse tethering for exactly one device\n\n\
+                 - install the client if necessary;
+                 - start the client;
+                 - start the relay server;
+                 - on Ctrl+C, stop both the relay server and the client.")]
+    Run {
+        #[structopt(help_raw = "PARAM_SERIAL_HELP", long_help_raw = "PARAM_SERIAL_LONG_HELP")]
+        serial: Option<String>,
+        #[structopt(short = "d", long = "dns", help_raw = "PARAM_DNS_SERVERS_HELP",
+                    long_help_raw = "PARAM_DNS_SERVERS_LONG_HELP")]
+        dns_servers: Option<String>,
+    },
 
-impl Command for UninstallCommand {
-    fn command(&self) -> &'static str {
-        "uninstall"
-    }
+    #[structopt(name = "start", about = "Start the client on the Android device and exit",
+                long_about = "Start the client on the Android device and exit\n\n\
+                If the client is already started, then do nothing (and ignore the parameters).")]
+    Start {
+        #[structopt(help_raw = "PARAM_SERIAL_HELP", long_help_raw = "PARAM_SERIAL_LONG_HELP")]
+        serial: Option<String>,
+        #[structopt(short = "d", long = "dns", help_raw = "PARAM_DNS_SERVERS_HELP",
+                    long_help_raw = "PARAM_DNS_SERVERS_LONG_HELP")]
+        dns_servers: Option<String>,
+    },
 
-    fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_SERIAL
-    }
+    #[structopt(name = "stop", about = "Stop the client on the Android device and exit")]
+    Stop {
+        #[structopt(help_raw = "PARAM_SERIAL_HELP", long_help_raw = "PARAM_SERIAL_LONG_HELP")]
+        serial: Option<String>,
+    },
 
-    fn description(&self) -> &'static str {
-        "Uninstall the client from the Android device and exit.\n\
-        If several devices are connected via adb, then serial must be\n\
-        specified."
-    }
+    #[structopt(name = "restart", about = "Stop then start")]
+    Restart {
+        #[structopt(help_raw = "PARAM_SERIAL_HELP", long_help_raw = "PARAM_SERIAL_LONG_HELP")]
+        serial: Option<String>,
+        #[structopt(short = "d", long = "dns", help_raw = "PARAM_DNS_SERVERS_HELP",
+                    long_help_raw = "PARAM_DNS_SERVERS_LONG_HELP")]
+        dns_servers: Option<String>,
+    },
 
-    fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_uninstall(args.serial())
-    }
-}
+    #[structopt(name = "tunnel", about = "Set up the 'adb reverse' tunnel",
+                long_about = "Set up the 'adb reverse' tunnel\n\n\
+                If a device is unplugged then plugged back while gnirehtet is active, \
+                resetting the tunnel is sufficient to get the connection back.")]
+    Tunnel {
+        #[structopt(help_raw = "PARAM_SERIAL_HELP", long_help_raw = "PARAM_SERIAL_LONG_HELP")]
+        serial: Option<String>,
+    },
 
-impl Command for ReinstallCommand {
-    fn command(&self) -> &'static str {
-        "reinstall"
-    }
-
-    fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_SERIAL
-    }
-
-    fn description(&self) -> &'static str {
-        "Uninstall then install."
-    }
-
-    fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_reinstall(args.serial())
-    }
-}
-
-impl Command for RunCommand {
-    fn command(&self) -> &'static str {
-        "run"
-    }
-
-    fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_SERIAL | cli_args::PARAM_DNS_SERVERS
-    }
-
-    fn description(&self) -> &'static str {
-        "Enable reverse tethering for exactly one device:\n  \
-          - install the client if necessary;\n  \
-          - start the client;\n  \
-          - start the relay server;\n  \
-          - on Ctrl+C, stop both the relay server and the client."
-    }
-
-    fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_run(args.serial(), args.dns_servers())
-    }
-}
-
-impl Command for StartCommand {
-    fn command(&self) -> &'static str {
-        "start"
-    }
-
-    fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_SERIAL | cli_args::PARAM_DNS_SERVERS
-    }
-
-    fn description(&self) -> &'static str {
-        "Start a client on the Android device and exit.\n\
-        If several devices are connected via adb, then serial must be\n\
-        specified.\n\
-        If -d is given, then make the Android device use the specified\n\
-        DNS server(s). Otherwise, use 8.8.8.8 (Google public DNS).\n\
-        If the client is already started, then do nothing, and ignore\n\
-        DNS servers parameter.\n\
-        To use the host 'localhost' as DNS, use 10.0.2.2."
-    }
-
-    fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_start(args.serial(), args.dns_servers())
-    }
-}
-
-impl Command for StopCommand {
-    fn command(&self) -> &'static str {
-        "stop"
-    }
-
-    fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_SERIAL
-    }
-
-    fn description(&self) -> &'static str {
-        "Stop the client on the Android device and exit.\n\
-        If several devices are connected via adb, then serial must be\n\
-        specified."
-    }
-
-    fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_stop(args.serial())
-    }
-}
-
-impl Command for RestartCommand {
-    fn command(&self) -> &'static str {
-        "restart"
-    }
-
-    fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_SERIAL | cli_args::PARAM_DNS_SERVERS
-    }
-
-    fn description(&self) -> &'static str {
-        "Stop then start."
-    }
-
-    fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_stop(args.serial())?;
-        cmd_start(args.serial(), args.dns_servers())?;
-        Ok(())
-    }
-}
-
-impl Command for TunnelCommand {
-    fn command(&self) -> &'static str {
-        "tunnel"
-    }
-
-    fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_SERIAL
-    }
-
-    fn description(&self) -> &'static str {
-        "Set up the 'adb reverse' tunnel.\n\
-        If a device is unplugged then plugged back while gnirehtet is\n\
-        active, resetting the tunnel is sufficient to get the\n\
-        connection back."
-    }
-
-    fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_tunnel(args.serial())
-    }
-}
-
-impl Command for RelayCommand {
-    fn command(&self) -> &'static str {
-        "relay"
-    }
-
-    fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_NONE
-    }
-
-    fn description(&self) -> &'static str {
-        "Start the relay server in the current terminal."
-    }
-
-    fn execute(&self, _: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_relay()?;
-        Ok(())
-    }
+    #[structopt(name = "relay", about = "Start the relay server in the current terminal")]
+    Relay,
 }
 
 fn cmd_install(serial: Option<&String>) -> Result<(), CommandExecutionError> {
@@ -346,6 +223,15 @@ fn cmd_stop(serial: Option<&String>) -> Result<(), CommandExecutionError> {
     )
 }
 
+fn cmd_restart(
+    serial: Option<&String>,
+    dns_servers: Option<&String>,
+) -> Result<(), CommandExecutionError> {
+    cmd_stop(serial)?;
+    cmd_start(serial, dns_servers)?;
+    Ok(())
+}
+
 fn cmd_tunnel(serial: Option<&String>) -> Result<(), CommandExecutionError> {
     exec_adb(
         serial,
@@ -432,87 +318,31 @@ fn must_install_client(serial: Option<&String>) -> Result<bool, CommandExecution
     }
 }
 
-fn print_usage() {
-    let mut msg = "Syntax: gnirehtet (".to_string();
-    msg.push_str(COMMANDS[0].command());
-    for command in &COMMANDS[1..] {
-        msg.push('|');
-        msg.push_str(command.command());
-    }
-    msg.push_str(") ...\n");
-    for &command in COMMANDS {
-        msg.push('\n');
-        append_command_usage(&mut msg, command);
-    }
-    eprint!("{}", msg);
-}
-
-fn append_command_usage(msg: &mut String, command: &Command) {
-    msg.push_str("  gnirehtet ");
-    msg.push_str(command.command());
-    let accepted_parameters = command.accepted_parameters();
-    if (accepted_parameters & cli_args::PARAM_SERIAL) != 0 {
-        msg.push_str(" [serial]");
-    }
-    if (accepted_parameters & cli_args::PARAM_DNS_SERVERS) != 0 {
-        msg.push_str(" [-d DNS[,DNS2,...]]");
-    }
-    msg.push('\n');
-    for desc_line in command.description().split('\n') {
-        msg.push_str("      ");
-        msg.push_str(desc_line);
-        msg.push('\n');
-    }
-}
-
-fn print_command_usage(command: &Command) {
-    let mut msg = String::new();
-    append_command_usage(&mut msg, command);
-    eprint!("{}", msg);
-}
-
 fn main() {
     SimpleLogger::init().unwrap();
-    let mut args = env::args();
-    // args.nth(1) will consume the two first arguments (the binary name and the command name)
-    if let Some(command_name) = args.nth(1) {
-        let command = COMMANDS.iter().find(
-            |&&command| command.command() == command_name,
-        );
-        match command {
-            Some(&command) => {
-                // args now contains only the command parameters
-                let arguments =
-                    CommandLineArguments::parse(command.accepted_parameters(), args.collect());
-                match arguments {
-                    Ok(arguments) => {
-                        if let Err(err) = command.execute(&arguments) {
-                            error!(target: TAG, "Execution error: {}", err);
-                            exit(3);
-                        }
-                    }
-                    Err(err) => {
-                        error!(target: TAG, "{}", err);
-                        print_command_usage(command);
-                        exit(2);
-                    }
-                }
-            }
-            None => {
-                if command_name == "rt" {
-                    error!(
-                        target: TAG,
-                        "The 'rt' command has been renamed to 'run'. Try 'gnirehtet run' instead."
-                    );
-                    print_command_usage(&RunCommand);
-                } else {
-                    error!(target: TAG, "Unknown command: {}", command_name);
-                    print_usage();
-                }
-                exit(1);
-            }
-        }
-    } else {
-        print_usage();
+    let opt = Gnirehtet::from_args();
+    let result = match opt {
+        Gnirehtet::Install { serial } => cmd_install(serial.as_ref()),
+        Gnirehtet::Uninstall { serial } => cmd_uninstall(serial.as_ref()),
+        Gnirehtet::Reinstall { serial } => cmd_reinstall(serial.as_ref()),
+        Gnirehtet::Run {
+            serial,
+            dns_servers,
+        } => cmd_run(serial.as_ref(), dns_servers.as_ref()),
+        Gnirehtet::Start {
+            serial,
+            dns_servers,
+        } => cmd_start(serial.as_ref(), dns_servers.as_ref()),
+        Gnirehtet::Stop { serial } => cmd_stop(serial.as_ref()),
+        Gnirehtet::Restart {
+            serial,
+            dns_servers,
+        } => cmd_restart(serial.as_ref(), dns_servers.as_ref()),
+        Gnirehtet::Tunnel { serial } => cmd_tunnel(serial.as_ref()),
+        Gnirehtet::Relay => cmd_relay(),
+    };
+    if let Err(err) = result {
+        error!(target: TAG, "Execution error: {}", err);
+        exit(2);
     }
 }

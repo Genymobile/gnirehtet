@@ -95,7 +95,7 @@ public final class Main {
         START("start", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER) {
             @Override
             String getDescription() {
-                return "Start a client on the Android device and exit.\n"
+                return "Start the client on the Android device and exit.\n"
                         + "If several devices are connected via adb, then serial must be\n"
                         + "specified.\n"
                         + "If -d is given, then make the Android device use the specified\n"
@@ -328,7 +328,7 @@ public final class Main {
             builder.append(" [serial]");
         }
         if ((command.acceptedParameters & CommandLineArguments.PARAM_DNS_SERVER) != 0) {
-            builder.append(" [-d DNS[,DNS2,...]]");
+            builder.append(" [-d|--dns DNS[,DNS2,...]]");
         }
         builder.append(NL);
         String[] descLines = command.getDescription().split("\n");

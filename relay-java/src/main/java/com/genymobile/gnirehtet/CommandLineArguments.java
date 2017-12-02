@@ -32,7 +32,7 @@ public class CommandLineArguments {
         CommandLineArguments arguments = new CommandLineArguments();
         for (int i = 0; i < args.length; ++i) {
             String arg = args[i];
-            if ((acceptedParameters & PARAM_DNS_SERVER) != 0 && "-d".equals(arg)) {
+            if ((acceptedParameters & PARAM_DNS_SERVER) != 0 && ("-d".equals(arg) || "--dns".equals(arg))) {
                 if (arguments.dnsServers != null) {
                     throw new IllegalArgumentException("DNS servers already set");
                 }
