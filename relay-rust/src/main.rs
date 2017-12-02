@@ -28,7 +28,6 @@ use std::env;
 use cli_args::CommandLineArguments;
 use execution_error::{Cmd, CommandExecutionError, ProcessStatusError, ProcessIoError};
 use logger::SimpleLogger;
-use std::io;
 use std::process::{self, exit};
 use std::thread;
 use std::time::Duration;
@@ -81,8 +80,7 @@ impl Command for InstallCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        info!(target: TAG, "Installing gnirehtet client...");
-        exec_adb(args.serial(), vec!["install", "-r", "gnirehtet.apk"])
+        cmd_install(args.serial())
     }
 }
 
@@ -102,8 +100,7 @@ impl Command for UninstallCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        info!(target: TAG, "Uninstalling gnirehtet client...");
-        exec_adb(args.serial(), vec!["uninstall", "com.genymobile.gnirehtet"])
+        cmd_uninstall(args.serial())
     }
 }
 
@@ -121,9 +118,7 @@ impl Command for ReinstallCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        UninstallCommand.execute(args)?;
-        InstallCommand.execute(args)?;
-        Ok(())
+        cmd_reinstall(args.serial())
     }
 }
 
@@ -145,43 +140,7 @@ impl Command for RunCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        if must_install_client(args.serial())? {
-            InstallCommand.execute(args)?;
-            // wait a bit after the app is installed so that intent actions are correctly
-            // registered
-            thread::sleep(Duration::from_millis(500));
-        }
-
-        {
-            // start in parallel so that the relay server is ready when the client connects
-            let serial = args.serial().cloned();
-            let dns_servers = args.dns_servers().cloned();
-            thread::spawn(move || if let Err(err) = start_client(
-                serial.as_ref(),
-                dns_servers.as_ref(),
-            )
-            {
-                error!(target: TAG, "Cannot start client: {}", err);
-            });
-        }
-
-        let serial = args.serial().cloned();
-        ctrlc::set_handler(move || {
-            info!(target: TAG, "Interrupted");
-
-            if let Err(err) = stop_client(serial.as_ref()) {
-                error!(target: TAG, "Cannot stop client: {}", err);
-            }
-
-            exit(0);
-        }).expect("Error setting Ctrl-C handler");
-
-        match relay() {
-            Err(ref err) => {
-                panic!("Cannot relay: {}", err);
-            }
-            _ => Ok(()),
-        }
+        cmd_run(args.serial(), args.dns_servers())
     }
 }
 
@@ -206,7 +165,7 @@ impl Command for StartCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        start_client(args.serial(), args.dns_servers())
+        cmd_start(args.serial(), args.dns_servers())
     }
 }
 
@@ -226,7 +185,7 @@ impl Command for StopCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        stop_client(args.serial())
+        cmd_stop(args.serial())
     }
 }
 
@@ -244,8 +203,8 @@ impl Command for RestartCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        StopCommand.execute(args)?;
-        StartCommand.execute(args)?;
+        cmd_stop(args.serial())?;
+        cmd_start(args.serial(), args.dns_servers())?;
         Ok(())
     }
 }
@@ -267,7 +226,7 @@ impl Command for TunnelCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        setup_tunnel(args.serial())
+        cmd_tunnel(args.serial())
     }
 }
 
@@ -285,11 +244,120 @@ impl Command for RelayCommand {
     }
 
     fn execute(&self, _: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        relay()?;
+        cmd_relay()?;
         Ok(())
     }
 }
 
+fn cmd_install(serial: Option<&String>) -> Result<(), CommandExecutionError> {
+    info!(target: TAG, "Installing gnirehtet client...");
+    exec_adb(serial, vec!["install", "-r", "gnirehtet.apk"])
+}
+
+fn cmd_uninstall(serial: Option<&String>) -> Result<(), CommandExecutionError> {
+    info!(target: TAG, "Uninstalling gnirehtet client...");
+    exec_adb(serial, vec!["uninstall", "com.genymobile.gnirehtet"])
+}
+
+fn cmd_reinstall(serial: Option<&String>) -> Result<(), CommandExecutionError> {
+    cmd_uninstall(serial)?;
+    cmd_install(serial)?;
+    Ok(())
+}
+
+fn cmd_run(
+    serial: Option<&String>,
+    dns_servers: Option<&String>,
+) -> Result<(), CommandExecutionError> {
+    if must_install_client(serial)? {
+        cmd_install(serial)?;
+        // wait a bit after the app is installed so that intent actions are correctly
+        // registered
+        thread::sleep(Duration::from_millis(500));
+    }
+
+    {
+        // start in parallel so that the relay server is ready when the client connects
+        let start_serial = serial.cloned();
+        let start_dns_servers = dns_servers.cloned();
+        thread::spawn(move || if let Err(err) = cmd_start(
+            start_serial.as_ref(),
+            start_dns_servers.as_ref(),
+        )
+        {
+            error!(target: TAG, "Cannot start client: {}", err);
+        });
+    }
+
+    let ctrlc_serial = serial.cloned();
+    ctrlc::set_handler(move || {
+        info!(target: TAG, "Interrupted");
+
+        if let Err(err) = cmd_stop(ctrlc_serial.as_ref()) {
+            error!(target: TAG, "Cannot stop client: {}", err);
+        }
+
+        exit(0);
+    }).expect("Error setting Ctrl-C handler");
+
+    match cmd_relay() {
+        Err(ref err) => {
+            panic!("Cannot relay: {}", err);
+        }
+        _ => Ok(()),
+    }
+}
+
+fn cmd_start(
+    serial: Option<&String>,
+    dns_servers: Option<&String>,
+) -> Result<(), CommandExecutionError> {
+    info!(target: TAG, "Starting client...");
+    cmd_tunnel(serial)?;
+
+    let mut adb_args = vec![
+        "shell",
+        "am",
+        "broadcast",
+        "-a",
+        "com.genymobile.gnirehtet.START",
+        "-n",
+        "com.genymobile.gnirehtet/.GnirehtetControlReceiver",
+    ];
+    if let Some(dns_servers) = dns_servers {
+        adb_args.append(&mut vec!["--esa", "dnsServers", dns_servers]);
+    }
+    exec_adb(serial, adb_args)
+}
+
+fn cmd_stop(serial: Option<&String>) -> Result<(), CommandExecutionError> {
+    info!(target: TAG, "Stopping client...");
+    exec_adb(
+        serial,
+        vec![
+            "shell",
+            "am",
+            "broadcast",
+            "-a",
+            "com.genymobile.gnirehtet.STOP",
+            "-n",
+            "com.genymobile.gnirehtet/.GnirehtetControlReceiver",
+        ],
+    )
+}
+
+fn cmd_tunnel(serial: Option<&String>) -> Result<(), CommandExecutionError> {
+    exec_adb(
+        serial,
+        vec!["reverse", "localabstract:gnirehtet", "tcp:31416"],
+    )
+}
+
+fn cmd_relay() -> Result<(), CommandExecutionError> {
+    info!(target: TAG, "Starting relay server...");
+    relaylib::relay()?;
+    Ok(())
+}
 
 fn create_adb_args<S: Into<String>>(serial: Option<&String>, args: Vec<S>) -> Vec<String> {
     let mut command = Vec::<String>::new();
@@ -362,57 +430,6 @@ fn must_install_client(serial: Option<&String>) -> Result<bool, CommandExecution
             Err(ProcessIoError::new(cmd, err).into())
         }
     }
-}
-
-fn setup_tunnel(serial: Option<&String>) -> Result<(), CommandExecutionError> {
-    exec_adb(
-        serial,
-        vec!["reverse", "localabstract:gnirehtet", "tcp:31416"],
-    )
-}
-
-fn start_client(
-    serial: Option<&String>,
-    dns_servers: Option<&String>,
-) -> Result<(), CommandExecutionError> {
-    info!(target: TAG, "Starting client...");
-    setup_tunnel(serial)?;
-
-    let mut adb_args = vec![
-        "shell",
-        "am",
-        "broadcast",
-        "-a",
-        "com.genymobile.gnirehtet.START",
-        "-n",
-        "com.genymobile.gnirehtet/.GnirehtetControlReceiver",
-    ];
-    if let Some(dns_servers) = dns_servers {
-        adb_args.append(&mut vec!["--esa", "dnsServers", dns_servers]);
-    }
-    exec_adb(serial, adb_args)
-}
-
-fn stop_client(serial: Option<&String>) -> Result<(), CommandExecutionError> {
-    info!(target: TAG, "Stopping client...");
-    exec_adb(
-        serial,
-        vec![
-            "shell",
-            "am",
-            "broadcast",
-            "-a",
-            "com.genymobile.gnirehtet.STOP",
-            "-n",
-            "com.genymobile.gnirehtet/.GnirehtetControlReceiver",
-        ],
-    )
-}
-
-fn relay() -> Result<(), io::Error> {
-    info!(target: TAG, "Starting relay server...");
-    relaylib::relay()?;
-    Ok(())
 }
 
 fn print_usage() {

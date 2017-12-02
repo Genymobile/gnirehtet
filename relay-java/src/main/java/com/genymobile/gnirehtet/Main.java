@@ -49,8 +49,7 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                Log.i(TAG, "Installing gnirehtet client...");
-                execAdb(args.getSerial(), "install", "-r", "gnirehtet.apk");
+                cmdInstall(args.getSerial());
             }
         },
         UNINSTALL("uninstall", CommandLineArguments.PARAM_SERIAL) {
@@ -63,8 +62,7 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                Log.i(TAG, "Uninstalling gnirehtet client...");
-                execAdb(args.getSerial(), "uninstall", "com.genymobile.gnirehtet");
+                cmdUninstall(args.getSerial());
             }
         },
         REINSTALL("reinstall", CommandLineArguments.PARAM_SERIAL) {
@@ -75,8 +73,7 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                UNINSTALL.execute(args);
-                INSTALL.execute(args);
+                cmdReinstall(args.getSerial());
             }
         },
         RUN("run", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER) {
@@ -92,31 +89,7 @@ public final class Main {
             @Override
             @SuppressWarnings("checkstyle:MagicNumber")
             void execute(CommandLineArguments args) throws Exception {
-                if (mustInstallClient(args.getSerial())) {
-                    INSTALL.execute(args);
-                    // wait a bit after the app is installed so that intent actions are correctly registered
-                    Thread.sleep(500); // ms
-                }
-
-                // start in parallel so that the relay server is ready when the client connects
-                new Thread(() -> {
-                    try {
-                        startClient(args.getSerial(), args.getDnsServers());
-                    } catch (Exception e) {
-                        Log.e(TAG, "Cannot start client", e);
-                    }
-                }).start();
-
-                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-                    // executed on Ctrl+C
-                    try {
-                        stopClient(args.getSerial());
-                    } catch (Exception e) {
-                        Log.e(TAG, "Cannot stop client", e);
-                    }
-                }));
-
-                relay();
+                cmdRun(args.getSerial(), args.getDnsServers());
             }
         },
         START("start", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER) {
@@ -134,7 +107,7 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                startClient(args.getSerial(), args.getDnsServers());
+                cmdStart(args.getSerial(), args.getDnsServers());
             }
         },
         STOP("stop", CommandLineArguments.PARAM_SERIAL) {
@@ -147,7 +120,7 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                stopClient(args.getSerial());
+                cmdStop(args.getSerial());
             }
         },
         RESTART("restart", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER) {
@@ -158,8 +131,7 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                STOP.execute(args);
-                START.execute(args);
+                cmdRestart(args.getSerial(), args.getDnsServers());
             }
         },
         TUNNEL("tunnel", CommandLineArguments.PARAM_SERIAL) {
@@ -173,7 +145,7 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                setupTunnel(args.getSerial());
+                cmdTunnel(args.getSerial());
             }
         },
         RELAY("relay", CommandLineArguments.PARAM_NONE) {
@@ -184,8 +156,7 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                Log.i(TAG, "Starting relay server...");
-                relay();
+                cmdRelay();
             }
         };
 
@@ -200,6 +171,82 @@ public final class Main {
         abstract String getDescription();
 
         abstract void execute(CommandLineArguments args) throws Exception;
+    }
+
+    private static void cmdInstall(String serial) throws InterruptedException, IOException, CommandExecutionException {
+        Log.i(TAG, "Installing gnirehtet client...");
+        execAdb(serial, "install", "-r", "gnirehtet.apk");
+    }
+
+    private static void cmdUninstall(String serial) throws InterruptedException, IOException, CommandExecutionException {
+        Log.i(TAG, "Uninstalling gnirehtet client...");
+        execAdb(serial, "uninstall", "com.genymobile.gnirehtet");
+    }
+
+    private static void cmdReinstall(String serial) throws InterruptedException, IOException, CommandExecutionException {
+        cmdUninstall(serial);
+        cmdInstall(serial);
+    }
+
+    private static void cmdRun(String serial, String dnsServers) throws InterruptedException, IOException, CommandExecutionException {
+        if (mustInstallClient(serial)) {
+            cmdInstall(serial);
+            // wait a bit after the app is installed so that intent actions are correctly registered
+            Thread.sleep(500); // ms
+        }
+
+        // start in parallel so that the relay server is ready when the client connects
+        new Thread(() -> {
+            try {
+                cmdStart(serial, dnsServers);
+            } catch (Exception e) {
+                Log.e(TAG, "Cannot start client", e);
+            }
+        }).start();
+
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            // executed on Ctrl+C
+            try {
+                cmdStop(serial);
+            } catch (Exception e) {
+                Log.e(TAG, "Cannot stop client", e);
+            }
+        }));
+
+        cmdRelay();
+    }
+
+    private static void cmdStart(String serial, String dnsServers) throws InterruptedException, IOException, CommandExecutionException {
+        Log.i(TAG, "Starting client...");
+        cmdTunnel(serial);
+
+        List<String> cmd = new ArrayList<>();
+        Collections.addAll(cmd, "shell", "am", "broadcast", "-a", "com.genymobile.gnirehtet.START", "-n",
+                "com.genymobile.gnirehtet/.GnirehtetControlReceiver");
+        if (dnsServers != null) {
+            Collections.addAll(cmd, "--esa", "dnsServers", dnsServers);
+        }
+        execAdb(serial, cmd);
+    }
+
+    private static void cmdStop(String serial) throws InterruptedException, IOException, CommandExecutionException {
+        Log.i(TAG, "Stopping client...");
+        execAdb(serial, "shell", "am", "broadcast", "-a", "com.genymobile.gnirehtet.STOP", "-n",
+                "com.genymobile.gnirehtet/.GnirehtetControlReceiver");
+    }
+
+    private static void cmdRestart(String serial, String dnsServers) throws InterruptedException, IOException, CommandExecutionException {
+        cmdStop(serial);
+        cmdStart(serial, dnsServers);
+    }
+
+    private static void cmdTunnel(String serial) throws InterruptedException, IOException, CommandExecutionException {
+        execAdb(serial, "reverse", "localabstract:gnirehtet", "tcp:31416");
+    }
+
+    private static void cmdRelay() throws IOException {
+        Log.i(TAG, "Starting relay server...");
+        new Relay().run();
     }
 
     private static void execAdb(String serial, String... adbArgs) throws InterruptedException, IOException, CommandExecutionException {
@@ -255,33 +302,6 @@ public final class Main {
         return true;
     }
 
-    private static void setupTunnel(String serial) throws InterruptedException, IOException, CommandExecutionException {
-        execAdb(serial, "reverse", "localabstract:gnirehtet", "tcp:31416");
-    }
-
-    private static void startClient(String serial, String dns) throws InterruptedException, IOException, CommandExecutionException {
-        Log.i(TAG, "Starting client...");
-        setupTunnel(serial);
-
-        List<String> cmd = new ArrayList<>();
-        Collections.addAll(cmd, "shell", "am", "broadcast", "-a", "com.genymobile.gnirehtet.START", "-n",
-                "com.genymobile.gnirehtet/.GnirehtetControlReceiver");
-        if (dns != null) {
-            Collections.addAll(cmd, "--esa", "dnsServers", dns);
-        }
-        execAdb(serial, cmd);
-    }
-
-    private static void stopClient(String serial) throws InterruptedException, IOException, CommandExecutionException {
-        Log.i(TAG, "Stopping client...");
-        execAdb(serial, "shell", "am", "broadcast", "-a", "com.genymobile.gnirehtet.STOP", "-n",
-                "com.genymobile.gnirehtet/.GnirehtetControlReceiver");
-    }
-
-    private static void relay() throws IOException {
-        Log.i(TAG, "Starting relay server...");
-        new Relay().run();
-    }
 
     private static void printUsage() {
         StringBuilder builder = new StringBuilder("Syntax: gnirehtet (");
