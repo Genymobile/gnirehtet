@@ -150,9 +150,6 @@ Install the `apk` on your Android device:
 
     ./gnirehtet install [serial]
 
-_(if an older version of _gnirehtet_ was already installed, you must install the
-new one first)_
-
 In another terminal, for each client, execute:
 
     ./gnirehtet start [serial]

@@ -269,13 +269,6 @@ fn cmd_run(
     serial: Option<&String>,
     dns_servers: Option<&String>,
 ) -> Result<(), CommandExecutionError> {
-    if must_install_client(serial)? {
-        cmd_install(serial)?;
-        // wait a bit after the app is installed so that intent actions are correctly
-        // registered
-        thread::sleep(Duration::from_millis(500));
-    }
-
     {
         // start in parallel so that the relay server is ready when the client connects
         let start_serial = serial.cloned();
@@ -312,6 +305,13 @@ fn cmd_start(
     serial: Option<&String>,
     dns_servers: Option<&String>,
 ) -> Result<(), CommandExecutionError> {
+    if must_install_client(serial)? {
+        cmd_install(serial)?;
+        // wait a bit after the app is installed so that intent actions are correctly
+        // registered
+        thread::sleep(Duration::from_millis(500));
+    }
+
     info!(target: TAG, "Starting client...");
     cmd_tunnel(serial)?;
 

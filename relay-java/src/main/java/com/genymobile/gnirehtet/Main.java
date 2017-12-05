@@ -189,12 +189,6 @@ public final class Main {
     }
 
     private static void cmdRun(String serial, String dnsServers) throws InterruptedException, IOException, CommandExecutionException {
-        if (mustInstallClient(serial)) {
-            cmdInstall(serial);
-            // wait a bit after the app is installed so that intent actions are correctly registered
-            Thread.sleep(500); // ms
-        }
-
         // start in parallel so that the relay server is ready when the client connects
         new Thread(() -> {
             try {
@@ -217,6 +211,12 @@ public final class Main {
     }
 
     private static void cmdStart(String serial, String dnsServers) throws InterruptedException, IOException, CommandExecutionException {
+        if (mustInstallClient(serial)) {
+            cmdInstall(serial);
+            // wait a bit after the app is installed so that intent actions are correctly registered
+            Thread.sleep(500); // ms
+        }
+
         Log.i(TAG, "Starting client...");
         cmdTunnel(serial);
 
