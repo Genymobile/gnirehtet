@@ -19,7 +19,7 @@ use std::cmp;
 use std::io;
 use std::num::Wrapping;
 use std::rc::{Rc, Weak};
-use log::LogLevel;
+use log::Level;
 use mio::{Event, PollOpt, Ready, Token};
 use mio::net::TcpStream;
 use rand::random;
@@ -593,7 +593,7 @@ impl TcpConnection {
             return;
         }
 
-        if log_enabled!(target: TAG, LogLevel::Trace) {
+        if log_enabled!(target: TAG, Level::Trace) {
             cx_trace!(
                 target: TAG,
                 self.id,
@@ -645,7 +645,7 @@ impl TcpConnection {
             cx_debug!(target: TAG, id, "Acking {}", tcb.numbers());
         }
         let ipv4_packet = packetizer.packetize_empty_payload();
-        if log_enabled!(target: TAG, LogLevel::Trace) {
+        if log_enabled!(target: TAG, Level::Trace) {
             cx_trace!(target: TAG, id, "{}", binary::to_string(ipv4_packet.raw()));
         }
         ipv4_packet

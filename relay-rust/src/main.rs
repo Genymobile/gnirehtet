@@ -27,7 +27,6 @@ mod logger;
 use std::env;
 use cli_args::CommandLineArguments;
 use execution_error::{Cmd, CommandExecutionError, ProcessStatusError, ProcessIoError};
-use logger::SimpleLogger;
 use std::process::{self, exit};
 use std::thread;
 use std::time::Duration;
@@ -472,7 +471,7 @@ fn print_command_usage(command: &Command) {
 }
 
 fn main() {
-    SimpleLogger::init().unwrap();
+    logger::init().unwrap();
     let mut args = env::args();
     // args.nth(1) will consume the two first arguments (the binary name and the command name)
     if let Some(command_name) = args.nth(1) {

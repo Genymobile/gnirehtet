@@ -17,7 +17,7 @@
 use std::cell::RefCell;
 use std::io;
 use std::rc::{Rc, Weak};
-use log::LogLevel;
+use log::Level;
 
 use super::binary;
 use super::client::{Client, ClientChannel};
@@ -73,7 +73,7 @@ impl Router {
             }
         } else {
             warn!(target: TAG, "Dropping invalid packet");
-            if log_enabled!(target: TAG, LogLevel::Trace) {
+            if log_enabled!(target: TAG, Level::Trace) {
                 trace!(target: TAG, "{}", binary::to_string(ipv4_packet.raw()));
             }
         }

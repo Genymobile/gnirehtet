@@ -19,7 +19,7 @@ use std::io;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::rc::{Rc, Weak};
 use std::time::Instant;
-use log::LogLevel;
+use log::Level;
 use mio::{Event, PollOpt, Ready, Token};
 use mio::net::UdpSocket;
 
@@ -203,7 +203,7 @@ impl UdpConnection {
                     "Packet ({} bytes) sent to client",
                     ipv4_packet.length()
                 );
-                if log_enabled!(target: TAG, LogLevel::Trace) {
+                if log_enabled!(target: TAG, Level::Trace) {
                     cx_trace!(
                         target: TAG,
                         self.id,

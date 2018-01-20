@@ -10,10 +10,10 @@ path = "src/lib.rs"
 [dependencies]
 mio = "0.6"       # for async I/O
 slab = "0.4"      # helper for mio Tokens
-log = "0.3"       # for logs
+log = "0.4"       # for logs
 chrono = "0.4"    # for formatting timestamp in logs
-byteorder = "1.1" # for reading/writing binary
-rand = "0.3"      # for random TCP sequence number
+byteorder = "1.2" # for reading/writing binary
+rand = "0.4"      # for random TCP sequence number
 ctrlc = { version = "3.0", features = ["termination"] }     # for handling Ctrl+C
 
 [profile.release]

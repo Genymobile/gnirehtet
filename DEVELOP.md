@@ -7,11 +7,11 @@
 
 You need the [Android SDK] (_Android Studio_) and the JDK 8 (`openjdk-8-jdk`).
 
-You also need the [Rust] environment (currently 1.20) to build the Rust version:
+You also need the [Rust] environment (currently 1.23) to build the Rust version:
 
 ```bash
 wget https://sh.rustup.rs -O rustup-init
-sh rustup-init --default-toolchain 1.20.0
+sh rustup-init --default-toolchain 1.23.0
 ```
 
 [Android SDK]: https://developer.android.com/studio/index.html
