@@ -24,7 +24,7 @@ rm -rf "$DIST"
 for dir in "$TARGET_DIR_JAVA" "$TARGET_DIR_RUST_LINUX" "$TARGET_DIR_RUST_WIN"
 do
     mkdir -p "$DIST/$dir"
-    cp app/build/outputs/apk/gnirehtet-release.apk "$DIST/$dir"/gnirehtet.apk
+    cp app/build/outputs/apk/release/gnirehtet-release.apk "$DIST/$dir"/gnirehtet.apk
 done
 
 cp relay-java/build/libs/gnirehtet.jar \
