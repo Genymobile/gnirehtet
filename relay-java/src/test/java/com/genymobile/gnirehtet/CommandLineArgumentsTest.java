@@ -21,7 +21,8 @@ import org.junit.Test;
 
 public class CommandLineArgumentsTest {
 
-    private static final int ACCEPT_ALL = CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER;
+    private static final int ACCEPT_ALL = CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER
+            | CommandLineArguments.PARAM_ROUTES;
 
     @Test
     public void testNoArgs() {
@@ -71,5 +72,16 @@ public class CommandLineArgumentsTest {
     @Test(expected = IllegalArgumentException.class)
     public void testNoDnsServersParameter() {
         CommandLineArguments.parse(ACCEPT_ALL, "-d");
+    }
+
+    @Test
+    public void testRoutesParameter() {
+        CommandLineArguments args = CommandLineArguments.parse(ACCEPT_ALL, "-r", "1.2.3.0/24");
+        Assert.assertEquals("1.2.3.0/24", args.getRoutes());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testNoRoutesParameter() {
+        CommandLineArguments.parse(ACCEPT_ALL, "-r");
     }
 }

@@ -24,9 +24,11 @@ public class CommandLineArguments {
     public static final int PARAM_NONE = 0;
     public static final int PARAM_SERIAL = 1;
     public static final int PARAM_DNS_SERVER = 1 << 1;
+    public static final int PARAM_ROUTES = 1 << 2;
 
     private String serial;
     private String dnsServers;
+    private String routes;
 
     public static CommandLineArguments parse(int acceptedParameters, String... args) {
         CommandLineArguments arguments = new CommandLineArguments();
@@ -41,6 +43,15 @@ public class CommandLineArguments {
                 }
                 arguments.dnsServers = args[i + 1];
                 ++i; // consume the -d parameter
+            } else if ((acceptedParameters & PARAM_ROUTES) != 0 && "-r".equals(arg)) {
+                if (arguments.routes != null) {
+                    throw new IllegalArgumentException("Routes already set");
+                }
+                if (i == args.length - 1) {
+                    throw new IllegalArgumentException("Missing -r parameter");
+                }
+                arguments.routes = args[i + 1];
+                ++i; // consume the -r parameter
             } else if ((acceptedParameters & PARAM_SERIAL) != 0 && arguments.serial == null) {
                 arguments.serial = arg;
             } else {
@@ -56,5 +67,9 @@ public class CommandLineArguments {
 
     public String getDnsServers() {
         return dnsServers;
+    }
+
+    public String getRoutes() {
+        return routes;
     }
 }

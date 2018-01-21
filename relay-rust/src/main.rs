@@ -127,7 +127,7 @@ impl Command for RunCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_SERIAL | cli_args::PARAM_DNS_SERVERS
+        cli_args::PARAM_SERIAL | cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES
     }
 
     fn description(&self) -> &'static str {
@@ -139,7 +139,7 @@ impl Command for RunCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_run(args.serial(), args.dns_servers())
+        cmd_run(args.serial(), args.dns_servers(), args.routes())
     }
 }
 
@@ -149,7 +149,7 @@ impl Command for StartCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_SERIAL | cli_args::PARAM_DNS_SERVERS
+        cli_args::PARAM_SERIAL | cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES
     }
 
     fn description(&self) -> &'static str {
@@ -158,13 +158,15 @@ impl Command for StartCommand {
         specified.\n\
         If -d is given, then make the Android device use the specified\n\
         DNS server(s). Otherwise, use 8.8.8.8 (Google public DNS).\n\
+        If -r is given, then only reverse tether the specified routes.\n\
+        Otherwise, use 0.0.0.0/0 (redirect the whole traffic).\n\
         If the client is already started, then do nothing, and ignore\n\
-        DNS servers parameter.\n\
-        To use the host 'localhost' as DNS, use 10.0.2.2."
+        the other parameters.\n\
+        10.0.2.2 is mapped to the host 'localhost'."
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_start(args.serial(), args.dns_servers())
+        cmd_start(args.serial(), args.dns_servers(), args.routes())
     }
 }
 
@@ -194,7 +196,7 @@ impl Command for RestartCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_SERIAL | cli_args::PARAM_DNS_SERVERS
+        cli_args::PARAM_SERIAL | cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES
     }
 
     fn description(&self) -> &'static str {
@@ -203,7 +205,7 @@ impl Command for RestartCommand {
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
         cmd_stop(args.serial())?;
-        cmd_start(args.serial(), args.dns_servers())?;
+        cmd_start(args.serial(), args.dns_servers(), args.routes())?;
         Ok(())
     }
 }
@@ -267,14 +269,17 @@ fn cmd_reinstall(serial: Option<&String>) -> Result<(), CommandExecutionError> {
 fn cmd_run(
     serial: Option<&String>,
     dns_servers: Option<&String>,
+    routes: Option<&String>,
 ) -> Result<(), CommandExecutionError> {
     {
         // start in parallel so that the relay server is ready when the client connects
         let start_serial = serial.cloned();
         let start_dns_servers = dns_servers.cloned();
+        let start_routes = routes.cloned();
         thread::spawn(move || if let Err(err) = cmd_start(
             start_serial.as_ref(),
             start_dns_servers.as_ref(),
+            start_routes.as_ref(),
         )
         {
             error!(target: TAG, "Cannot start client: {}", err);
@@ -303,6 +308,7 @@ fn cmd_run(
 fn cmd_start(
     serial: Option<&String>,
     dns_servers: Option<&String>,
+    routes: Option<&String>,
 ) -> Result<(), CommandExecutionError> {
     if must_install_client(serial)? {
         cmd_install(serial)?;
@@ -325,6 +331,9 @@ fn cmd_start(
     ];
     if let Some(dns_servers) = dns_servers {
         adb_args.append(&mut vec!["--esa", "dnsServers", dns_servers]);
+    }
+    if let Some(routes) = routes {
+        adb_args.append(&mut vec!["--esa", "routes", routes]);
     }
     exec_adb(serial, adb_args)
 }
@@ -455,6 +464,9 @@ fn append_command_usage(msg: &mut String, command: &Command) {
     }
     if (accepted_parameters & cli_args::PARAM_DNS_SERVERS) != 0 {
         msg.push_str(" [-d DNS[,DNS2,...]]");
+    }
+    if (accepted_parameters & cli_args::PARAM_ROUTES) != 0 {
+        msg.push_str(" [-r ROUTE[,ROUTE2,...]]");
     }
     msg.push('\n');
     for desc_line in command.description().split('\n') {

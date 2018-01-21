@@ -76,7 +76,7 @@ public final class Main {
                 cmdReinstall(args.getSerial());
             }
         },
-        RUN("run", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER) {
+        RUN("run", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES) {
             @Override
             String getDescription() {
                 return "Enable reverse tethering for exactly one device:\n"
@@ -89,10 +89,10 @@ public final class Main {
             @Override
             @SuppressWarnings("checkstyle:MagicNumber")
             void execute(CommandLineArguments args) throws Exception {
-                cmdRun(args.getSerial(), args.getDnsServers());
+                cmdRun(args.getSerial(), args.getDnsServers(), args.getRoutes());
             }
         },
-        START("start", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER) {
+        START("start", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES) {
             @Override
             String getDescription() {
                 return "Start a client on the Android device and exit.\n"
@@ -100,14 +100,16 @@ public final class Main {
                         + "specified.\n"
                         + "If -d is given, then make the Android device use the specified\n"
                         + "DNS server(s). Otherwise, use 8.8.8.8 (Google public DNS).\n"
+                        + "If -r is given, then only reverse tether the specified routes.\n"
+                        + "Otherwise, use 0.0.0.0/0 (redirect the whole traffic).\n"
                         + "If the client is already started, then do nothing, and ignore\n"
-                        + "DNS servers parameter.\n"
-                        + "To use the host 'localhost' as DNS, use 10.0.2.2.";
+                        + "the other parameters.\n"
+                        + "10.0.2.2 is mapped to the host 'localhost'.";
             }
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                cmdStart(args.getSerial(), args.getDnsServers());
+                cmdStart(args.getSerial(), args.getDnsServers(), args.getRoutes());
             }
         },
         STOP("stop", CommandLineArguments.PARAM_SERIAL) {
@@ -123,7 +125,7 @@ public final class Main {
                 cmdStop(args.getSerial());
             }
         },
-        RESTART("restart", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER) {
+        RESTART("restart", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES) {
             @Override
             String getDescription() {
                 return "Stop then start.";
@@ -131,7 +133,7 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                cmdRestart(args.getSerial(), args.getDnsServers());
+                cmdRestart(args.getSerial(), args.getDnsServers(), args.getRoutes());
             }
         },
         TUNNEL("tunnel", CommandLineArguments.PARAM_SERIAL) {
@@ -188,11 +190,11 @@ public final class Main {
         cmdInstall(serial);
     }
 
-    private static void cmdRun(String serial, String dnsServers) throws InterruptedException, IOException, CommandExecutionException {
+    private static void cmdRun(String serial, String dnsServers, String routes) throws InterruptedException, IOException, CommandExecutionException {
         // start in parallel so that the relay server is ready when the client connects
         new Thread(() -> {
             try {
-                cmdStart(serial, dnsServers);
+                cmdStart(serial, dnsServers, routes);
             } catch (Exception e) {
                 Log.e(TAG, "Cannot start client", e);
             }
@@ -210,7 +212,9 @@ public final class Main {
         cmdRelay();
     }
 
-    private static void cmdStart(String serial, String dnsServers) throws InterruptedException, IOException, CommandExecutionException {
+    @SuppressWarnings("checkstyle:MagicNumber")
+    private static void cmdStart(String serial, String dnsServers, String routes) throws InterruptedException, IOException,
+            CommandExecutionException {
         if (mustInstallClient(serial)) {
             cmdInstall(serial);
             // wait a bit after the app is installed so that intent actions are correctly registered
@@ -226,6 +230,9 @@ public final class Main {
         if (dnsServers != null) {
             Collections.addAll(cmd, "--esa", "dnsServers", dnsServers);
         }
+        if (routes != null) {
+            Collections.addAll(cmd, "--esa", "routes", routes);
+        }
         execAdb(serial, cmd);
     }
 
@@ -235,9 +242,10 @@ public final class Main {
                 "com.genymobile.gnirehtet/.GnirehtetControlReceiver");
     }
 
-    private static void cmdRestart(String serial, String dnsServers) throws InterruptedException, IOException, CommandExecutionException {
+    private static void cmdRestart(String serial, String dnsServers, String routes) throws InterruptedException, IOException,
+            CommandExecutionException {
         cmdStop(serial);
-        cmdStart(serial, dnsServers);
+        cmdStart(serial, dnsServers, routes);
     }
 
     private static void cmdTunnel(String serial) throws InterruptedException, IOException, CommandExecutionException {
@@ -329,6 +337,9 @@ public final class Main {
         }
         if ((command.acceptedParameters & CommandLineArguments.PARAM_DNS_SERVER) != 0) {
             builder.append(" [-d DNS[,DNS2,...]]");
+        }
+        if ((command.acceptedParameters & CommandLineArguments.PARAM_ROUTES) != 0) {
+            builder.append(" [-r ROUTE[,ROUTE2,...]]");
         }
         builder.append(NL);
         String[] descLines = command.getDescription().split("\n");

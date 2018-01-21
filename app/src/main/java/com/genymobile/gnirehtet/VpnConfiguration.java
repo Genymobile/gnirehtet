@@ -25,25 +25,37 @@ import java.net.UnknownHostException;
 public class VpnConfiguration implements Parcelable {
 
     private final InetAddress[] dnsServers;
+    private final CIDR[] routes;
 
-    public VpnConfiguration(InetAddress... dnsServers) {
+    public VpnConfiguration() {
+        this.dnsServers = new InetAddress[0];
+        this.routes = new CIDR[0];
+    }
+
+    public VpnConfiguration(InetAddress[] dnsServers, CIDR[] routes) {
         this.dnsServers = dnsServers;
+        this.routes = routes;
     }
 
     private VpnConfiguration(Parcel source) {
-        int count = source.readInt();
-        dnsServers = new InetAddress[count];
+        int dnsCount = source.readInt();
+        dnsServers = new InetAddress[dnsCount];
         try {
-            for (int i = 0; i < count; ++i) {
+            for (int i = 0; i < dnsCount; ++i) {
                 dnsServers[i] = InetAddress.getByAddress(source.createByteArray());
             }
         } catch (UnknownHostException e) {
             throw new AssertionError("Invalid address", e);
         }
+        routes = source.createTypedArray(CIDR.CREATOR);
     }
 
     public InetAddress[] getDnsServers() {
         return dnsServers;
+    }
+
+    public CIDR[] getRoutes() {
+        return routes;
     }
 
     @Override
@@ -52,6 +64,7 @@ public class VpnConfiguration implements Parcelable {
         for (InetAddress addr : dnsServers) {
             dest.writeByteArray(addr.getAddress());
         }
+        dest.writeTypedArray(routes, 0);
     }
 
     @Override

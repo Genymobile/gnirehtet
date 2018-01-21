@@ -50,6 +50,7 @@ public class GnirehtetControlReceiver extends BroadcastReceiver {
     public static final String ACTION_GNIREHTET_STOP = "com.genymobile.gnirehtet.STOP";
 
     public static final String EXTRA_DNS_SERVERS = "dnsServers";
+    public static final String EXTRA_ROUTES = "routes";
 
     private static final String TAG = GnirehtetControlReceiver.class.getSimpleName();
 
@@ -70,7 +71,11 @@ public class GnirehtetControlReceiver extends BroadcastReceiver {
         if (dnsServers == null) {
             dnsServers = new String[0];
         }
-        return new VpnConfiguration(Net.toInetAddresses(dnsServers));
+        String[] routes = intent.getStringArrayExtra(EXTRA_ROUTES);
+        if (routes == null) {
+            routes = new String[0];
+        }
+        return new VpnConfiguration(Net.toInetAddresses(dnsServers), Net.toCIDRs(routes));
     }
 
     private void startGnirehtet(Context context, VpnConfiguration config) {

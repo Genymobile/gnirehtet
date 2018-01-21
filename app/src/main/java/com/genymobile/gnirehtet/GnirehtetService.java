@@ -44,7 +44,6 @@ public class GnirehtetService extends VpnService {
     private static final String TAG = GnirehtetService.class.getSimpleName();
 
     private static final InetAddress VPN_ADDRESS = Net.toInetAddress(new byte[] {10, 0, 0, 2});
-    private static final InetAddress VPN_ROUTE = Net.toInetAddress(new byte[] {0, 0, 0, 0}); // intercept everything
     // magic value: higher (like 0x8000 or 0xffff) or lower (like 1500) values show poorer performances
     private static final int MTU = 0x4000;
 
@@ -110,8 +109,17 @@ public class GnirehtetService extends VpnService {
     private boolean setupVpn(VpnConfiguration config) {
         Builder builder = new Builder();
         builder.addAddress(VPN_ADDRESS, 32);
-        builder.addRoute(VPN_ROUTE, 0);
         builder.setSession(getString(R.string.app_name));
+
+        CIDR[] routes = config.getRoutes();
+        if (routes.length == 0) {
+            // no routes defined, redirect the whole network traffic
+            builder.addRoute("0.0.0.0", 0);
+        } else {
+            for (CIDR route : routes) {
+                builder.addRoute(route.getAddress(), route.getPrefixLength());
+            }
+        }
 
         InetAddress[] dnsServers = config.getDnsServers();
         if (dnsServers.length == 0) {

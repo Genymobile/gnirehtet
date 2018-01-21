@@ -49,6 +49,22 @@ public final class Net {
         }
     }
 
+    public static CIDR toCIDR(String cidr) {
+        try {
+            return CIDR.parse(cidr);
+        } catch (InvalidCIDRException e) {
+            throw new IllegalArgumentException(e);
+        }
+    }
+
+    public static CIDR[] toCIDRs(String... cidrs) {
+        CIDR[] result = new CIDR[cidrs.length];
+        for (int i = 0; i < result.length; ++i) {
+            result[i] = toCIDR(cidrs[i]);
+        }
+        return result;
+    }
+
     @SuppressWarnings("checkstyle:MagicNumber")
     public static Inet4Address getLocalhostIPv4() {
         byte[] localhost = {127, 0, 0, 1};

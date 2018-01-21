@@ -17,10 +17,12 @@
 pub const PARAM_NONE: u8 = 0;
 pub const PARAM_SERIAL: u8 = 1;
 pub const PARAM_DNS_SERVERS: u8 = 1 << 1;
+pub const PARAM_ROUTES: u8 = 1 << 2;
 
 pub struct CommandLineArguments {
     serial: Option<String>,
     dns_servers: Option<String>,
+    routes: Option<String>,
 }
 
 impl CommandLineArguments {
@@ -28,6 +30,7 @@ impl CommandLineArguments {
     pub fn parse<S: Into<String>>(accepted_parameters: u8, args: Vec<S>) -> Result<Self, String> {
         let mut serial = None;
         let mut dns_servers = None;
+        let mut routes = None;
 
         let mut iter = args.into_iter();
         while let Some(arg) = iter.next() {
@@ -41,6 +44,15 @@ impl CommandLineArguments {
                 } else {
                     return Err(String::from("Missing -d parameter"));
                 }
+            } else if (accepted_parameters & PARAM_ROUTES) != 0 && "-r" == arg {
+                if routes.is_some() {
+                    return Err(String::from("Routes already set"));
+                }
+                if let Some(value) = iter.next() {
+                    routes = Some(value.into());
+                } else {
+                    return Err(String::from("Missing -r parameter"));
+                }
             } else if (accepted_parameters & PARAM_SERIAL) != 0 && serial.is_none() {
                 serial = Some(arg);
             } else {
@@ -50,6 +62,7 @@ impl CommandLineArguments {
         Ok(Self {
             serial: serial,
             dns_servers: dns_servers,
+            routes: routes,
         })
     }
 
@@ -60,13 +73,17 @@ impl CommandLineArguments {
     pub fn dns_servers(&self) -> Option<&String> {
         self.dns_servers.as_ref()
     }
+
+    pub fn routes(&self) -> Option<&String> {
+        self.routes.as_ref()
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    const ACCEPT_ALL: u8 = PARAM_SERIAL | PARAM_DNS_SERVERS;
+    const ACCEPT_ALL: u8 = PARAM_SERIAL | PARAM_DNS_SERVERS | PARAM_ROUTES;
 
     #[test]
     fn test_no_args() {
@@ -121,6 +138,19 @@ mod tests {
     #[test]
     fn test_no_dns_servers_parameter() {
         let raw_args = vec!["-d"];
+        assert!(CommandLineArguments::parse(ACCEPT_ALL, raw_args).is_err());
+    }
+
+    #[test]
+    fn test_routes_parameter() {
+        let raw_args = vec!["-r", "1.2.3.0/24"];
+        let args = CommandLineArguments::parse(ACCEPT_ALL, raw_args).unwrap();
+        assert_eq!("1.2.3.0/24", args.routes.unwrap());
+    }
+
+    #[test]
+    fn test_no_routes_parameter() {
+        let raw_args = vec!["-r"];
         assert!(CommandLineArguments::parse(ACCEPT_ALL, raw_args).is_err());
     }
 }
