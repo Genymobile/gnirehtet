@@ -23,6 +23,7 @@ extern crate rand;
 extern crate slab;
 
 mod relay;
+pub use relay::byte_buffer;
 
 use std::io;
 use relay::Relay;

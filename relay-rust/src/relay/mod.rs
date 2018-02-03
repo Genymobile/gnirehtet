@@ -15,9 +15,9 @@
  */
 
 pub use self::relay::*;
+pub mod byte_buffer;
 
 mod binary;
-mod byte_buffer;
 mod client;
 mod close_listener;
 #[macro_use]

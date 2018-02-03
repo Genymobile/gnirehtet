@@ -136,6 +136,11 @@ A "key" logo appears in the status bar whenever _Gnirehtet_ is active:
 
 ![key](assets/key.png)
 
+Alternatively, you can enable reverse tethering for all connected devices
+(present and future) by calling:
+
+    ./gnirehtet autorun
+
 
 ## Run
 

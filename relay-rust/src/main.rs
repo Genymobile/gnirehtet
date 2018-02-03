@@ -20,11 +20,13 @@ extern crate ctrlc;
 extern crate log;
 extern crate relaylib;
 
+mod adb_monitor;
 mod cli_args;
 mod execution_error;
 mod logger;
 
 use std::env;
+use adb_monitor::AdbMonitor;
 use cli_args::CommandLineArguments;
 use execution_error::{Cmd, CommandExecutionError, ProcessStatusError, ProcessIoError};
 use std::process::{self, exit};
@@ -39,7 +41,9 @@ const COMMANDS: &[&'static Command] = &[
     &UninstallCommand,
     &ReinstallCommand,
     &RunCommand,
+    &AutorunCommand,
     &StartCommand,
+    &AutostartCommand,
     &StopCommand,
     &RestartCommand,
     &TunnelCommand,
@@ -57,7 +61,9 @@ struct InstallCommand;
 struct UninstallCommand;
 struct ReinstallCommand;
 struct RunCommand;
+struct AutorunCommand;
 struct StartCommand;
+struct AutostartCommand;
 struct StopCommand;
 struct RestartCommand;
 struct TunnelCommand;
@@ -143,6 +149,26 @@ impl Command for RunCommand {
     }
 }
 
+impl Command for AutorunCommand {
+    fn command(&self) -> &'static str {
+        "autorun"
+    }
+
+    fn accepted_parameters(&self) -> u8 {
+        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES
+    }
+
+    fn description(&self) -> &'static str {
+        "Enable reverse tethering for all devices:\n  \
+          - monitor devices and start clients (autostart);\n  \
+          - start the relay server."
+    }
+
+    fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
+        cmd_autorun(args.dns_servers(), args.routes())
+    }
+}
+
 impl Command for StartCommand {
     fn command(&self) -> &'static str {
         "start"
@@ -167,6 +193,27 @@ impl Command for StartCommand {
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
         cmd_start(args.serial(), args.dns_servers(), args.routes())
+    }
+}
+
+impl Command for AutostartCommand {
+    fn command(&self) -> &'static str {
+        "autostart"
+    }
+
+    fn accepted_parameters(&self) -> u8 {
+        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES
+    }
+
+    fn description(&self) -> &'static str {
+        "Listen for device connexions and start a client on every detected\n\
+        device.\n\
+        Accept the same parameters as the start command (excluding the\n\
+        serial, which will be taken from the detected device)."
+    }
+
+    fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
+        cmd_autostart(args.dns_servers(), args.routes())
     }
 }
 
@@ -300,6 +347,25 @@ fn cmd_run(
     cmd_relay()
 }
 
+fn cmd_autorun(
+    dns_servers: Option<&String>,
+    routes: Option<&String>,
+) -> Result<(), CommandExecutionError> {
+    {
+        let autostart_dns_servers = dns_servers.cloned();
+        let autostart_routes = routes.cloned();
+        thread::spawn(move || if let Err(err) = cmd_autostart(
+            autostart_dns_servers.as_ref(),
+            autostart_routes.as_ref(),
+        )
+        {
+            error!(target: TAG, "Cannot auto start clients: {}", err);
+        });
+    }
+
+    cmd_relay()
+}
+
 fn cmd_start(
     serial: Option<&String>,
     dns_servers: Option<&String>,
@@ -331,6 +397,28 @@ fn cmd_start(
         adb_args.append(&mut vec!["--esa", "routes", routes]);
     }
     exec_adb(serial, adb_args)
+}
+
+fn cmd_autostart(
+    dns_servers: Option<&String>,
+    routes: Option<&String>,
+) -> Result<(), CommandExecutionError> {
+    let start_dns_servers = dns_servers.cloned();
+    let start_routes = routes.cloned();
+    let mut adb_monitor = AdbMonitor::new(Box::new(
+        move |serial: &String| if let Err(err) = cmd_start(
+            Some(serial),
+            start_dns_servers
+                .as_ref(),
+            start_routes
+                .as_ref(),
+        )
+        {
+            error!(target: TAG, "Cannot start on device {}: {}", serial, err);
+        },
+    ));
+    adb_monitor.monitor()?;
+    Ok(())
 }
 
 fn cmd_stop(serial: Option<&String>) -> Result<(), CommandExecutionError> {

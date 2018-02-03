@@ -91,6 +91,19 @@ public final class Main {
                 cmdRun(args.getSerial(), args.getDnsServers(), args.getRoutes());
             }
         },
+        AUTORUN("autorun", CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES) {
+            @Override
+            String getDescription() {
+                return "Enable reverse tethering for all devices:\n"
+                        + "  - monitor devices and start clients (autostart);\n"
+                        + "  - start the relay server.";
+            }
+
+            @Override
+            void execute(CommandLineArguments args) throws Exception {
+                cmdAutorun(args.getDnsServers(), args.getRoutes());
+            }
+        },
         START("start", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES) {
             @Override
             String getDescription() {
@@ -109,6 +122,20 @@ public final class Main {
             @Override
             void execute(CommandLineArguments args) throws Exception {
                 cmdStart(args.getSerial(), args.getDnsServers(), args.getRoutes());
+            }
+        },
+        AUTOSTART("autostart", CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES) {
+            @Override
+            String getDescription() {
+                return "Listen for device connexions and start a client on every detected\n"
+                        + "device.\n"
+                        + "Accept the same parameters as the start command (excluding the\n"
+                        + "serial, which will be taken from the detected device).";
+            }
+
+            @Override
+            void execute(CommandLineArguments args) throws Exception {
+                cmdAutostart(args.getDnsServers(), args.getRoutes());
             }
         },
         STOP("stop", CommandLineArguments.PARAM_SERIAL) {
@@ -211,6 +238,18 @@ public final class Main {
         cmdRelay();
     }
 
+    private static void cmdAutorun(final String dnsServers, final String routes) throws InterruptedException, IOException, CommandExecutionException {
+        new Thread(() -> {
+            try {
+                cmdAutostart(dnsServers, routes);
+            } catch (Exception e) {
+                Log.e(TAG, "Cannot auto start clients", e);
+            }
+        }).start();
+
+        cmdRelay();
+    }
+
     @SuppressWarnings("checkstyle:MagicNumber")
     private static void cmdStart(String serial, String dnsServers, String routes) throws InterruptedException, IOException,
             CommandExecutionException {
@@ -233,6 +272,18 @@ public final class Main {
             Collections.addAll(cmd, "--esa", "routes", routes);
         }
         execAdb(serial, cmd);
+    }
+
+    private static void cmdAutostart(final String dnsServers, final String routes) throws InterruptedException, IOException,
+            CommandExecutionException {
+        AdbMonitor adbMonitor = new AdbMonitor((serial) -> {
+            try {
+                cmdStart(serial, dnsServers, routes);
+            } catch (Exception e) {
+                Log.e(TAG, "Cannot start on device " + serial, e);
+            }
+        });
+        adbMonitor.monitor();
     }
 
     private static void cmdStop(String serial) throws InterruptedException, IOException, CommandExecutionException {
