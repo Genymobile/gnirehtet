@@ -87,7 +87,6 @@ public final class Main {
             }
 
             @Override
-            @SuppressWarnings("checkstyle:MagicNumber")
             void execute(CommandLineArguments args) throws Exception {
                 cmdRun(args.getSerial(), args.getDnsServers(), args.getRoutes());
             }
