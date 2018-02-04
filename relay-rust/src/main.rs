@@ -297,12 +297,7 @@ fn cmd_run(
         exit(0);
     }).expect("Error setting Ctrl-C handler");
 
-    match cmd_relay() {
-        Err(ref err) => {
-            panic!("Cannot relay: {}", err);
-        }
-        _ => Ok(()),
-    }
+    cmd_relay()
 }
 
 fn cmd_start(
