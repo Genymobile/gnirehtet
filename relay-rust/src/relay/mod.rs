@@ -15,8 +15,6 @@
  */
 
 pub use self::relay::*;
-#[macro_use]
-pub mod interrupt;
 
 mod binary;
 mod client;
@@ -25,6 +23,8 @@ mod close_listener;
 mod connection;
 mod datagram;
 mod datagram_buffer;
+#[macro_use]
+mod interrupt;
 mod ipv4_header;
 mod ipv4_packet;
 mod ipv4_packet_buffer;
