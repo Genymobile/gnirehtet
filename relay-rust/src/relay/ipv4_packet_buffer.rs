@@ -15,34 +15,28 @@
  */
 
 use std::io;
-use std::ptr;
+use super::byte_buffer::ByteBuffer;
 use super::ipv4_header;
 use super::ipv4_packet::{Ipv4Packet, MAX_PACKET_LENGTH};
 
 pub struct Ipv4PacketBuffer {
-    buf: [u8; MAX_PACKET_LENGTH],
-    head: usize,
+    buf: ByteBuffer,
 }
 
 impl Ipv4PacketBuffer {
     pub fn new() -> Self {
-        Self {
-            buf: [0; MAX_PACKET_LENGTH],
-            head: 0,
-        }
+        Self { buf: ByteBuffer::new(MAX_PACKET_LENGTH) }
     }
 
     pub fn read_from<R: io::Read>(&mut self, source: &mut R) -> io::Result<(bool)> {
-        let target_slice = &mut self.buf[self.head..];
-        let r = source.read(target_slice)?;
-        self.head += r;
-        Ok(r > 0)
+        self.buf.read_from(source)
     }
 
     fn available_packet_length(&self) -> Option<u16> {
-        if let Some((version, length)) = ipv4_header::peek_version_length(&self.buf) {
+        let data = self.buf.peek();
+        if let Some((version, length)) = ipv4_header::peek_version_length(data) {
             assert!(version == 4, "Not an Ipv4 packet, version={}", version);
-            if length as usize <= self.head {
+            if length as usize <= data.len() {
                 // full packet available
                 Some(length)
             } else {
@@ -56,9 +50,9 @@ impl Ipv4PacketBuffer {
     }
 
     pub fn as_ipv4_packet<'a>(&'a mut self) -> Option<Ipv4Packet<'a>> {
-        let length = self.available_packet_length();
-        if let Some(len) = length {
-            Some(Ipv4Packet::parse(&mut self.buf[..len as usize]))
+        if self.available_packet_length().is_some() {
+            let data = self.buf.peek_mut();
+            Some(Ipv4Packet::parse(data))
         } else {
             None
         }
@@ -69,33 +63,7 @@ impl Ipv4PacketBuffer {
         let length = self.available_packet_length().expect(
             "next() called while there was no packet",
         ) as usize;
-        assert!(self.head >= length);
-        self.head -= length;
-        if self.head > 0 {
-            // some data remaining, move them to the front of the buffer
-            unsafe {
-                let buf_ptr = self.buf.as_mut_ptr();
-
-                // Before:
-                //
-                //  consumed                  old_head
-                // |        |....................|
-                //  <------>
-                //   length
-                //
-                // After:
-                //
-                //                  new_head (= old_head - length)
-                // |....................|
-                //                       <------>
-                //                        length
-                //
-                // move from [length..old_head] to [0..new_head]
-                //
-                // semantically equivalent to memmove()
-                ptr::copy(buf_ptr.offset(length as isize), buf_ptr, self.head);
-            }
-        }
+        self.buf.consume(length);
     }
 }
 
