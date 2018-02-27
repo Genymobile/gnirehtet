@@ -165,7 +165,7 @@ impl TcpConnection {
             self_ref.self_weak = Rc::downgrade(&rc);
 
             let rc2 = rc.clone();
-            // must anotate selector type: https://stackoverflow.com/a/44004103/1987178
+            // must annotate selector type: https://stackoverflow.com/a/44004103/1987178
             let handler =
                 move |selector: &mut Selector, event| rc2.borrow_mut().on_ready(selector, event);
             let token = selector.register(
