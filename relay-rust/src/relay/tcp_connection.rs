@@ -64,17 +64,33 @@ struct Tcb {
     sequence_number: Wrapping<u32>,
     acknowledgement_number: Wrapping<u32>,
     their_acknowledgement_number: u32,
+    fin_sequence_number: Option<u32>,
     client_window: u16,
-    remote_closed: bool,
 }
 
+// See RFC793: <https://tools.ietf.org/html/rfc793#page-23>
 #[derive(Debug, PartialEq, Eq)]
 enum TcpState {
     Init,
     SynSent,
     SynReceived,
     Established,
+    CloseWait,
     LastAck,
+    Closing,
+    FinWait1,
+    FinWait2,
+}
+
+impl TcpState {
+    fn is_connected(&self) -> bool {
+        self != &TcpState::Init && self != &TcpState::SynSent && self != &TcpState::SynReceived
+    }
+
+    fn is_closed(&self) -> bool {
+        self == &TcpState::FinWait1 || self == &TcpState::FinWait2 || self == &TcpState::Closing ||
+            self == &TcpState::LastAck
+    }
 }
 
 impl Tcb {
@@ -85,8 +101,8 @@ impl Tcb {
             sequence_number: Wrapping(0),
             acknowledgement_number: Wrapping(0),
             their_acknowledgement_number: 0,
+            fin_sequence_number: None,
             client_window: 0,
-            remote_closed: false,
         }
     }
 
@@ -311,7 +327,7 @@ impl TcpConnection {
         };
         match non_lexical_lifetime_workaround {
             Ok(None) => {
-                self.eof();
+                self.eof(selector);
             }
             Err(err) => {
                 if err.kind() == io::ErrorKind::WouldBlock {
@@ -336,6 +352,7 @@ impl TcpConnection {
     fn process_connect(&mut self, selector: &mut Selector) {
         assert_eq!(self.tcb.state, TcpState::SynSent);
         self.tcb.state = TcpState::SynReceived;
+        cx_debug!(target: TAG, self.id, "State = {:?}", self.tcb.state);
         self.send_empty_packet_to_client(selector, tcp_header::FLAG_SYN | tcp_header::FLAG_ACK);
         self.tcb.sequence_number += Wrapping(1); // SYN counts for 1 byte
     }
@@ -386,8 +403,16 @@ impl TcpConnection {
         }
     }
 
-    fn eof(&mut self) {
-        self.tcb.remote_closed = true;
+    fn eof(&mut self, selector: &mut Selector) {
+        self.send_empty_packet_to_client(selector, tcp_header::FLAG_FIN | tcp_header::FLAG_ACK);
+        self.tcb.fin_sequence_number = Some(self.tcb.sequence_number.0);
+        self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
+        self.tcb.state = if self.tcb.state == TcpState::CloseWait {
+            TcpState::LastAck
+        } else {
+            TcpState::FinWait1
+        };
+        cx_debug!(target: TAG, self.id, "State = {:?}", self.tcb.state);
     }
 
     #[inline]
@@ -449,8 +474,9 @@ impl TcpConnection {
             cx_warn!(
                 target: TAG,
                 self.id,
-                "Ignoring packet {}; expecting {}; flags={}",
+                "Ignoring packet {} (acking {}); expecting {}; flags={}",
                 tcp_header.sequence_number(),
+                tcp_header.acknowledgement_number(),
                 self.tcb.acknowledgement_number.0,
                 tcp_header.flags()
             );
@@ -482,12 +508,19 @@ impl TcpConnection {
                 "Client acked {}",
                 tcp_header.acknowledgement_number()
             );
+
+            self.handle_ack(selector, client_channel, ipv4_packet);
         }
 
         if tcp_header.is_fin() {
             self.handle_fin(selector, client_channel, ipv4_packet);
-        } else if tcp_header.is_ack() {
-            self.handle_ack(selector, client_channel, ipv4_packet);
+        }
+
+        if let Some(fin_sequence_number) = self.tcb.fin_sequence_number {
+            if tcp_header.acknowledgement_number() == fin_sequence_number + 1 {
+                cx_debug!(target: TAG, self.id, "Received ACK of FIN");
+                self.handle_fin_ack(selector);
+            }
         }
     }
 
@@ -514,6 +547,7 @@ impl TcpConnection {
             );
             self.tcb.client_window = tcp_header.window();
             self.tcb.state = TcpState::SynSent;
+            cx_debug!(target: TAG, self.id, "State = {:?}", self.tcb.state);
         } else {
             cx_warn!(
                 target: TAG,
@@ -557,23 +591,62 @@ impl TcpConnection {
         ipv4_packet: &Ipv4Packet,
     ) {
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
+        assert_eq!(
+            tcp_header.sequence_number(),
+            self.tcb.acknowledgement_number.0
+        );
         self.tcb.acknowledgement_number = Wrapping(tcp_header.sequence_number()) + Wrapping(1);
 
-        // consider the connection closed immediately (no need for CLOSE_WAIT)
-        self.tcb.state = TcpState::LastAck;
-        self.tcb.remote_closed = true;
         cx_debug!(
             target: TAG,
             self.id,
-            "Received a FIN from the client, sending ACK+FIN {}",
-            self.tcb.numbers()
+            "Received a FIN ({}) from the client",
+            tcp_header.sequence_number()
         );
-        self.reply_empty_packet_to_client(
-            selector,
-            client_channel,
-            tcp_header::FLAG_FIN | tcp_header::FLAG_ACK,
-        );
-        self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
+
+        if self.tcb.state == TcpState::Established {
+            self.reply_empty_packet_to_client(
+                selector,
+                client_channel,
+                tcp_header::FLAG_FIN | tcp_header::FLAG_ACK,
+            );
+            self.tcb.fin_sequence_number = Some(self.tcb.sequence_number.0);
+            self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
+            // the connection will be closed by RAII, so switch immediately to LastAck
+            // (bypass CloseWait)
+            self.tcb.state = TcpState::LastAck;
+            cx_debug!(target: TAG, self.id, "State = {:?}", self.tcb.state);
+        } else if self.tcb.state == TcpState::FinWait1 {
+            self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_ACK);
+            self.tcb.state = TcpState::Closing;
+            cx_debug!(target: TAG, self.id, "State = {:?}", self.tcb.state);
+        } else if self.tcb.state == TcpState::FinWait2 {
+            self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_ACK);
+            self.close(selector);
+        } else {
+            cx_warn!(
+                target: TAG,
+                self.id,
+                "Received FIN was state was {:?}",
+                self.tcb.state
+            );
+        }
+    }
+
+    fn handle_fin_ack(&mut self, selector: &mut Selector) {
+        if self.tcb.state == TcpState::LastAck || self.tcb.state == TcpState::Closing {
+            self.close(selector);
+        } else if self.tcb.state == TcpState::FinWait1 {
+            self.tcb.state = TcpState::FinWait2;
+            cx_debug!(target: TAG, self.id, "State = {:?}", self.tcb.state);
+        } else if self.tcb.state != TcpState::FinWait2 {
+            cx_warn!(
+                target: TAG,
+                self.id,
+                "Received FIN ACK while state was {:?}",
+                self.tcb.state
+            );
+        }
     }
 
     fn handle_ack(
@@ -585,11 +658,7 @@ impl TcpConnection {
         cx_debug!(target: TAG, self.id, "handle_ack()");
         if self.tcb.state == TcpState::SynReceived {
             self.tcb.state = TcpState::Established;
-            return;
-        }
-        if self.tcb.state == TcpState::LastAck {
-            cx_debug!(target: TAG, self.id, "LAST_ACK");
-            self.close(selector);
+            cx_debug!(target: TAG, self.id, "State = {:?}", self.tcb.state);
             return;
         }
 
@@ -676,11 +745,7 @@ impl TcpConnection {
     }
 
     fn may_read(&self) -> bool {
-        if self.tcb.remote_closed {
-            return false;
-        }
-        if self.tcb.state == TcpState::SynSent || self.tcb.state == TcpState::SynReceived {
-            // not connected yet
+        if !self.tcb.state.is_connected() || self.tcb.state.is_closed() {
             return false;
         }
         if self.packet_for_client_length.is_some() {

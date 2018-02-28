@@ -33,11 +33,26 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
     private static final Random RANDOM = new Random();
 
+    /**
+     * See <a href="https://tools.ietf.org/html/rfc793#page-23">RFC793</a>.
+     */
     public enum State {
         SYN_SENT,
         SYN_RECEIVED,
         ESTABLISHED,
-        LAST_ACK
+        CLOSE_WAIT,
+        LAST_ACK,
+        CLOSING,
+        FIN_WAIT_1,
+        FIN_WAIT_2;
+
+        public boolean isConnected() {
+            return this != SYN_SENT && this != SYN_RECEIVED;
+        }
+
+        public boolean isClosed() {
+            return this == FIN_WAIT_1 || this == FIN_WAIT_2 || this == CLOSING || this == LAST_ACK;
+        }
     }
 
     private final StreamBuffer clientToNetwork = new StreamBuffer(4 * IPv4Packet.MAX_PACKET_LENGTH);
@@ -52,11 +67,9 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     private int synSequenceNumber;
     private int sequenceNumber;
     private int acknowledgementNumber;
-
     private int theirAcknowledgementNumber;
+    private Integer finSequenceNumber; // null means "no FIN sent yet"
     private int clientWindow;
-
-    private boolean remoteClosed;
 
     public TCPConnection(ConnectionId id, Client client, Selector selector, IPv4Header ipv4Header, TCPHeader tcpHeader) throws IOException {
         super(id, client);
@@ -129,7 +142,16 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     }
 
     private void eof() {
-        remoteClosed = true;
+        sendEmptyPacketToClient(TCPHeader.FLAG_FIN | TCPHeader.FLAG_ACK);
+
+        finSequenceNumber = sequenceNumber;
+        ++sequenceNumber; // FIN counts for 1 byte
+        if (state == State.CLOSE_WAIT) {
+            state = State.LAST_ACK;
+        } else {
+            state = State.FIN_WAIT_1;
+        }
+        logd(TAG, "State = " + state);
     }
 
     private int getRemainingClientWindow() {
@@ -187,8 +209,9 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         int packetSequenceNumber = tcpHeader.getSequenceNumber();
         if (packetSequenceNumber != acknowledgementNumber) {
             // ignore packet already received or out-of-order, retransmission is already managed by both sides
-            logw(TAG, "Ignoring packet " + packetSequenceNumber + "; expecting " + acknowledgementNumber + "; flags=" + tcpHeader.getFlags());
-            sendToClient(createEmptyResponsePacket(TCPHeader.FLAG_ACK)); // re-ack
+            logw(TAG, "Ignoring packet " + packetSequenceNumber + " (acking " + tcpHeader.getAcknowledgementNumber() + "); expecting "
+                    + acknowledgementNumber + "; flags=" + tcpHeader.getFlags());
+            sendEmptyPacketToClient(TCPHeader.FLAG_ACK); // re-ack
             return;
         }
 
@@ -205,15 +228,16 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
         if (tcpHeader.isAck()) {
             logd(TAG, "Client acked " + tcpHeader.getAcknowledgementNumber());
+            handleAck(packet);
         }
 
         if (tcpHeader.isFin()) {
             handleFin(packet);
-            return;
         }
 
-        if (tcpHeader.isAck()) {
-            handleAck(packet);
+        if (finSequenceNumber != null && tcpHeader.getAcknowledgementNumber() == finSequenceNumber + 1) {
+            logd(TAG, "Received ACK of FIN");
+            handleFinAck();
         }
     }
 
@@ -236,6 +260,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         logd(TAG, "initialized seqNum=" + sequenceNumber + "; ackNum=" + acknowledgementNumber);
         clientWindow = tcpHeader.getWindow();
         state = State.SYN_SENT;
+        logd(TAG, "State = " + state);
     }
 
     private void handleDuplicateSyn(IPv4Packet packet) {
@@ -253,26 +278,56 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
     private void handleFin(IPv4Packet packet) {
         TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
+        assert tcpHeader.getSequenceNumber() == acknowledgementNumber;
         acknowledgementNumber = tcpHeader.getSequenceNumber() + 1;
-        // consider the connection closed immediately (no need for CLOSE_WAIT)
-        state = State.LAST_ACK;
-        remoteClosed = true;
-        logd(TAG, "Received a FIN from the client, sending ACK+FIN " + numbers());
-        IPv4Packet response = createEmptyResponsePacket(TCPHeader.FLAG_FIN | TCPHeader.FLAG_ACK);
-        ++sequenceNumber; // FIN counts for 1 byte
-        sendToClient(response);
+        logd(TAG, "Received a FIN (" + tcpHeader.getSequenceNumber() + ")");
+
+        switch (state) {
+            case ESTABLISHED:
+                sendEmptyPacketToClient(TCPHeader.FLAG_FIN | TCPHeader.FLAG_ACK);
+                finSequenceNumber = sequenceNumber;
+                ++sequenceNumber; // FIN counts for 1 byte
+                // do not wait for the real network connection, switch immediately to LAST_ACK (bypass CLOSE_WAIT)
+                state = State.LAST_ACK;
+                logd(TAG, "State = " + state);
+                break;
+            case FIN_WAIT_1:
+                sendEmptyPacketToClient(TCPHeader.FLAG_ACK);
+                state = State.CLOSING;
+                logd(TAG, "State = " + state);
+                break;
+            case FIN_WAIT_2:
+                sendEmptyPacketToClient(TCPHeader.FLAG_ACK);
+                close();
+                break;
+            default:
+                logw(TAG, "Received FIN while state was " + state);
+        }
+    }
+
+    private void handleFinAck() {
+        switch (state) {
+            case LAST_ACK:
+            case CLOSING:
+                close();
+                break;
+            case FIN_WAIT_1:
+                state = State.FIN_WAIT_2;
+                logd(TAG, "State = " + state);
+                break;
+            case FIN_WAIT_2:
+                // do nothing
+                break;
+            default:
+                logw(TAG, "Received FIN ACK while state was " + state);
+        }
     }
 
     private void handleAck(IPv4Packet packet) {
         logd(TAG, "handleAck()");
         if (state == State.SYN_RECEIVED) {
-            logd(TAG, "ESTABLISHED");
             state = State.ESTABLISHED;
-            return;
-        }
-        if (state == State.LAST_ACK) {
-            logd(TAG, "LAST_ACK");
-            close();
+            logd(TAG, "State = " + state);
             return;
         }
 
@@ -296,8 +351,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
         // send ACK to client
         logd(TAG, "Received a payload from the client (" + payloadLength + " bytes), sending ACK " + numbers());
-        IPv4Packet responsePacket = createEmptyResponsePacket(TCPHeader.FLAG_ACK);
-        sendToClient(responsePacket);
+        sendEmptyPacketToClient(TCPHeader.FLAG_ACK);
     }
 
     private void processConnect() {
@@ -308,9 +362,9 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         }
         logd(TAG, "SYN_RECEIVED, acking " + numbers());
         state = State.SYN_RECEIVED;
-        IPv4Packet packet = createEmptyResponsePacket(TCPHeader.FLAG_SYN | TCPHeader.FLAG_ACK);
+        logd(TAG, "State = " + state);
+        sendEmptyPacketToClient(TCPHeader.FLAG_SYN | TCPHeader.FLAG_ACK);
         ++sequenceNumber; // SYN counts for 1 byte
-        sendToClient(packet);
     }
 
     private boolean finishConnect() {
@@ -325,8 +379,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     private void resetConnection() {
         logd(TAG, "Resetting connection");
         state = null;
-        IPv4Packet packet = createEmptyResponsePacket(TCPHeader.FLAG_RST);
-        sendToClient(packet);
+        sendEmptyPacketToClient(TCPHeader.FLAG_RST);
         close();
     }
 
@@ -341,6 +394,10 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
             logd(TAG, "Acking " + numbers());
         }
         return packet;
+    }
+
+    private void sendEmptyPacketToClient(int flags) {
+        sendToClient(createEmptyResponsePacket(flags));
     }
 
     protected void updateInterests() {
@@ -365,11 +422,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     }
 
     private boolean mayRead() {
-        if (remoteClosed) {
-            return false;
-        }
-        if (state == State.SYN_SENT || state == State.SYN_RECEIVED) {
-            // not connected yet
+        if (!state.isConnected() || state.isClosed()) {
             return false;
         }
         if (packetForClient != null) {
