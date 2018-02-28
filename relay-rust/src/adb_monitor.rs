@@ -56,16 +56,20 @@ impl AdbMonitor {
 
     pub fn monitor(&mut self) -> io::Result<()> {
         loop {
-            let adbd_addr = SocketAddr::from(([127, 0, 0, 1], 5037));
-            let mut stream = TcpStream::connect(adbd_addr)?;
-            if let Err(err) = self.track_devices(&mut stream) {
+            if let Err(err) = self.track_devices() {
                 error!(target: TAG, "Failed to monitor adb devices: {}", err);
                 Self::repair_adb_daemon();
             }
         }
     }
 
-    fn track_devices(&mut self, stream: &mut TcpStream) -> io::Result<()> {
+    fn track_devices(&mut self) -> io::Result<()> {
+        let adbd_addr = SocketAddr::from(([127, 0, 0, 1], 5037));
+        let mut stream = TcpStream::connect(adbd_addr)?;
+        self.track_devices_on_stream(&mut stream)
+    }
+
+    fn track_devices_on_stream(&mut self, stream: &mut TcpStream) -> io::Result<()> {
         stream.write_all(Self::TRACK_DEVICES_REQUEST)?;
         if self.consume_okay(stream)? {
             loop {
@@ -172,6 +176,7 @@ impl AdbMonitor {
     }
 
     fn start_adb_daemon() -> bool {
+        info!(target: TAG, "Restarting adb daemon");
         match process::Command::new("adb")
             .args(&["start-server"])
             .status() {

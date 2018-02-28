@@ -57,13 +57,7 @@ public class AdbMonitor {
     public void monitor() {
         while (true) {
             try {
-                SocketChannel socketChannel = SocketChannel.open();
-                try {
-                    socketChannel.connect(new InetSocketAddress(Inet4Address.getLoopbackAddress(), ADBD_PORT));
-                    trackDevices(socketChannel);
-                } finally {
-                    socketChannel.close();
-                }
+                trackDevices();
             } catch (Exception e) {
                 Log.e(TAG, "Failed to monitor adb devices", e);
                 repairAdbDaemon();
@@ -71,7 +65,17 @@ public class AdbMonitor {
         }
     }
 
-    private void trackDevices(ByteChannel channel) throws IOException {
+    private void trackDevices() throws IOException {
+        SocketChannel socketChannel = SocketChannel.open();
+        try {
+            socketChannel.connect(new InetSocketAddress(Inet4Address.getLoopbackAddress(), ADBD_PORT));
+            trackDevicesOnChannel(socketChannel);
+        } finally {
+            socketChannel.close();
+        }
+    }
+
+    private void trackDevicesOnChannel(ByteChannel channel) throws IOException {
         socketBuffer.clear();
         writeRequest(channel, TRACK_DEVICES_REQUEST);
         // the daemon initially sends "OKAY" if it understands the request
@@ -176,6 +180,7 @@ public class AdbMonitor {
     }
 
     private static boolean startAdbDaemon() {
+        Log.i(TAG, "Restarting adb deamon");
         try {
             Process process = new ProcessBuilder("adb", "start-server")
                     .redirectOutput(ProcessBuilder.Redirect.INHERIT)
