@@ -9,8 +9,8 @@ android {
         applicationId "com.genymobile.gnirehtet"
         minSdkVersion 21
         targetSdkVersion 27
-        versionCode 4
-        versionName "2.1"
+        versionCode 5
+        versionName "2.2"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
     }
     buildTypes {
