@@ -65,6 +65,7 @@ struct Tcb {
     acknowledgement_number: Wrapping<u32>,
     their_acknowledgement_number: u32,
     fin_sequence_number: Option<u32>,
+    fin_received: bool,
     client_window: u16,
 }
 
@@ -102,6 +103,7 @@ impl Tcb {
             acknowledgement_number: Wrapping(0),
             their_acknowledgement_number: 0,
             fin_sequence_number: None,
+            fin_received: false,
             client_window: 0,
         }
     }
@@ -251,7 +253,28 @@ impl TcpConnection {
     fn process_send(&mut self, selector: &mut Selector) -> io::Result<()> {
         match self.client_to_network.write_to(&mut self.stream) {
             Ok(w) => {
-                if w == 0 {
+                if w != 0 {
+                    self.tcb.acknowledgement_number += Wrapping(w as u32);
+
+                    if self.tcb.fin_received && self.client_to_network.is_empty() {
+                        let client_rc = self.client.upgrade().expect("Expected client not found");
+                        let mut client = client_rc.borrow_mut();
+                        cx_debug!(
+                            target: TAG,
+                            self.id,
+                            "No more pending data, process the pending FIN"
+                        );
+                        self.do_handle_fin(selector, &mut client.channel());
+                    } else {
+                        cx_debug!(
+                            target: TAG,
+                            self.id,
+                            "Sending ACK {} to client",
+                            self.tcb.numbers()
+                        );
+                        self.send_empty_packet_to_client(selector, tcp_header::FLAG_ACK);
+                    }
+                } else {
                     self.close(selector);
                 }
             }
@@ -468,7 +491,9 @@ impl TcpConnection {
             return;
         }
 
-        if tcp_header.sequence_number() != self.tcb.acknowledgement_number.0 {
+        let expected_packet =
+            (self.tcb.acknowledgement_number + Wrapping(self.client_to_network.size() as u32)).0;
+        if tcp_header.sequence_number() != expected_packet {
             // ignore packet already received or out-of-order, retransmission is already
             // managed by both sides
             cx_warn!(
@@ -477,11 +502,9 @@ impl TcpConnection {
                 "Ignoring packet {} (acking {}); expecting {}; flags={}",
                 tcp_header.sequence_number(),
                 tcp_header.acknowledgement_number(),
-                self.tcb.acknowledgement_number.0,
+                expected_packet,
                 tcp_header.flags()
             );
-            // re-ack
-            self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_ACK);
             return;
         }
 
@@ -513,7 +536,7 @@ impl TcpConnection {
         }
 
         if tcp_header.is_fin() {
-            self.handle_fin(selector, client_channel, ipv4_packet);
+            self.handle_fin(selector, client_channel);
         }
 
         if let Some(fin_sequence_number) = self.tcb.fin_sequence_number {
@@ -584,25 +607,28 @@ impl TcpConnection {
         }
     }
 
-    fn handle_fin(
-        &mut self,
-        selector: &mut Selector,
-        client_channel: &mut ClientChannel,
-        ipv4_packet: &Ipv4Packet,
-    ) {
-        let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
-        assert_eq!(
-            tcp_header.sequence_number(),
-            self.tcb.acknowledgement_number.0
-        );
-        self.tcb.acknowledgement_number = Wrapping(tcp_header.sequence_number()) + Wrapping(1);
-
+    fn handle_fin(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel) {
         cx_debug!(
             target: TAG,
             self.id,
-            "Received a FIN ({}) from the client",
-            tcp_header.sequence_number()
+            "Received a FIN from the client {}",
+            self.tcb.numbers()
         );
+
+        self.tcb.fin_received = true;
+        if self.client_to_network.is_empty() {
+            cx_debug!(
+                target: TAG,
+                self.id,
+                "No pending data, process the FIN immediately"
+            );
+            self.do_handle_fin(selector, client_channel);
+        }
+        // otherwise, the FIN will be processed once client_to_network is empty
+    }
+
+    fn do_handle_fin(&mut self, selector: &mut Selector, client_channel: &mut ClientChannel) {
+        self.tcb.acknowledgement_number += Wrapping(1); // received FIN counts for 1 byte
 
         if self.tcb.state == TcpState::Established {
             self.reply_empty_packet_to_client(
@@ -651,8 +677,8 @@ impl TcpConnection {
 
     fn handle_ack(
         &mut self,
-        selector: &mut Selector,
-        client_channel: &mut ClientChannel,
+        _selector: &mut Selector,
+        _client_channel: &mut ClientChannel,
         ipv4_packet: &Ipv4Packet,
     ) {
         cx_debug!(target: TAG, self.id, "handle_ack()");
@@ -683,17 +709,7 @@ impl TcpConnection {
         }
 
         self.client_to_network.read_from(payload);
-        self.tcb.acknowledgement_number += Wrapping(payload.len() as u32);
-
-        // send ACK to client
-        cx_debug!(
-            target: TAG,
-            self.id,
-            "Received a payload from the client ({} bytes), sending ACK {}",
-            payload.len(),
-            self.tcb.numbers()
-        );
-        self.reply_empty_packet_to_client(selector, client_channel, tcp_header::FLAG_ACK);
+        // data will be ACKed once written to the network socket
     }
 
     fn create_empty_response_packet<'a>(

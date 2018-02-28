@@ -69,6 +69,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     private int acknowledgementNumber;
     private int theirAcknowledgementNumber;
     private Integer finSequenceNumber; // null means "no FIN sent yet"
+    private boolean finReceived;
     private int clientWindow;
 
     public TCPConnection(ConnectionId id, Client client, Selector selector, IPv4Header ipv4Header, TCPHeader tcpHeader) throws IOException {
@@ -132,7 +133,20 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
 
     private void processSend() {
         try {
-            if (clientToNetwork.writeTo(channel) == -1) {
+            int w = clientToNetwork.writeTo(channel);
+            if (w > 0) {
+                acknowledgementNumber += w;
+
+                logd(TAG, w + " bytes written to the network socket");
+
+                if (finReceived && clientToNetwork.isEmpty()) {
+                    logd(TAG, "No more pending data, process the pending FIN");
+                    doHandleFin();
+                } else {
+                    logd(TAG, "Sending ACK " + numbers() + " to client");
+                    sendEmptyPacketToClient(TCPHeader.FLAG_ACK);
+                }
+            } else {
                 close();
             }
         } catch (IOException e) {
@@ -207,11 +221,11 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         }
 
         int packetSequenceNumber = tcpHeader.getSequenceNumber();
-        if (packetSequenceNumber != acknowledgementNumber) {
+        int expectedPacket = acknowledgementNumber + clientToNetwork.size();
+        if (packetSequenceNumber != expectedPacket) {
             // ignore packet already received or out-of-order, retransmission is already managed by both sides
             logw(TAG, "Ignoring packet " + packetSequenceNumber + " (acking " + tcpHeader.getAcknowledgementNumber() + "); expecting "
-                    + acknowledgementNumber + "; flags=" + tcpHeader.getFlags());
-            sendEmptyPacketToClient(TCPHeader.FLAG_ACK); // re-ack
+                    + expectedPacket + "; flags=" + tcpHeader.getFlags());
             return;
         }
 
@@ -232,7 +246,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         }
 
         if (tcpHeader.isFin()) {
-            handleFin(packet);
+            handleFin();
         }
 
         if (finSequenceNumber != null && tcpHeader.getAcknowledgementNumber() == finSequenceNumber + 1) {
@@ -276,11 +290,18 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         }
     }
 
-    private void handleFin(IPv4Packet packet) {
-        TCPHeader tcpHeader = (TCPHeader) packet.getTransportHeader();
-        assert tcpHeader.getSequenceNumber() == acknowledgementNumber;
-        acknowledgementNumber = tcpHeader.getSequenceNumber() + 1;
-        logd(TAG, "Received a FIN (" + tcpHeader.getSequenceNumber() + ")");
+    private void handleFin() {
+        logd(TAG, "Received a FIN from the client " + numbers());
+        finReceived = true;
+        if (clientToNetwork.isEmpty()) {
+            logd(TAG, "No pending data, process the FIN immediately");
+            doHandleFin();
+        }
+        // otherwise, the FIN will be processed once clientToNetwork is empty
+    }
+
+    private void doHandleFin() {
+        ++acknowledgementNumber; // received FIN counts for 1 byte
 
         switch (state) {
             case ESTABLISHED:
@@ -347,11 +368,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         }
 
         clientToNetwork.readFrom(packet.getPayload());
-        acknowledgementNumber += payloadLength;
-
-        // send ACK to client
-        logd(TAG, "Received a payload from the client (" + payloadLength + " bytes), sending ACK " + numbers());
-        sendEmptyPacketToClient(TCPHeader.FLAG_ACK);
+        // data will be ACKed once written to the network socket
     }
 
     private void processConnect() {
