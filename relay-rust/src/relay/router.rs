@@ -159,6 +159,13 @@ impl Router {
             connection.id(),
             connection.is_closed()
         );
+        // ===== for debugging purpose only
+        for c in &self.connections {
+            let x = connection;
+            let y = c.as_ptr();
+            debug!("===== {:p} == {:p} ? {}", x, y, ptr::eq(x, y));
+        }
+        // =====
         let index = self.connections
             .iter()
             .position(|item| {

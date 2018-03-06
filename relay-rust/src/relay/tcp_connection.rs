@@ -348,7 +348,9 @@ impl TcpConnection {
             Ok(None) => Ok(None),
             Err(err) => Err(err),
         };
-        match non_lexical_lifetime_workaround {
+        // force an error to reproduce issue 61
+        let err: io::Result<Option<Ipv4Packet>> = Err(io::Error::new(io::ErrorKind::Other, "FAIL"));
+        match err {
             Ok(None) => {
                 self.eof(selector);
             }
