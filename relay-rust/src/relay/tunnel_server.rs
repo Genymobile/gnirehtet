@@ -17,11 +17,11 @@
 use std::cell::RefCell;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::io;
+use std::ptr;
 use std::rc::{Rc, Weak};
 use mio::{Event, PollOpt, Ready};
 use mio::tcp::TcpListener;
 
-use super::binary;
 use super::client::Client;
 use super::selector::Selector;
 
@@ -103,7 +103,7 @@ impl TunnelServer {
             .iter()
             .position(|item| {
                 // compare pointers to find the client to remove
-                binary::ptr_eq(client, item.as_ptr())
+                ptr::eq(client, item.as_ptr())
             })
             .expect("Trying to remove an unknown client");
         self.clients.swap_remove(index);

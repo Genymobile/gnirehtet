@@ -35,9 +35,3 @@ pub fn to_string(data: &[u8]) -> String {
     }
     s
 }
-
-// std::ptr::eq is too recent:
-// <https://doc.rust-lang.org/std/ptr/fn.eq.html>
-pub fn ptr_eq<T: ?Sized>(lhs: *const T, rhs: *const T) -> bool {
-    lhs == rhs
-}

@@ -16,6 +16,7 @@
 
 use std::cell::RefCell;
 use std::io;
+use std::ptr;
 use std::rc::{Rc, Weak};
 use log::Level;
 
@@ -141,7 +142,7 @@ impl Router {
             .iter()
             .position(|item| {
                 // compare pointers to find the connection to remove
-                binary::ptr_eq(connection, item.as_ptr())
+                ptr::eq(connection, item.as_ptr())
             })
             .expect("Removing an unknown connection");
         self.connections.swap_remove(index);
