@@ -35,3 +35,12 @@ pub fn to_string(data: &[u8]) -> String {
     }
     s
 }
+
+// only compare the data part for fat pointers (ignore the vtable part)
+// for some (buggy) reason, the vtable part may be different even if the data reference the same
+// object
+// See <https://github.com/Genymobile/gnirehtet/issues/61#issuecomment-370933770>
+pub fn ptr_data_eq<T: ?Sized>(lhs: *const T, rhs: *const T) -> bool {
+    // cast to thin pointers to ignore the vtable part
+    lhs as *const () == rhs as *const ()
+}

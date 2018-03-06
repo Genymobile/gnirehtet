@@ -150,8 +150,8 @@ impl Router {
         let index = self.connections
             .iter()
             .position(|item| {
-                // compare pointers to find the connection to remove
-                ptr::eq(connection, item.as_ptr())
+                // compare (thin) pointers to find the connection to remove
+                binary::ptr_data_eq(connection, item.as_ptr())
             })
             .expect("Removing an unknown connection");
         debug!(
