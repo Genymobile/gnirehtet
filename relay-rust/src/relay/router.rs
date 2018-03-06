@@ -138,14 +138,14 @@ impl Router {
     }
 
     pub fn remove(&mut self, connection: &Connection) {
-        let index = self.connections.iter().position(|item| {
-            // compare pointers to find the connection to remove
-            ptr::eq(connection, item.as_ptr())
-        });
-        // the connection may have already been removed by send_to_network()
-        if let Some(index) = index {
-            self.connections.swap_remove(index);
-        }
+        let index = self.connections
+            .iter()
+            .position(|item| {
+                // compare pointers to find the connection to remove
+                ptr::eq(connection, item.as_ptr())
+            })
+            .expect("Removing an unknown connection");
+        self.connections.swap_remove(index);
     }
 
     pub fn clear(&mut self, selector: &mut Selector) {
