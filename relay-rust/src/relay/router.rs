@@ -62,6 +62,12 @@ impl Router {
                     let closed = {
                         let connection_ref = self.connections.get_mut(index).unwrap();
                         let mut connection = connection_ref.borrow_mut();
+                        debug!(
+                            target: TAG,
+                            "connection already closed on send_to_network? {} {}",
+                            connection.id(),
+                            connection.is_closed()
+                        );
                         connection.send_to_network(selector, client_channel, ipv4_packet);
                         if connection.is_closed() {
                             debug!(
@@ -147,6 +153,12 @@ impl Router {
     }
 
     pub fn remove(&mut self, connection: &Connection) {
+        debug!(
+            target: TAG,
+            "connection already closed on self-remove? {} {}",
+            connection.id(),
+            connection.is_closed()
+        );
         let index = self.connections
             .iter()
             .position(|item| {
@@ -175,6 +187,12 @@ impl Router {
             let expired = {
                 let mut connection = self.connections[i].borrow_mut();
                 if connection.is_expired() {
+                    debug!(
+                        target: TAG,
+                        "connection already closed on expiration? {} {}",
+                        connection.id(),
+                        connection.is_closed()
+                    );
                     debug!(
                         target: TAG,
                         "Removing expired connection from router: {}",
