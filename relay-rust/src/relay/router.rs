@@ -63,7 +63,16 @@ impl Router {
                         let connection_ref = self.connections.get_mut(index).unwrap();
                         let mut connection = connection_ref.borrow_mut();
                         connection.send_to_network(selector, client_channel, ipv4_packet);
-                        connection.is_closed()
+                        if connection.is_closed() {
+                            debug!(
+                                target: TAG,
+                                "Removing connection from router: {}",
+                                connection.id()
+                            );
+                            true
+                        } else {
+                            false
+                        }
                     };
                     if closed {
                         // the connection is closed, remove it
@@ -145,6 +154,11 @@ impl Router {
                 ptr::eq(connection, item.as_ptr())
             })
             .expect("Removing an unknown connection");
+        debug!(
+            target: TAG,
+            "Self-removing connection from router: {}",
+            connection.id()
+        );
         self.connections.swap_remove(index);
     }
 
@@ -163,7 +177,7 @@ impl Router {
                 if connection.is_expired() {
                     debug!(
                         target: TAG,
-                        "Removed expired connection: {}",
+                        "Removing expired connection from router: {}",
                         connection.id()
                     );
                     connection.close(selector);
