@@ -1,6 +1,6 @@
 [package]
 name = "gnirehtet"
-version = "2.2.0"
+version = "2.2.1"
 authors = ["Romain Vimont <rvimont@genymobile.com>"]
 
 [lib]
