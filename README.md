@@ -72,16 +72,16 @@ Download the [latest release][latest] in the flavor you want.
 
 ### Rust
 
- - **Linux:** [`gnirehtet-rust-linux64-v2.2.zip`][direct-rust-linux64]  
-   (SHA-256: _46dc5e9be2d7c2be1805a518a853c454bb891bec18bab806b9b098ce36a78197_)
- - **Windows:** [`gnirehtet-rust-win64-v2.2.zip`][direct-rust-win64]  
-   (SHA-256: _bd8ba6f63dd15b0e9b84ddf34123992406ad9342559f0e1a35e8336f931cfb3d_)
- - **MacOS:** [`gnirehtet-rust-macos64-v2.2.zip`][direct-rust-macos64]  
-   (SHA-256: _f2b147eb364dcc88f94614b34077a511383bdff96bf5d5fb8d0c437016449efb_)
+ - **Linux:** [`gnirehtet-rust-linux64-v2.2.1.zip`][direct-rust-linux64]  
+   (SHA-256: _7ecb04bc7e2a223773dc9be66efafd39bb6cfb16b5cc4ccbe252f997c003bf6c_)
+ - **Windows:** [`gnirehtet-rust-win64-v2.2.1.zip`][direct-rust-win64]  
+   (SHA-256: _1e62a5a5ade4a5f4d0b1d4a6699feedbc727eebd808cfcc152662313a1003400_)
+ - **MacOS:** [`gnirehtet-rust-macos64-v2.2.1.zip`][direct-rust-macos64]  
+   (SHA-256: _902103e6497f995e1e9b92421be212559950cca4a8b557e1f0403769aee06fc8_)
 
-[direct-rust-linux64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.2/gnirehtet-rust-linux64-v2.2.zip
-[direct-rust-win64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.2/gnirehtet-rust-win64-v2.2.zip
-[direct-rust-macos64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.2/gnirehtet-rust-macos64-v2.2.zip
+[direct-rust-linux64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.2.1/gnirehtet-rust-linux64-v2.2.1.zip
+[direct-rust-win64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.2.1/gnirehtet-rust-win64-v2.2.1.zip
+[direct-rust-macos64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.2.1/gnirehtet-rust-macos64-v2.2.1.zip
 
 Then extract it.
 
@@ -97,10 +97,10 @@ The Windows archive contains:
 
 ### Java
 
- - **All platforms:** [`gnirehtet-java-v2.2.zip`][direct-java]  
-   (SHA-256: _55d772d119d597a68ce0e65881d39f8088866fd419be86f3fef2cdf22e555a79_)
+ - **All platforms:** [`gnirehtet-java-v2.2.1.zip`][direct-java]  
+   (SHA-256: _feb7fae78d1247247ae4ec89a5a01895c7fc4efa0965bdbfeb46396577f150db_)
 
-[direct-java]: https://github.com/Genymobile/gnirehtet/releases/download/v2.2/gnirehtet-java-v2.2.zip
+[direct-java]: https://github.com/Genymobile/gnirehtet/releases/download/v2.2.1/gnirehtet-java-v2.2.1.zip
 
 Then extract it. The archive contains:
  - `gnirehtet.apk`
