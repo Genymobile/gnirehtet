@@ -16,7 +16,6 @@
 
 use std::cell::RefCell;
 use std::io;
-use std::ptr;
 use std::rc::{Rc, Weak};
 use log::Level;
 
