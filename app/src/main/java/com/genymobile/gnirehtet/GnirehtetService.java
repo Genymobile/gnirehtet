@@ -65,7 +65,11 @@ public class GnirehtetService extends VpnService {
     }
 
     public static void stop(Context context) {
-        context.startService(createStopIntent(context));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            context.startForegroundService(createStopIntent(context));
+        } else {
+            context.startService(createStopIntent(context));
+        }
     }
 
     static Intent createStopIntent(Context context) {
