@@ -218,3 +218,72 @@ impl AdbMonitor {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::cell::RefCell;
+    use std::rc::Rc;
+
+    #[test]
+    fn test_read_valid_packet() {
+        let mut buf = ByteBuffer::new(64);
+        let raw = "00180123456789ABCDEF\tdevice\n".as_bytes();
+
+        let mut cursor = io::Cursor::new(raw);
+        buf.read_from(&mut cursor).unwrap();
+
+        let packet = AdbMonitor::read_packet(&mut buf).unwrap().unwrap();
+        assert_eq!("0123456789ABCDEF\tdevice\n", packet);
+    }
+
+    #[test]
+    fn test_read_valid_packet_with_garbage() {
+        let mut buf = ByteBuffer::new(64);
+        let raw = "00180123456789ABCDEF\tdevice\ngarbage".as_bytes();
+
+        let mut cursor = io::Cursor::new(raw);
+        buf.read_from(&mut cursor).unwrap();
+
+        let packet = AdbMonitor::read_packet(&mut buf).unwrap().unwrap();
+        assert_eq!("0123456789ABCDEF\tdevice\n", packet);
+    }
+
+    #[test]
+    fn test_read_short_packet() {
+        let mut buf = ByteBuffer::new(64);
+        let raw = "00180123456789ABCDEF\tdevi".as_bytes();
+
+        let mut cursor = io::Cursor::new(raw);
+        buf.read_from(&mut cursor).unwrap();
+
+        let packet = AdbMonitor::read_packet(&mut buf).unwrap();
+        assert!(packet.is_none());
+    }
+
+    #[test]
+    fn test_handle_packet_device() {
+        let serial = Rc::new(RefCell::new(None));
+        let serial_clone = serial.clone();
+
+        let monitor = AdbMonitor::new(Box::new(move |serial: &String| {
+            serial_clone.replace(Some(serial.to_string()));
+        }));
+        monitor.handle_packet(&"0123456789ABCDEF\tdevice\n".to_string());
+
+        assert_eq!("0123456789ABCDEF", serial.borrow().as_ref().unwrap());
+    }
+
+    #[test]
+    fn test_handle_packet_offline() {
+        let serial = Rc::new(RefCell::new(None));
+        let serial_clone = serial.clone();
+
+        let monitor = AdbMonitor::new(Box::new(move |serial: &String| {
+            serial_clone.replace(Some(serial.to_string()));
+        }));
+        monitor.handle_packet(&"0123456789ABCDEF\toffline\n".to_string());
+
+        assert!(serial.borrow().is_none());
+    }
+}
