@@ -53,9 +53,7 @@ public class AdbMonitorTest {
     @Test
     public void testHandlePacketDevice() {
         final String[] pSerial = new String[1];
-        AdbMonitor monitor = new AdbMonitor((serial) -> {
-            pSerial[0] = serial;
-        });
+        AdbMonitor monitor = new AdbMonitor((serial) -> pSerial[0] = serial);
         String packet = "0123456789ABCDEF\tdevice\n";
         monitor.handlePacket(packet);
         Assert.assertEquals("0123456789ABCDEF", pSerial[0]);
@@ -64,9 +62,7 @@ public class AdbMonitorTest {
     @Test
     public void testHandlePacketOffline() {
         final String[] pSerial = new String[1];
-        AdbMonitor monitor = new AdbMonitor((serial) -> {
-            pSerial[0] = serial;
-        });
+        AdbMonitor monitor = new AdbMonitor((serial) -> pSerial[0] = serial);
         String packet = "0123456789ABCDEF\toffline\n";
         monitor.handlePacket(packet);
         Assert.assertNull(pSerial[0]);
