@@ -318,20 +318,8 @@ fn cmd_run(
     dns_servers: Option<&String>,
     routes: Option<&String>,
 ) -> Result<(), CommandExecutionError> {
-    {
-        // start in parallel so that the relay server is ready when the client connects
-        let start_serial = serial.cloned();
-        let start_dns_servers = dns_servers.cloned();
-        let start_routes = routes.cloned();
-        thread::spawn(move || if let Err(err) = cmd_start(
-            start_serial.as_ref(),
-            start_dns_servers.as_ref(),
-            start_routes.as_ref(),
-        )
-        {
-            error!(target: TAG, "Cannot start client: {}", err);
-        });
-    }
+    // start in parallel so that the relay server is ready when the client connects
+    async_start(serial, dns_servers, routes);
 
     let ctrlc_serial = serial.cloned();
     ctrlc::set_handler(move || {
@@ -405,18 +393,13 @@ fn cmd_autostart(
 ) -> Result<(), CommandExecutionError> {
     let start_dns_servers = dns_servers.cloned();
     let start_routes = routes.cloned();
-    let mut adb_monitor = AdbMonitor::new(Box::new(
-        move |serial: &String| if let Err(err) = cmd_start(
+    let mut adb_monitor = AdbMonitor::new(Box::new(move |serial: &String| {
+        async_start(
             Some(serial),
-            start_dns_servers
-                .as_ref(),
-            start_routes
-                .as_ref(),
+            start_dns_servers.as_ref(),
+            start_routes.as_ref(),
         )
-        {
-            error!(target: TAG, "Cannot start on device {}: {}", serial, err);
-        },
-    ));
+    }));
     adb_monitor.monitor()?;
     Ok(())
 }
@@ -448,6 +431,20 @@ fn cmd_relay() -> Result<(), CommandExecutionError> {
     info!(target: TAG, "Starting relay server...");
     relaylib::relay()?;
     Ok(())
+}
+
+fn async_start(serial: Option<&String>, dns_servers: Option<&String>, routes: Option<&String>) {
+    let start_serial = serial.cloned();
+    let start_dns_servers = dns_servers.cloned();
+    let start_routes = routes.cloned();
+    thread::spawn(move || if let Err(err) = cmd_start(
+        start_serial.as_ref(),
+        start_dns_servers.as_ref(),
+        start_routes.as_ref(),
+    )
+    {
+        error!(target: TAG, "Cannot start client: {}", err);
+    });
 }
 
 fn create_adb_args<S: Into<String>>(serial: Option<&String>, args: Vec<S>) -> Vec<String> {

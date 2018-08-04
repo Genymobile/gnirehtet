@@ -218,13 +218,7 @@ public final class Main {
 
     private static void cmdRun(String serial, String dnsServers, String routes) throws InterruptedException, IOException, CommandExecutionException {
         // start in parallel so that the relay server is ready when the client connects
-        new Thread(() -> {
-            try {
-                cmdStart(serial, dnsServers, routes);
-            } catch (Exception e) {
-                Log.e(TAG, "Cannot start client", e);
-            }
-        }).start();
+        asyncStart(serial, dnsServers, routes);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             // executed on Ctrl+C
@@ -274,14 +268,9 @@ public final class Main {
         execAdb(serial, cmd);
     }
 
-    private static void cmdAutostart(final String dnsServers, final String routes) throws InterruptedException, IOException,
-            CommandExecutionException {
+    private static void cmdAutostart(final String dnsServers, final String routes) {
         AdbMonitor adbMonitor = new AdbMonitor((serial) -> {
-            try {
-                cmdStart(serial, dnsServers, routes);
-            } catch (Exception e) {
-                Log.e(TAG, "Cannot start on device " + serial, e);
-            }
+            asyncStart(serial, dnsServers, routes);
         });
         adbMonitor.monitor();
     }
@@ -305,6 +294,16 @@ public final class Main {
     private static void cmdRelay() throws IOException {
         Log.i(TAG, "Starting relay server...");
         new Relay().run();
+    }
+
+    private static void asyncStart(String serial, String dnsServers, String routes) {
+        new Thread(() -> {
+            try {
+                cmdStart(serial, dnsServers, routes);
+            } catch (Exception e) {
+                Log.e(TAG, "Cannot start client", e);
+            }
+        }).start();
     }
 
     private static void execAdb(String serial, String... adbArgs) throws InterruptedException, IOException, CommandExecutionException {
