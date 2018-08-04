@@ -39,6 +39,7 @@ where
 pub struct AdbMonitor {
     callback: Box<AdbMonitorCallback>,
     buf: ByteBuffer,
+    connected_devices: Vec<String>,
 }
 
 impl AdbMonitor {
@@ -51,6 +52,7 @@ impl AdbMonitor {
         Self {
             callback: callback,
             buf: ByteBuffer::new(Self::BUFFER_SIZE),
+            connected_devices: Vec::new(),
         }
     }
 
@@ -127,10 +129,14 @@ impl AdbMonitor {
         if input.len() < 4 {
             Ok(None)
         } else {
-            // each packet contains 4 bytes representing the String length in hexa, followed by the
-            // device serial, `\t', the state, '\n'
-            // for example: "00180123456789abcdef\tdevice\n": 0018 indicates that the data is 0x18
-            // (24) bytes length
+            // each packet contains 4 bytes representing the String length in hexa, followed by a
+            // list of device information;
+            // each line contains: the device serial, `\t', the state, '\n'
+            // for example:
+            // "00360123456789abcdef\tdevice\nfedcba9876543210\tunauthorized\n":
+            //  - 0036 indicates that the data is 0x36 (54) bytes length
+            //  - the device with serial 0123456789abcdef is connected
+            //  - the device with serial fedcba9876543210 is unauthorized
             let len = Self::parse_length(&input[0..4])?;
             if len > Self::BUFFER_SIZE as u32 {
                 return Err(io::Error::new(
@@ -147,15 +153,31 @@ impl AdbMonitor {
         }
     }
 
-    fn handle_packet(&self, serial: &String) {
-        let mut split = serial.split_whitespace();
-        if let Some(serial) = split.next() {
-            if let Some(state) = split.next() {
-                if "device" == state {
-                    self.callback.on_new_device_connected(&serial.to_string());
-                }
+    fn handle_packet(&mut self, packet: &String) {
+        let current_connected_devices = self.parse_connected_devices(packet);
+        for serial in &current_connected_devices {
+            if !self.connected_devices.contains(serial) {
+                self.callback.on_new_device_connected(&serial);
             }
         }
+        self.connected_devices = current_connected_devices;
+    }
+
+    fn parse_connected_devices(&self, packet: &String) -> Vec<String> {
+        packet
+            .lines()
+            .filter_map(|line| {
+                let mut split = line.split_whitespace();
+                if let Some(serial) = split.next() {
+                    if let Some(state) = split.next() {
+                        if state == "device" {
+                            return Some(serial.to_string());
+                        }
+                    }
+                }
+                None
+            })
+            .collect()
     }
 
     fn parse_length(data: &[u8]) -> io::Result<u32> {
@@ -238,6 +260,21 @@ mod tests {
     }
 
     #[test]
+    fn test_read_valid_packets() {
+        let mut buf = ByteBuffer::new(64);
+        let raw = "00300123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n".as_bytes();
+
+        let mut cursor = io::Cursor::new(raw);
+        buf.read_from(&mut cursor).unwrap();
+
+        let packet = AdbMonitor::read_packet(&mut buf).unwrap().unwrap();
+        assert_eq!(
+            "0123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n",
+            packet
+        );
+    }
+
+    #[test]
     fn test_read_valid_packet_with_garbage() {
         let mut buf = ByteBuffer::new(64);
         let raw = "00180123456789ABCDEF\tdevice\ngarbage".as_bytes();
@@ -266,7 +303,7 @@ mod tests {
         let serial = Rc::new(RefCell::new(None));
         let serial_clone = serial.clone();
 
-        let monitor = AdbMonitor::new(Box::new(move |serial: &String| {
+        let mut monitor = AdbMonitor::new(Box::new(move |serial: &String| {
             serial_clone.replace(Some(serial.to_string()));
         }));
         monitor.handle_packet(&"0123456789ABCDEF\tdevice\n".to_string());
@@ -279,11 +316,49 @@ mod tests {
         let serial = Rc::new(RefCell::new(None));
         let serial_clone = serial.clone();
 
-        let monitor = AdbMonitor::new(Box::new(move |serial: &String| {
+        let mut monitor = AdbMonitor::new(Box::new(move |serial: &String| {
             serial_clone.replace(Some(serial.to_string()));
         }));
         monitor.handle_packet(&"0123456789ABCDEF\toffline\n".to_string());
 
         assert!(serial.borrow().is_none());
+    }
+
+    #[test]
+    fn test_multiple_connected_devices() {
+        let serials = Rc::new(RefCell::new(Vec::new()));
+        let serials_clone = serials.clone();
+
+        let mut monitor = AdbMonitor::new(Box::new(move |serial: &String| {
+            serials_clone.borrow_mut().push(serial.to_string());
+        }));
+        monitor.handle_packet(&"0123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n"
+            .to_string());
+
+        let vec = serials.borrow();
+        assert_eq!(2, vec.len());
+        assert_eq!("0123456789ABCDEF", vec[0]);
+        assert_eq!("FEDCBA9876543210", vec[1]);
+    }
+
+    #[test]
+    fn test_multiple_connected_devices_with_disconnection() {
+        let serials = Rc::new(RefCell::new(Vec::new()));
+        let serials_clone = serials.clone();
+
+        let mut monitor = AdbMonitor::new(Box::new(move |serial: &String| {
+            serials_clone.borrow_mut().push(serial.to_string());
+        }));
+        monitor.handle_packet(&"0123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n"
+            .to_string());
+        monitor.handle_packet(&"0123456789ABCDEF\tdevice\n".to_string());
+        monitor.handle_packet(&"0123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n"
+            .to_string());
+
+        let vec = serials.borrow();
+        assert_eq!(3, vec.len());
+        assert_eq!("0123456789ABCDEF", vec[0]);
+        assert_eq!("FEDCBA9876543210", vec[1]);
+        assert_eq!("FEDCBA9876543210", vec[2]);
     }
 }

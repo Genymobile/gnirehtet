@@ -28,6 +28,8 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.SocketChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
 
 public class AdbMonitor {
 
@@ -44,6 +46,8 @@ public class AdbMonitor {
     private static final int OKAY_SIZE = 4;
     private static final long RETRY_DELAY_ADB_DAEMON_OK = 1000;
     private static final long RETRY_DELAY_ADB_DAEMON_KO = 5000;
+
+    private List<String> connectedDevices = new ArrayList<>();
 
     private AdbDevicesCallback callback;
 
@@ -131,8 +135,12 @@ public class AdbMonitor {
         if (input.remaining() < LENGTH_FIELD_SIZE) {
             return null;
         }
-        // each packet contains 4 bytes representing the String length in hexa, followed by the device serial, `\t', the state, '\n'
-        // for example: "00180123456789abcdef\tdevice\n": 0018 indicates that the data is 0x18 (24) bytes length
+        // each packet contains 4 bytes representing the String length in hexa, followed by a list of device states, one per line;
+        // each line contains: the device serial, `\t', the state, '\n'
+        // for example: "00360123456789abcdef\tdevice\nfedcba9876543210\tunauthorized\n":
+        //  - 0036 indicates that the data is 0x36 (54) bytes length
+        //  - the device with serial 0123456789abcdef is connected
+        //  - the device with serial fedcba9876543210 is unauthorized
         input.get(BUFFER, 0, LENGTH_FIELD_SIZE);
         int length = parseLength(BUFFER);
         if (length > BUFFER.length) {
@@ -148,14 +156,28 @@ public class AdbMonitor {
     }
 
     void handlePacket(String packet) {
-        String[] tokens = packet.split("\\s+");
-        if (tokens.length == 2) {
-            String state = tokens[1];
-            if ("device".equals(state)) {
-                String serial = tokens[0];
+        List<String> currentConnectedDevices = parseConnectedDevices(packet);
+        for (String serial : currentConnectedDevices) {
+            if (!connectedDevices.contains(serial)) {
                 callback.onNewDeviceConnected(serial);
             }
         }
+        connectedDevices = currentConnectedDevices;
+    }
+
+    private static List<String> parseConnectedDevices(String packet) {
+        List<String> list = new ArrayList<>();
+        for (String line : packet.split("\\n")) {
+            String[] tokens = line.split("\\s+");
+            if (tokens.length == 2) {
+                String state = tokens[1];
+                if ("device".equals(state)) {
+                    String serial = tokens[0];
+                    list.add(serial);
+                }
+            }
+        }
+        return list;
     }
 
     @SuppressWarnings("checkstyle:MagicNumber")

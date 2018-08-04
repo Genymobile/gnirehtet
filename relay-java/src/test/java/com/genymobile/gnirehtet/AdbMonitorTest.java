@@ -35,6 +35,12 @@ public class AdbMonitorTest {
         Assert.assertEquals("0123456789ABCDEF\tdevice\n", result);
     }
 
+    @Test
+    public void testReadValidPackets() {
+        String data = "00300123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n";
+        String result = AdbMonitor.readPacket(toByteBuffer(data));
+        Assert.assertEquals("0123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n", result);
+    }
 
     @Test
     public void testReadValidPacketWithGarbage() {
@@ -66,5 +72,43 @@ public class AdbMonitorTest {
         String packet = "0123456789ABCDEF\toffline\n";
         monitor.handlePacket(packet);
         Assert.assertNull(pSerial[0]);
+    }
+
+    @Test
+    public void testMultipleConnectedDevices() {
+        final String[] pSerials = new String[2];
+        AdbMonitor monitor = new AdbMonitor(new AdbMonitor.AdbDevicesCallback() {
+            private int i;
+            @Override
+            public void onNewDeviceConnected(String serial) {
+                pSerials[i++] = serial;
+            }
+        });
+        String packet = "0123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n";
+        monitor.handlePacket(packet);
+        Assert.assertEquals("0123456789ABCDEF", pSerials[0]);
+        Assert.assertEquals("FEDCBA9876543210", pSerials[1]);
+    }
+
+    @Test
+    @SuppressWarnings("checkstyle:MagicNumber")
+    public void testMultipleConnectedDevicesWithDisconnection() {
+        final String[] pSerials = new String[3];
+        AdbMonitor monitor = new AdbMonitor(new AdbMonitor.AdbDevicesCallback() {
+            private int i;
+            @Override
+            public void onNewDeviceConnected(String serial) {
+                pSerials[i++] = serial;
+            }
+        });
+        String packet = "0123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n";
+        monitor.handlePacket(packet);
+        packet = "0123456789ABCDEF\tdevice\n";
+        monitor.handlePacket(packet);
+        packet = "0123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n";
+        monitor.handlePacket(packet);
+        Assert.assertEquals("0123456789ABCDEF", pSerials[0]);
+        Assert.assertEquals("FEDCBA9876543210", pSerials[1]);
+        Assert.assertEquals("FEDCBA9876543210", pSerials[2]);
     }
 }
