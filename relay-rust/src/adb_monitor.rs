@@ -89,19 +89,26 @@ impl AdbMonitor {
         Ok(ok)
     }
 
+    fn read_packet(buf: &mut ByteBuffer) -> io::Result<Option<String>> {
+        let packet_length = Self::available_packet_length(buf.peek())?;
+        if let Some(len) = packet_length {
+            // retrieve the content and consume the packet
+            let data = Self::to_string(&buf.peek()[4..len])?;
+            buf.consume(len);
+            Ok(Some(data))
+        } else {
+            Ok(None)
+        }
+    }
+
     fn next_packet(&mut self, stream: &mut TcpStream) -> io::Result<String> {
         loop {
-            let packet_length = Self::available_packet_length(self.buf.peek())?;
-            match packet_length {
-                Some(len) => {
-                    // retrieve the content and consume the packet
-                    let data = Self::to_string(&self.buf.peek()[4..len])?;
-                    self.buf.consume(len);
-                    return Ok(data);
-                }
-                // need more data
-                None => self.fill_buffer_from(stream)?,
-            };
+            let packet = Self::read_packet(&mut self.buf)?;
+            if let Some(packet) = packet {
+                return Ok(packet);
+            } else {
+                self.fill_buffer_from(stream)?;
+            }
         }
     }
 
