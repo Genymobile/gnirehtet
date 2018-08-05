@@ -19,7 +19,8 @@ task clean(type: Exec) {
 }
 
 task checkstyle(type: Exec) {
-    commandLine 'cargo', 'fmt', '--', '--write-mode=diff'
+    // --force to use the current rustfmt, the new one is only available in nightly
+    commandLine 'cargo', 'fmt', '--', '--write-mode=diff', '--force'
 }
 
 task check(dependsOn: ['checkstyle', 'test'])
