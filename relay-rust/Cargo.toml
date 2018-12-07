@@ -1,7 +1,7 @@
 [package]
 name = "gnirehtet"
 version = "2.3.0"
-authors = ["Romain Vimont <rvimont@genymobile.com>"]
+authors = ["Romain Vimont <rom@rom1v.com>"]
 
 [lib]
 name = "relaylib"
