@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-use std::net::{SocketAddr, TcpStream};
+use log::*;
+use relaylib::byte_buffer::ByteBuffer;
 use std::io::{self, Write};
+use std::net::{SocketAddr, TcpStream};
 use std::process;
 use std::str;
 use std::thread;
 use std::time::Duration;
-use log::*;
-use relaylib::byte_buffer::ByteBuffer;
 
 const TAG: &'static str = "AdbMonitor";
 
@@ -209,7 +209,8 @@ impl AdbMonitor {
         info!(target: TAG, "Restarting adb daemon");
         match process::Command::new("adb")
             .args(&["start-server"])
-            .status() {
+            .status()
+        {
             Ok(exit_status) => {
                 if exit_status.success() {
                     true
@@ -333,8 +334,7 @@ mod tests {
         let mut monitor = AdbMonitor::new(Box::new(move |serial: &String| {
             serials_clone.borrow_mut().push(serial.to_string());
         }));
-        monitor.handle_packet(&"0123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n"
-            .to_string());
+        monitor.handle_packet(&"0123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n".to_string());
 
         let vec = serials.borrow();
         assert_eq!(2, vec.len());
@@ -350,11 +350,9 @@ mod tests {
         let mut monitor = AdbMonitor::new(Box::new(move |serial: &String| {
             serials_clone.borrow_mut().push(serial.to_string());
         }));
-        monitor.handle_packet(&"0123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n"
-            .to_string());
+        monitor.handle_packet(&"0123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n".to_string());
         monitor.handle_packet(&"0123456789ABCDEF\tdevice\n".to_string());
-        monitor.handle_packet(&"0123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n"
-            .to_string());
+        monitor.handle_packet(&"0123456789ABCDEF\tdevice\nFEDCBA9876543210\tdevice\n".to_string());
 
         let vec = serials.borrow();
         assert_eq!(3, vec.len());

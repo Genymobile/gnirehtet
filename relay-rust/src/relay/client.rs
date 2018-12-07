@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
+use log::*;
+use mio::net::TcpStream;
+use mio::{Event, PollOpt, Ready, Token};
 use std::cell::RefCell;
 use std::io::{self, Write};
 use std::mem;
 use std::net::Shutdown;
 use std::rc::Rc;
-use log::*;
-use mio::net::TcpStream;
-use mio::{Event, PollOpt, Ready, Token};
 
 use super::binary;
 use super::close_listener::CloseListener;
@@ -140,12 +140,8 @@ impl Client {
             // must anotate selector type: https://stackoverflow.com/a/44004103/1987178
             let handler =
                 move |selector: &mut Selector, event| rc2.borrow_mut().on_ready(selector, event);
-            let token = selector.register(
-                &self_ref.stream,
-                handler,
-                interests,
-                PollOpt::level(),
-            )?;
+            let token =
+                selector.register(&self_ref.stream, handler, interests, PollOpt::level())?;
             self_ref.token = token;
         }
         Ok(rc)
@@ -314,11 +310,8 @@ impl Client {
                     self.token,
                     &mut self.interests,
                 );
-                self.router.send_to_network(
-                    selector,
-                    &mut client_channel,
-                    packet,
-                );
+                self.router
+                    .send_to_network(selector, &mut client_channel, packet);
                 true
             }
             None => false,
@@ -332,9 +325,9 @@ impl Client {
             let consumed = {
                 let mut source = pending.borrow_mut();
                 let result = {
-                    let ipv4_packet = source.get().expect(
-                        "Unexpected pending source with no packet",
-                    );
+                    let ipv4_packet = source
+                        .get()
+                        .expect("Unexpected pending source with no packet");
                     self.send_to_client(selector, &ipv4_packet)
                 };
                 match result {

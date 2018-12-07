@@ -14,15 +14,15 @@
  * limitations under the License.
  */
 
+use log::*;
+use mio::net::TcpStream;
+use mio::{Event, PollOpt, Ready, Token};
+use rand::random;
 use std::cell::RefCell;
 use std::cmp;
 use std::io;
 use std::num::Wrapping;
 use std::rc::{Rc, Weak};
-use log::*;
-use mio::{Event, PollOpt, Ready, Token};
-use mio::net::TcpStream;
-use rand::random;
 
 use super::binary;
 use super::client::{Client, ClientChannel};
@@ -89,8 +89,10 @@ impl TcpState {
     }
 
     fn is_closed(&self) -> bool {
-        self == &TcpState::FinWait1 || self == &TcpState::FinWait2 || self == &TcpState::Closing ||
-            self == &TcpState::LastAck
+        self == &TcpState::FinWait1
+            || self == &TcpState::FinWait2
+            || self == &TcpState::Closing
+            || self == &TcpState::LastAck
     }
 }
 
@@ -109,9 +111,9 @@ impl Tcb {
     }
 
     fn remaining_client_window(&self) -> u16 {
-        let wrapped_remaining = Wrapping(self.their_acknowledgement_number) +
-            Wrapping(self.client_window as u32) -
-            self.sequence_number;
+        let wrapped_remaining = Wrapping(self.their_acknowledgement_number)
+            + Wrapping(self.client_window as u32)
+            - self.sequence_number;
         let remaining = wrapped_remaining.0;
         if remaining <= self.client_window as u32 {
             remaining as u16
@@ -123,8 +125,7 @@ impl Tcb {
     fn numbers(&self) -> String {
         format!(
             "(seq={}, ack={})",
-            self.sequence_number,
-            self.acknowledgement_number
+            self.sequence_number, self.acknowledgement_number
         )
     }
 }
@@ -186,12 +187,8 @@ impl TcpConnection {
             // must annotate selector type: https://stackoverflow.com/a/44004103/1987178
             let handler =
                 move |selector: &mut Selector, event| rc2.borrow_mut().on_ready(selector, event);
-            let token = selector.register(
-                &self_ref.stream,
-                handler,
-                interests,
-                PollOpt::level(),
-            )?;
+            let token =
+                selector.register(&self_ref.stream, handler, interests, PollOpt::level())?;
             self_ref.token = token;
         }
         Ok(rc)
@@ -308,8 +305,8 @@ impl TcpConnection {
             remaining_client_window > 0,
             "process_received() must not be called when window == 0"
         );
-        let max_payload_length = Some(cmp::min(remaining_client_window, MAX_PAYLOAD_LENGTH) as
-            usize);
+        let max_payload_length =
+            Some(cmp::min(remaining_client_window, MAX_PAYLOAD_LENGTH) as usize);
         Self::update_headers(
             &mut self.network_to_client,
             &self.tcb,
@@ -317,10 +314,10 @@ impl TcpConnection {
         );
         // the packet is bound to the lifetime of self, so we cannot borrow self to call methods
         // defer the other branches in a separate match-block
-        let non_lexical_lifetime_workaround = match self.network_to_client.packetize_read(
-            &mut self.stream,
-            max_payload_length,
-        ) {
+        let non_lexical_lifetime_workaround = match self
+            .network_to_client
+            .packetize_read(&mut self.stream, max_payload_length)
+        {
             Ok(Some(ipv4_packet)) => {
                 match Self::send_to_client(&self.client, selector, &ipv4_packet) {
                     Ok(_) => {
@@ -638,8 +635,8 @@ impl TcpConnection {
             );
             self.tcb.fin_sequence_number = Some(self.tcb.sequence_number.0);
             self.tcb.sequence_number += Wrapping(1); // FIN counts for 1 byte
-            // the connection will be closed by RAII, so switch immediately to LastAck
-            // (bypass CloseWait)
+                                                     // the connection will be closed by RAII, so switch immediately to LastAck
+                                                     // (bypass CloseWait)
             self.tcb.state = TcpState::LastAck;
             cx_debug!(target: TAG, self.id, "State = {:?}", self.tcb.state);
         } else if self.tcb.state == TcpState::FinWait1 {
@@ -820,9 +817,9 @@ impl PacketSource for TcpConnection {
     }
 
     fn next(&mut self, selector: &mut Selector) {
-        let len = self.packet_for_client_length.expect(
-            "next() called on empty packet source",
-        );
+        let len = self
+            .packet_for_client_length
+            .expect("next() called on empty packet source");
         cx_debug!(
             target: TAG,
             self.id,

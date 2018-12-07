@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-use log::*;
 use chrono::prelude::Local;
+use log::*;
 use std::io::{self, Write};
 
 static LOGGER: SimpleLogger = SimpleLogger;

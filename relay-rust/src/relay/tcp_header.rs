@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
+use super::ipv4_header::Ipv4HeaderData;
 use byteorder::{BigEndian, ByteOrder};
 use std::mem;
-use super::ipv4_header::Ipv4HeaderData;
 
 pub struct TcpHeader<'a> {
     raw: &'a [u8],
@@ -214,7 +214,7 @@ macro_rules! tcp_header_common {
                 self.data.is_ack()
             }
         }
-    }
+    };
 }
 
 tcp_header_common!(TcpHeader, &'a [u8], &'a TcpHeaderData);
@@ -300,8 +300,8 @@ impl<'a> TcpHeaderMut<'a> {
         // pseudo-header checksum (cf rfc793 section 3.1)
         let source = ipv4_header_data.source();
         let destination = ipv4_header_data.destination();
-        let transport_length = ipv4_header_data.total_length() -
-            ipv4_header_data.header_length() as u16;
+        let transport_length =
+            ipv4_header_data.total_length() - ipv4_header_data.header_length() as u16;
 
         let header_length = self.header_length();
         debug_assert!(header_length % 2 == 0 && header_length >= 20);
@@ -364,9 +364,9 @@ impl<'a> TcpHeaderMut<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use byteorder::{BigEndian, WriteBytesExt};
     use crate::relay::ipv4_packet::Ipv4Packet;
     use crate::relay::transport_header::TransportHeaderMut;
+    use byteorder::{BigEndian, WriteBytesExt};
 
     fn create_packet() -> Vec<u8> {
         let mut raw = Vec::new();
@@ -530,8 +530,16 @@ mod tests {
                 let mut sum: u32 = 0x1234 + 0x5678 + 0xA2A2 + 0x4242 + 0x0006 + 0x0018;
 
                 // header
-                sum += 0x1234 + 0x5678 + 0x0000 + 0x0111 + 0x0000 + 0x0222 + 0x5000 + 0x0000 +
-                    0x0000 + 0x0000;
+                sum += 0x1234
+                    + 0x5678
+                    + 0x0000
+                    + 0x0111
+                    + 0x0000
+                    + 0x0222
+                    + 0x5000
+                    + 0x0000
+                    + 0x0000
+                    + 0x0000;
 
                 // payload
                 sum += 0x1122 + 0xEEFF;
@@ -564,8 +572,16 @@ mod tests {
                 let mut sum: u32 = 0x1234 + 0x5678 + 0xA2A2 + 0x4242 + 0x0006 + 0x0019;
 
                 // header
-                sum += 0x1234 + 0x5678 + 0x0000 + 0x0111 + 0x0000 + 0x0222 + 0x5000 + 0x0000 +
-                    0x0000 + 0x0000;
+                sum += 0x1234
+                    + 0x5678
+                    + 0x0000
+                    + 0x0111
+                    + 0x0000
+                    + 0x0222
+                    + 0x5000
+                    + 0x0000
+                    + 0x0000
+                    + 0x0000;
 
                 // payload
                 sum += 0x1122 + 0xEEFF + 0x8800;
@@ -598,8 +614,16 @@ mod tests {
                 let mut sum: u32 = 0x1234 + 0x5678 + 0xA2A2 + 0x4242 + 0x0006 + 0x0014;
 
                 // header
-                sum += 0x1234 + 0x5678 + 0x0000 + 0x0111 + 0x0000 + 0x0222 + 0x5000 + 0x0000 +
-                    0x0000 + 0x0000;
+                sum += 0x1234
+                    + 0x5678
+                    + 0x0000
+                    + 0x0111
+                    + 0x0000
+                    + 0x0222
+                    + 0x5000
+                    + 0x0000
+                    + 0x0000
+                    + 0x0000;
 
                 while (sum & !0xFFFF) != 0 {
                     sum = (sum & 0xFFFF) + (sum >> 16);

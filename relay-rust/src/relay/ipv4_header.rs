@@ -143,7 +143,7 @@ macro_rules! ipv4_header_common {
                 self.data.destination
             }
         }
-    }
+    };
 }
 
 ipv4_header_common!(Ipv4Header, &'a [u8], &'a Ipv4HeaderData);
@@ -282,8 +282,8 @@ mod tests {
 
         header.update_checksum();
 
-        let mut sum: u32 = 0x4500 + 0x001C + 0x0000 + 0x0000 + 0x0011 + 0x0000 + 0x1234 +
-            0x5678 + 0x4242 + 0x4242;
+        let mut sum: u32 =
+            0x4500 + 0x001C + 0x0000 + 0x0000 + 0x0011 + 0x0000 + 0x1234 + 0x5678 + 0x4242 + 0x4242;
         while (sum & !0xffff) != 0 {
             sum = (sum & 0xffff) + (sum >> 16);
         }

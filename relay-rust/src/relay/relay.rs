@@ -14,18 +14,18 @@
  * limitations under the License.
  */
 
+use chrono::Local;
+use log::*;
+use mio::Events;
 use std::cell::RefCell;
 use std::cmp::max;
 use std::io;
 use std::rc::Rc;
 use std::time::Duration;
-use chrono::Local;
-use log::*;
-use mio::Events;
 
-use super::udp_connection::IDLE_TIMEOUT_SECONDS;
 use super::selector::Selector;
 use super::tunnel_server::TunnelServer;
+use super::udp_connection::IDLE_TIMEOUT_SECONDS;
 
 const TAG: &'static str = "Relay";
 const CLEANING_INTERVAL_SECONDS: i64 = 60;

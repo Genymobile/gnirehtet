@@ -25,10 +25,10 @@ mod cli_args;
 mod execution_error;
 mod logger;
 
-use std::env;
 use crate::adb_monitor::AdbMonitor;
 use crate::cli_args::CommandLineArguments;
-use crate::execution_error::{Cmd, CommandExecutionError, ProcessStatusError, ProcessIoError};
+use crate::execution_error::{Cmd, CommandExecutionError, ProcessIoError, ProcessStatusError};
+use std::env;
 use std::process::{self, exit};
 use std::thread;
 use std::time::Duration;
@@ -80,8 +80,8 @@ impl Command for InstallCommand {
 
     fn description(&self) -> &'static str {
         "Install the client on the Android device and exit.\n\
-        If several devices are connected via adb, then serial must be\n\
-        specified."
+         If several devices are connected via adb, then serial must be\n\
+         specified."
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
@@ -100,8 +100,8 @@ impl Command for UninstallCommand {
 
     fn description(&self) -> &'static str {
         "Uninstall the client from the Android device and exit.\n\
-        If several devices are connected via adb, then serial must be\n\
-        specified."
+         If several devices are connected via adb, then serial must be\n\
+         specified."
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
@@ -138,10 +138,10 @@ impl Command for RunCommand {
 
     fn description(&self) -> &'static str {
         "Enable reverse tethering for exactly one device:\n  \
-          - install the client if necessary;\n  \
-          - start the client;\n  \
-          - start the relay server;\n  \
-          - on Ctrl+C, stop both the relay server and the client."
+         - install the client if necessary;\n  \
+         - start the client;\n  \
+         - start the relay server;\n  \
+         - on Ctrl+C, stop both the relay server and the client."
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
@@ -160,8 +160,8 @@ impl Command for AutorunCommand {
 
     fn description(&self) -> &'static str {
         "Enable reverse tethering for all devices:\n  \
-          - monitor devices and start clients (autostart);\n  \
-          - start the relay server."
+         - monitor devices and start clients (autostart);\n  \
+         - start the relay server."
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
@@ -180,15 +180,15 @@ impl Command for StartCommand {
 
     fn description(&self) -> &'static str {
         "Start a client on the Android device and exit.\n\
-        If several devices are connected via adb, then serial must be\n\
-        specified.\n\
-        If -d is given, then make the Android device use the specified\n\
-        DNS server(s). Otherwise, use 8.8.8.8 (Google public DNS).\n\
-        If -r is given, then only reverse tether the specified routes.\n\
-        Otherwise, use 0.0.0.0/0 (redirect the whole traffic).\n\
-        If the client is already started, then do nothing, and ignore\n\
-        the other parameters.\n\
-        10.0.2.2 is mapped to the host 'localhost'."
+         If several devices are connected via adb, then serial must be\n\
+         specified.\n\
+         If -d is given, then make the Android device use the specified\n\
+         DNS server(s). Otherwise, use 8.8.8.8 (Google public DNS).\n\
+         If -r is given, then only reverse tether the specified routes.\n\
+         Otherwise, use 0.0.0.0/0 (redirect the whole traffic).\n\
+         If the client is already started, then do nothing, and ignore\n\
+         the other parameters.\n\
+         10.0.2.2 is mapped to the host 'localhost'."
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
@@ -207,9 +207,9 @@ impl Command for AutostartCommand {
 
     fn description(&self) -> &'static str {
         "Listen for device connexions and start a client on every detected\n\
-        device.\n\
-        Accept the same parameters as the start command (excluding the\n\
-        serial, which will be taken from the detected device)."
+         device.\n\
+         Accept the same parameters as the start command (excluding the\n\
+         serial, which will be taken from the detected device)."
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
@@ -228,8 +228,8 @@ impl Command for StopCommand {
 
     fn description(&self) -> &'static str {
         "Stop the client on the Android device and exit.\n\
-        If several devices are connected via adb, then serial must be\n\
-        specified."
+         If several devices are connected via adb, then serial must be\n\
+         specified."
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
@@ -268,9 +268,9 @@ impl Command for TunnelCommand {
 
     fn description(&self) -> &'static str {
         "Set up the 'adb reverse' tunnel.\n\
-        If a device is unplugged then plugged back while gnirehtet is\n\
-        active, resetting the tunnel is sufficient to get the\n\
-        connection back."
+         If a device is unplugged then plugged back while gnirehtet is\n\
+         active, resetting the tunnel is sufficient to get the\n\
+         connection back."
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
@@ -330,7 +330,8 @@ fn cmd_run(
         }
 
         exit(0);
-    }).expect("Error setting Ctrl-C handler");
+    })
+    .expect("Error setting Ctrl-C handler");
 
     cmd_relay()
 }
@@ -342,12 +343,12 @@ fn cmd_autorun(
     {
         let autostart_dns_servers = dns_servers.cloned();
         let autostart_routes = routes.cloned();
-        thread::spawn(move || if let Err(err) = cmd_autostart(
-            autostart_dns_servers.as_ref(),
-            autostart_routes.as_ref(),
-        )
-        {
-            error!(target: TAG, "Cannot auto start clients: {}", err);
+        thread::spawn(move || {
+            if let Err(err) =
+                cmd_autostart(autostart_dns_servers.as_ref(), autostart_routes.as_ref())
+            {
+                error!(target: TAG, "Cannot auto start clients: {}", err);
+            }
         });
     }
 
@@ -437,13 +438,14 @@ fn async_start(serial: Option<&String>, dns_servers: Option<&String>, routes: Op
     let start_serial = serial.cloned();
     let start_dns_servers = dns_servers.cloned();
     let start_routes = routes.cloned();
-    thread::spawn(move || if let Err(err) = cmd_start(
-        start_serial.as_ref(),
-        start_dns_servers.as_ref(),
-        start_routes.as_ref(),
-    )
-    {
-        error!(target: TAG, "Cannot start client: {}", err);
+    thread::spawn(move || {
+        if let Err(err) = cmd_start(
+            start_serial.as_ref(),
+            start_dns_servers.as_ref(),
+            start_routes.as_ref(),
+        ) {
+            error!(target: TAG, "Cannot start client: {}", err);
+        }
     });
 }
 
@@ -567,9 +569,9 @@ fn main() {
     let mut args = env::args();
     // args.nth(1) will consume the two first arguments (the binary name and the command name)
     if let Some(command_name) = args.nth(1) {
-        let command = COMMANDS.iter().find(
-            |&&command| command.command() == command_name,
-        );
+        let command = COMMANDS
+            .iter()
+            .find(|&&command| command.command() == command_name);
         match command {
             Some(&command) => {
                 // args now contains only the command parameters

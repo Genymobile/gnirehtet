@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-use std::io;
 use super::byte_buffer::ByteBuffer;
 use super::ipv4_header;
 use super::ipv4_packet::{Ipv4Packet, MAX_PACKET_LENGTH};
+use std::io;
 
 pub struct Ipv4PacketBuffer {
     buf: ByteBuffer,
@@ -25,7 +25,9 @@ pub struct Ipv4PacketBuffer {
 
 impl Ipv4PacketBuffer {
     pub fn new() -> Self {
-        Self { buf: ByteBuffer::new(MAX_PACKET_LENGTH) }
+        Self {
+            buf: ByteBuffer::new(MAX_PACKET_LENGTH),
+        }
     }
 
     pub fn read_from<R: io::Read>(&mut self, source: &mut R) -> io::Result<(bool)> {
@@ -60,9 +62,9 @@ impl Ipv4PacketBuffer {
 
     pub fn next(&mut self) {
         // remove the packet in front of the buffer
-        let length = self.available_packet_length().expect(
-            "next() called while there was no packet",
-        ) as usize;
+        let length = self
+            .available_packet_length()
+            .expect("next() called while there was no packet") as usize;
         self.buf.consume(length);
     }
 }
@@ -70,10 +72,10 @@ impl Ipv4PacketBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::io;
-    use byteorder::{BigEndian, WriteBytesExt};
     use crate::relay::ipv4_header::Protocol;
     use crate::relay::transport_header::TransportHeaderData;
+    use byteorder::{BigEndian, WriteBytesExt};
+    use std::io;
 
     fn create_packet() -> Vec<u8> {
         let mut raw = Vec::new();
@@ -127,8 +129,7 @@ mod tests {
         assert_eq!(0x12345678, ipv4_header.source());
         assert_eq!(0x42424242, ipv4_header.destination());
 
-        if let Some(&TransportHeaderData::Udp(ref udp_header)) =
-            ipv4_packet.transport_header_data()
+        if let Some(&TransportHeaderData::Udp(ref udp_header)) = ipv4_packet.transport_header_data()
         {
             assert_eq!(1234, udp_header.source_port());
             assert_eq!(5678, udp_header.destination_port());
@@ -145,8 +146,7 @@ mod tests {
         assert_eq!(0x11111111, ipv4_header.source());
         assert_eq!(0x22222222, ipv4_header.destination());
 
-        if let Some(&TransportHeaderData::Udp(ref udp_header)) =
-            ipv4_packet.transport_header_data()
+        if let Some(&TransportHeaderData::Udp(ref udp_header)) = ipv4_packet.transport_header_data()
         {
             assert_eq!(1111, udp_header.source_port());
             assert_eq!(2222, udp_header.destination_port());

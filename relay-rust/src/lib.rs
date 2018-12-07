@@ -17,8 +17,8 @@
 mod relay;
 pub use crate::relay::byte_buffer;
 
-use std::io;
 use crate::relay::Relay;
+use std::io;
 
 pub fn relay() -> io::Result<()> {
     const PORT: u16 = 31416;

@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
+use mio::net::UdpSocket;
 use std::cmp;
 use std::io;
-use mio::net::UdpSocket;
 
 pub const MAX_DATAGRAM_LENGTH: usize = 1 << 16;
 

@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-use std::fmt::Write;
 use byteorder::{BigEndian, ByteOrder};
+use std::fmt::Write;
 
 pub fn to_byte_array(value: u32) -> [u8; 4] {
     let mut raw = [0u8; 4];

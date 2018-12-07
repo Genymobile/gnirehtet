@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-use std::mem;
-use byteorder::{BigEndian, ByteOrder};
 use super::ipv4_header::Ipv4HeaderData;
+use byteorder::{BigEndian, ByteOrder};
+use std::mem;
 
 pub const UDP_HEADER_LENGTH: u8 = 8;
 
@@ -99,7 +99,7 @@ macro_rules! udp_header_common {
                 self.data.destination_port
             }
         }
-    }
+    };
 }
 
 udp_header_common!(UdpHeader, &'a [u8], &'a UdpHeaderData);

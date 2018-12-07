@@ -14,12 +14,12 @@
  * limitations under the License.
  */
 
-use std::io;
-use std::rc::Rc;
-use std::time::Duration;
 use log::*;
 use mio::{Event, Evented, Events, Poll, PollOpt, Ready, Token};
 use slab::Slab;
+use std::io;
+use std::rc::Rc;
+use std::time::Duration;
 
 const TAG: &'static str = "Selector";
 
@@ -110,7 +110,8 @@ impl Selector {
     pub fn run_handlers(&mut self, events: &Events) {
         for event in events {
             debug!(target: TAG, "event={:?}", event);
-            let handler = self.handlers
+            let handler = self
+                .handlers
                 .get_mut(event.token().0)
                 .expect("Token not found")
                 .clone();

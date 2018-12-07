@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
+use log::*;
+use mio::net::UdpSocket;
+use mio::{Event, PollOpt, Ready, Token};
 use std::cell::RefCell;
 use std::io;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::rc::{Rc, Weak};
 use std::time::Instant;
-use log::*;
-use mio::{Event, PollOpt, Ready, Token};
-use mio::net::UdpSocket;
 
 use super::binary;
 use super::client::{Client, ClientChannel};
@@ -80,12 +80,8 @@ impl UdpConnection {
             // must anotate selector type: https://stackoverflow.com/a/44004103/1987178
             let handler =
                 move |selector: &mut Selector, event| rc2.borrow_mut().on_ready(selector, event);
-            let token = selector.register(
-                &self_ref.socket,
-                handler,
-                interests,
-                PollOpt::level(),
-            )?;
+            let token =
+                selector.register(&self_ref.socket, handler, interests, PollOpt::level())?;
             self_ref.token = token;
         }
         Ok(rc)
@@ -192,10 +188,10 @@ impl UdpConnection {
     fn read(&mut self, selector: &mut Selector) -> io::Result<()> {
         let ipv4_packet = self.network_to_client.packetize(&mut self.socket)?;
         let client_rc = self.client.upgrade().expect("Expected client not found");
-        match client_rc.borrow_mut().send_to_client(
-            selector,
-            &ipv4_packet,
-        ) {
+        match client_rc
+            .borrow_mut()
+            .send_to_client(selector, &ipv4_packet)
+        {
             Ok(_) => {
                 cx_debug!(
                     target: TAG,
@@ -254,22 +250,19 @@ impl Connection for UdpConnection {
         _: &mut ClientChannel,
         ipv4_packet: &Ipv4Packet,
     ) {
-        match self.client_to_network.read_from(
-            ipv4_packet.payload().expect(
-                "No payload",
-            ),
-        ) {
+        match self
+            .client_to_network
+            .read_from(ipv4_packet.payload().expect("No payload"))
+        {
             Ok(_) => {
                 self.update_interests(selector);
             }
-            Err(err) => {
-                cx_warn!(
-                    target: TAG,
-                    self.id,
-                    "Cannot send to network, drop packet: {}",
-                    err
-                )
-            }
+            Err(err) => cx_warn!(
+                target: TAG,
+                self.id,
+                "Cannot send to network, drop packet: {}",
+                err
+            ),
         }
     }
 

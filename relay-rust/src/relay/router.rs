@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
+use log::*;
 use std::cell::RefCell;
 use std::io;
 use std::rc::{Rc, Weak};
-use log::*;
 
 use super::binary;
 use super::client::{Client, ClientChannel};
@@ -140,13 +140,14 @@ impl Router {
     }
 
     fn find_index(&self, id: &ConnectionId) -> Option<usize> {
-        self.connections.iter().position(|connection| {
-            connection.borrow().id() == id
-        })
+        self.connections
+            .iter()
+            .position(|connection| connection.borrow().id() == id)
     }
 
     pub fn remove(&mut self, connection: &Connection) {
-        let index = self.connections
+        let index = self
+            .connections
             .iter()
             .position(|item| {
                 // compare (thin) pointers to find the connection to remove

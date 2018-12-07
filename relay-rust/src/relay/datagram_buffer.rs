@@ -15,8 +15,8 @@
  */
 
 use byteorder::{BigEndian, ByteOrder};
-use std::io;
 use log::*;
+use std::io;
 
 use super::datagram::{DatagramSender, MAX_DATAGRAM_LENGTH};
 
@@ -82,9 +82,7 @@ impl DatagramBuffer {
         if w != length {
             error!(
                 target: TAG,
-                "Cannot write the whole datagram to the buffer (only {}/{})",
-                w,
-                length
+                "Cannot write the whole datagram to the buffer (only {}/{})", w, length
             );
             return Err(io::Error::new(
                 io::ErrorKind::Other,

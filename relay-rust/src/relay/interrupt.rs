@@ -30,5 +30,5 @@ macro_rules! retry_on_intr {
             }
         }
         result
-    }}
+    }};
 }

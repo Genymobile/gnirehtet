@@ -15,11 +15,11 @@
  */
 
 use std::error;
-use std::io;
 use std::fmt;
-use std::process::ExitStatus;
+use std::io;
 #[cfg(unix)]
 use std::os::unix::process::ExitStatusExt;
+use std::process::ExitStatus;
 
 #[derive(Debug)]
 pub enum CommandExecutionError {
