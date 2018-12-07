@@ -20,6 +20,7 @@ use std::process;
 use std::str;
 use std::thread;
 use std::time::Duration;
+use log::*;
 use relaylib::byte_buffer::ByteBuffer;
 
 const TAG: &'static str = "AdbMonitor";

@@ -19,7 +19,7 @@ use std::cmp;
 use std::io;
 use std::num::Wrapping;
 use std::rc::{Rc, Weak};
-use log::Level;
+use log::*;
 use mio::{Event, PollOpt, Ready, Token};
 use mio::net::TcpStream;
 use rand::random;

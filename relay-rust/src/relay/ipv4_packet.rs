@@ -226,7 +226,7 @@ impl<'a> Ipv4Packet<'a> {
 mod tests {
     use super::*;
     use byteorder::{BigEndian, WriteBytesExt};
-    use relay::ipv4_header::Protocol;
+    use crate::relay::ipv4_header::Protocol;
 
     fn create_packet() -> Vec<u8> {
         let mut raw = Vec::new();

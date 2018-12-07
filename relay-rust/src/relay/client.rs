@@ -19,6 +19,7 @@ use std::io::{self, Write};
 use std::mem;
 use std::net::Shutdown;
 use std::rc::Rc;
+use log::*;
 use mio::net::TcpStream;
 use mio::{Event, PollOpt, Ready, Token};
 

@@ -14,10 +14,11 @@
  * limitations under the License.
  */
 
-use mio::{Event, Evented, Events, Poll, PollOpt, Ready, Token};
 use std::io;
 use std::rc::Rc;
 use std::time::Duration;
+use log::*;
+use mio::{Event, Evented, Events, Poll, PollOpt, Ready, Token};
 use slab::Slab;
 
 const TAG: &'static str = "Selector";

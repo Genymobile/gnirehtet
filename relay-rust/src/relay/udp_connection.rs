@@ -19,7 +19,7 @@ use std::io;
 use std::net::{Ipv4Addr, SocketAddr};
 use std::rc::{Rc, Weak};
 use std::time::Instant;
-use log::Level;
+use log::*;
 use mio::{Event, PollOpt, Ready, Token};
 use mio::net::UdpSocket;
 

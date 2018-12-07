@@ -16,6 +16,7 @@
 
 use byteorder::{BigEndian, ByteOrder};
 use std::io;
+use log::*;
 
 use super::datagram::{DatagramSender, MAX_DATAGRAM_LENGTH};
 
@@ -130,7 +131,7 @@ impl DatagramBuffer {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use relay::datagram::tests::MockDatagramSocket;
+    use crate::relay::datagram::tests::MockDatagramSocket;
 
     fn create_datagram(length: u8) -> Vec<u8> {
         (0..length).collect()

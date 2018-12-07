@@ -17,7 +17,7 @@
 use std::cell::RefCell;
 use std::io;
 use std::rc::{Rc, Weak};
-use log::Level;
+use log::*;
 
 use super::binary;
 use super::client::{Client, ClientChannel};

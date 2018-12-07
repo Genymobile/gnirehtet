@@ -2,6 +2,7 @@
 name = "gnirehtet"
 version = "2.3.0"
 authors = ["Romain Vimont <rom@rom1v.com>"]
+edition = "2018"
 
 [lib]
 name = "relaylib"

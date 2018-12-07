@@ -19,6 +19,7 @@ use std::net::{Ipv4Addr, SocketAddr};
 use std::io;
 use std::ptr;
 use std::rc::{Rc, Weak};
+use log::*;
 use mio::{Event, PollOpt, Ready};
 use mio::tcp::TcpListener;
 

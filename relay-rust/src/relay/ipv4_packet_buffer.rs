@@ -72,8 +72,8 @@ mod tests {
     use super::*;
     use std::io;
     use byteorder::{BigEndian, WriteBytesExt};
-    use relay::ipv4_header::Protocol;
-    use relay::transport_header::TransportHeaderData;
+    use crate::relay::ipv4_header::Protocol;
+    use crate::relay::transport_header::TransportHeaderData;
 
     fn create_packet() -> Vec<u8> {
         let mut raw = Vec::new();

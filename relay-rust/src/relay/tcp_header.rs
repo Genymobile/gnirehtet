@@ -365,8 +365,8 @@ impl<'a> TcpHeaderMut<'a> {
 mod tests {
     use super::*;
     use byteorder::{BigEndian, WriteBytesExt};
-    use relay::ipv4_packet::Ipv4Packet;
-    use relay::transport_header::TransportHeaderMut;
+    use crate::relay::ipv4_packet::Ipv4Packet;
+    use crate::relay::transport_header::TransportHeaderMut;
 
     fn create_packet() -> Vec<u8> {
         let mut raw = Vec::new();

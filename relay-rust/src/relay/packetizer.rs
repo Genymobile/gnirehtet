@@ -138,7 +138,7 @@ mod tests {
     use super::*;
     use std::io;
     use byteorder::{BigEndian, WriteBytesExt};
-    use relay::datagram::tests::MockDatagramSocket;
+    use crate::relay::datagram::tests::MockDatagramSocket;
 
     fn create_packet() -> Vec<u8> {
         let mut raw = Vec::new();
