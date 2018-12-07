@@ -33,7 +33,7 @@ use super::packetizer::Packetizer;
 use super::selector::Selector;
 use super::transport_header::TransportHeader;
 
-const TAG: &'static str = "UdpConnection";
+const TAG: &str = "UdpConnection";
 
 pub const IDLE_TIMEOUT_SECONDS: u64 = 2 * 60;
 
@@ -50,7 +50,8 @@ pub struct UdpConnection {
 }
 
 impl UdpConnection {
-    pub fn new(
+    #[allow(clippy::needless_pass_by_value)] // semantically, headers are consumed
+    pub fn create(
         selector: &mut Selector,
         id: ConnectionId,
         client: Weak<RefCell<Client>>,
@@ -62,10 +63,10 @@ impl UdpConnection {
         let packetizer = Packetizer::new(&ipv4_header, &transport_header);
         let interests = Ready::readable();
         let rc = Rc::new(RefCell::new(Self {
-            id: id,
-            client: client,
-            socket: socket,
-            interests: interests,
+            id,
+            client,
+            socket,
+            interests,
             token: Token(0), // default value, will be set afterwards
             client_to_network: DatagramBuffer::new(4 * MAX_PACKET_LENGTH),
             network_to_client: packetizer,
@@ -102,6 +103,7 @@ impl UdpConnection {
     }
 
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
+        #[allow(clippy::match_wild_err_arm)]
         match self.process(selector, event) {
             Ok(_) => (),
             Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {

@@ -26,7 +26,7 @@ use std::rc::{Rc, Weak};
 use super::client::Client;
 use super::selector::Selector;
 
-const TAG: &'static str = "TunnelServer";
+const TAG: &str = "TunnelServer";
 
 pub struct TunnelServer {
     self_weak: Weak<RefCell<TunnelServer>>,
@@ -36,12 +36,12 @@ pub struct TunnelServer {
 }
 
 impl TunnelServer {
-    pub fn new(port: u16, selector: &mut Selector) -> io::Result<Rc<RefCell<Self>>> {
+    pub fn create(port: u16, selector: &mut Selector) -> io::Result<Rc<RefCell<Self>>> {
         let tcp_listener = Self::start_socket(port)?;
         let rc = Rc::new(RefCell::new(Self {
             self_weak: Weak::new(),
             clients: Vec::new(),
-            tcp_listener: tcp_listener,
+            tcp_listener,
             next_client_id: 0,
         }));
 
@@ -94,7 +94,7 @@ impl TunnelServer {
                 );
             }
         });
-        let client = Client::new(client_id, selector, stream, on_client_closed)?;
+        let client = Client::create(client_id, selector, stream, on_client_closed)?;
         self.clients.push(client);
         info!(target: TAG, "Client #{} connected", client_id);
         Ok(())

@@ -28,7 +28,7 @@ use super::selector::Selector;
 use super::tcp_connection::TcpConnection;
 use super::udp_connection::UdpConnection;
 
-const TAG: &'static str = "Router";
+const TAG: &str = "Router";
 
 pub struct Router {
     client: Weak<RefCell<Client>>,
@@ -59,7 +59,7 @@ impl Router {
             match self.connection(selector, ipv4_packet) {
                 Ok(index) => {
                     let closed = {
-                        let connection_ref = self.connections.get_mut(index).unwrap();
+                        let connection_ref = &self.connections[index];
                         let mut connection = connection_ref.borrow_mut();
                         connection.send_to_network(selector, client_channel, ipv4_packet);
                         if connection.is_closed() {
@@ -118,14 +118,14 @@ impl Router {
         let (ipv4_header, transport_header) = ipv4_packet.headers();
         let transport_header = transport_header.expect("No transport");
         match id.protocol() {
-            Protocol::Tcp => Ok(TcpConnection::new(
+            Protocol::Tcp => Ok(TcpConnection::create(
                 selector,
                 id,
                 client,
                 ipv4_header,
                 transport_header,
             )?),
-            Protocol::Udp => Ok(UdpConnection::new(
+            Protocol::Udp => Ok(UdpConnection::create(
                 selector,
                 id,
                 client,

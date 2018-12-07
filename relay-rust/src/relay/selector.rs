@@ -21,7 +21,7 @@ use std::io;
 use std::rc::Rc;
 use std::time::Duration;
 
-const TAG: &'static str = "Selector";
+const TAG: &str = "Selector";
 
 pub trait EventHandler {
     fn on_ready(&self, selector: &mut Selector, event: Event);
@@ -44,7 +44,7 @@ pub struct Selector {
 }
 
 impl Selector {
-    pub fn new() -> io::Result<Self> {
+    pub fn create() -> io::Result<Self> {
         Ok(Self {
             poll: Poll::new()?,
             handlers: Slab::with_capacity(1024),

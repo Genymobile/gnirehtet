@@ -34,8 +34,8 @@ impl<'a> Ipv4Packet<'a> {
         };
         Self {
             raw: &mut raw[..ipv4_header_data.total_length() as usize],
-            ipv4_header_data: ipv4_header_data,
-            transport_header_data: transport_header_data,
+            ipv4_header_data,
+            transport_header_data,
         }
     }
 
@@ -45,8 +45,8 @@ impl<'a> Ipv4Packet<'a> {
         transport_header_data: TransportHeaderData,
     ) -> Self {
         Self {
-            raw: raw,
-            ipv4_header_data: ipv4_header_data,
+            raw,
+            ipv4_header_data,
             transport_header_data: Some(transport_header_data),
         }
     }

@@ -27,7 +27,7 @@ pub fn to_string(data: &[u8]) -> String {
     let mut s = String::new();
     for (i, &byte) in data.iter().enumerate() {
         if i % 16 == 0 {
-            write!(&mut s, "\n").unwrap();
+            writeln!(&mut s).unwrap();
         } else if i % 8 == 0 {
             write!(&mut s, " ").unwrap();
         }

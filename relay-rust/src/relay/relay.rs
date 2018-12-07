@@ -27,7 +27,7 @@ use super::selector::Selector;
 use super::tunnel_server::TunnelServer;
 use super::udp_connection::IDLE_TIMEOUT_SECONDS;
 
-const TAG: &'static str = "Relay";
+const TAG: &str = "Relay";
 const CLEANING_INTERVAL_SECONDS: i64 = 60;
 
 pub struct Relay {
@@ -36,12 +36,12 @@ pub struct Relay {
 
 impl Relay {
     pub fn new(port: u16) -> Self {
-        Self { port: port }
+        Self { port }
     }
 
     pub fn run(&self) -> io::Result<()> {
-        let mut selector = Selector::new().unwrap();
-        let tunnel_server = TunnelServer::new(self.port, &mut selector)?;
+        let mut selector = Selector::create().unwrap();
+        let tunnel_server = TunnelServer::create(self.port, &mut selector)?;
         info!(target: TAG, "Relay server started");
         self.poll_loop(&mut selector, &tunnel_server)
     }
@@ -73,7 +73,7 @@ impl Relay {
                 continue;
             }
 
-            selector.run_handlers(&mut events);
+            selector.run_handlers(&events);
         }
     }
 }

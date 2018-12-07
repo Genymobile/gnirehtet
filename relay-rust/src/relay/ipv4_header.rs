@@ -197,7 +197,7 @@ impl<'a> Ipv4HeaderMut<'a> {
             .chain(6..j)
             .map(|i| {
                 let range = 2 * i..2 * (i + 1);
-                BigEndian::read_u16(&self.raw[range]) as u32
+                u32::from(BigEndian::read_u16(&self.raw[range]))
             })
             .sum::<u32>();
         while (sum & !0xffff) != 0 {

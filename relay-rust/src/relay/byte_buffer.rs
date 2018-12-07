@@ -70,7 +70,7 @@ impl ByteBuffer {
                 // move from [length..old_head] to [0..new_head]
                 //
                 // semantically equivalent to memmove()
-                ptr::copy(buf_ptr.offset(length as isize), buf_ptr, self.head);
+                ptr::copy(buf_ptr.add(length), buf_ptr, self.head);
             }
         }
     }

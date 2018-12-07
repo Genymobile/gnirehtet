@@ -58,11 +58,11 @@ impl Packetizer {
         }
 
         Self {
-            buffer: buffer,
-            transport_index: transport_index,
-            payload_index: payload_index,
-            ipv4_header_data: ipv4_header_data,
-            transport_header_data: transport_header_data,
+            buffer,
+            transport_index,
+            payload_index,
+            ipv4_header_data,
+            transport_header_data,
         }
     }
 

@@ -23,7 +23,7 @@ use super::datagram::{DatagramSender, MAX_DATAGRAM_LENGTH};
 const HEADER_LENGTH: usize = 2;
 const MAX_BLOCK_LENGTH: usize = HEADER_LENGTH + MAX_DATAGRAM_LENGTH;
 
-const TAG: &'static str = "DatagramBuffer";
+const TAG: &str = "DatagramBuffer";
 
 /// Circular buffer to store datagrams (preserving their boundaries).
 ///

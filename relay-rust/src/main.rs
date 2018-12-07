@@ -33,10 +33,10 @@ use std::process::{self, exit};
 use std::thread;
 use std::time::Duration;
 
-const TAG: &'static str = "Main";
-const REQUIRED_APK_VERSION_CODE: &'static str = "6";
+const TAG: &str = "Main";
+const REQUIRED_APK_VERSION_CODE: &str = "6";
 
-const COMMANDS: &[&'static Command] = &[
+const COMMANDS: &[&Command] = &[
     &InstallCommand,
     &UninstallCommand,
     &ReinstallCommand,
@@ -297,35 +297,36 @@ impl Command for RelayCommand {
     }
 }
 
-fn cmd_install(serial: Option<&String>) -> Result<(), CommandExecutionError> {
+fn cmd_install(serial: Option<&str>) -> Result<(), CommandExecutionError> {
     info!(target: TAG, "Installing gnirehtet client...");
     exec_adb(serial, vec!["install", "-r", "gnirehtet.apk"])
 }
 
-fn cmd_uninstall(serial: Option<&String>) -> Result<(), CommandExecutionError> {
+fn cmd_uninstall(serial: Option<&str>) -> Result<(), CommandExecutionError> {
     info!(target: TAG, "Uninstalling gnirehtet client...");
     exec_adb(serial, vec!["uninstall", "com.genymobile.gnirehtet"])
 }
 
-fn cmd_reinstall(serial: Option<&String>) -> Result<(), CommandExecutionError> {
+fn cmd_reinstall(serial: Option<&str>) -> Result<(), CommandExecutionError> {
     cmd_uninstall(serial)?;
     cmd_install(serial)?;
     Ok(())
 }
 
 fn cmd_run(
-    serial: Option<&String>,
-    dns_servers: Option<&String>,
-    routes: Option<&String>,
+    serial: Option<&str>,
+    dns_servers: Option<&str>,
+    routes: Option<&str>,
 ) -> Result<(), CommandExecutionError> {
     // start in parallel so that the relay server is ready when the client connects
     async_start(serial, dns_servers, routes);
 
-    let ctrlc_serial = serial.cloned();
+    let ctrlc_serial = serial.map(String::from);
     ctrlc::set_handler(move || {
         info!(target: TAG, "Interrupted");
 
-        if let Err(err) = cmd_stop(ctrlc_serial.as_ref()) {
+        let serial = ctrlc_serial.as_ref().map(String::as_ref);
+        if let Err(err) = cmd_stop(serial) {
             error!(target: TAG, "Cannot stop client: {}", err);
         }
 
@@ -337,16 +338,16 @@ fn cmd_run(
 }
 
 fn cmd_autorun(
-    dns_servers: Option<&String>,
-    routes: Option<&String>,
+    dns_servers: Option<&str>,
+    routes: Option<&str>,
 ) -> Result<(), CommandExecutionError> {
     {
-        let autostart_dns_servers = dns_servers.cloned();
-        let autostart_routes = routes.cloned();
+        let autostart_dns_servers = dns_servers.map(String::from);
+        let autostart_routes = routes.map(String::from);
         thread::spawn(move || {
-            if let Err(err) =
-                cmd_autostart(autostart_dns_servers.as_ref(), autostart_routes.as_ref())
-            {
+            let dns_servers = autostart_dns_servers.as_ref().map(String::as_ref);
+            let routes = autostart_routes.as_ref().map(String::as_ref);
+            if let Err(err) = cmd_autostart(dns_servers, routes) {
                 error!(target: TAG, "Cannot auto start clients: {}", err);
             }
         });
@@ -356,9 +357,9 @@ fn cmd_autorun(
 }
 
 fn cmd_start(
-    serial: Option<&String>,
-    dns_servers: Option<&String>,
-    routes: Option<&String>,
+    serial: Option<&str>,
+    dns_servers: Option<&str>,
+    routes: Option<&str>,
 ) -> Result<(), CommandExecutionError> {
     if must_install_client(serial)? {
         cmd_install(serial)?;
@@ -389,23 +390,21 @@ fn cmd_start(
 }
 
 fn cmd_autostart(
-    dns_servers: Option<&String>,
-    routes: Option<&String>,
+    dns_servers: Option<&str>,
+    routes: Option<&str>,
 ) -> Result<(), CommandExecutionError> {
-    let start_dns_servers = dns_servers.cloned();
-    let start_routes = routes.cloned();
-    let mut adb_monitor = AdbMonitor::new(Box::new(move |serial: &String| {
-        async_start(
-            Some(serial),
-            start_dns_servers.as_ref(),
-            start_routes.as_ref(),
-        )
+    let start_dns_servers = dns_servers.map(String::from);
+    let start_routes = routes.map(String::from);
+    let mut adb_monitor = AdbMonitor::new(Box::new(move |serial: &str| {
+        let dns_servers = start_dns_servers.as_ref().map(String::as_ref);
+        let routes = start_routes.as_ref().map(String::as_ref);
+        async_start(Some(serial), dns_servers, routes)
     }));
     adb_monitor.monitor()?;
     Ok(())
 }
 
-fn cmd_stop(serial: Option<&String>) -> Result<(), CommandExecutionError> {
+fn cmd_stop(serial: Option<&str>) -> Result<(), CommandExecutionError> {
     info!(target: TAG, "Stopping client...");
     exec_adb(
         serial,
@@ -421,7 +420,7 @@ fn cmd_stop(serial: Option<&String>) -> Result<(), CommandExecutionError> {
     )
 }
 
-fn cmd_tunnel(serial: Option<&String>) -> Result<(), CommandExecutionError> {
+fn cmd_tunnel(serial: Option<&str>) -> Result<(), CommandExecutionError> {
     exec_adb(
         serial,
         vec!["reverse", "localabstract:gnirehtet", "tcp:31416"],
@@ -434,26 +433,25 @@ fn cmd_relay() -> Result<(), CommandExecutionError> {
     Ok(())
 }
 
-fn async_start(serial: Option<&String>, dns_servers: Option<&String>, routes: Option<&String>) {
-    let start_serial = serial.cloned();
-    let start_dns_servers = dns_servers.cloned();
-    let start_routes = routes.cloned();
+fn async_start(serial: Option<&str>, dns_servers: Option<&str>, routes: Option<&str>) {
+    let start_serial = serial.map(String::from);
+    let start_dns_servers = dns_servers.map(String::from);
+    let start_routes = routes.map(String::from);
     thread::spawn(move || {
-        if let Err(err) = cmd_start(
-            start_serial.as_ref(),
-            start_dns_servers.as_ref(),
-            start_routes.as_ref(),
-        ) {
+        let serial = start_serial.as_ref().map(String::as_ref);
+        let dns_servers = start_dns_servers.as_ref().map(String::as_ref);
+        let routes = start_routes.as_ref().map(String::as_ref);
+        if let Err(err) = cmd_start(serial, dns_servers, routes) {
             error!(target: TAG, "Cannot start client: {}", err);
         }
     });
 }
 
-fn create_adb_args<S: Into<String>>(serial: Option<&String>, args: Vec<S>) -> Vec<String> {
+fn create_adb_args<S: Into<String>>(serial: Option<&str>, args: Vec<S>) -> Vec<String> {
     let mut command = Vec::<String>::new();
     if let Some(serial) = serial {
         command.push("-s".into());
-        command.push(serial.clone());
+        command.push(serial.to_string());
     }
     for arg in args {
         command.push(arg.into());
@@ -462,7 +460,7 @@ fn create_adb_args<S: Into<String>>(serial: Option<&String>, args: Vec<S>) -> Ve
 }
 
 fn exec_adb<S: Into<String>>(
-    serial: Option<&String>,
+    serial: Option<&str>,
     args: Vec<S>,
 ) -> Result<(), CommandExecutionError> {
     let adb_args = create_adb_args(serial, args);
@@ -483,7 +481,7 @@ fn exec_adb<S: Into<String>>(
     }
 }
 
-fn must_install_client(serial: Option<&String>) -> Result<bool, CommandExecutionError> {
+fn must_install_client(serial: Option<&str>) -> Result<bool, CommandExecutionError> {
     info!(target: TAG, "Checking gnirehtet client...");
     let args = create_adb_args(
         serial,
@@ -499,7 +497,7 @@ fn must_install_client(serial: Option<&String>) -> Result<bool, CommandExecution
                 // read the versionCode of the installed package
                 if let Some(index) = dumpsys.find("    versionCode=") {
                     let start = index + 16; // size of "    versionCode=\""
-                    if let Some(end) = (&dumpsys[start..]).find(" ") {
+                    if let Some(end) = (&dumpsys[start..]).find(' ') {
                         let installed_version_code = &dumpsys[start..start + end];
                         Ok(installed_version_code != REQUIRED_APK_VERSION_CODE)
                     } else {

@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-pub use self::relay::*;
+pub use self::relay::Relay;
 pub mod byte_buffer;
 
 mod binary;
@@ -32,6 +32,7 @@ mod ipv4_packet_buffer;
 mod net;
 mod packet_source;
 mod packetizer;
+#[allow(clippy::module_inception)] // relay.rs is in relay/
 mod relay;
 mod router;
 mod selector;

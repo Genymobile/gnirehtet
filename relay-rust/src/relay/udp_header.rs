@@ -139,7 +139,7 @@ impl<'a> UdpHeaderMut<'a> {
 
     #[inline]
     pub fn set_payload_length(&mut self, payload_length: u16) {
-        let total_length = UDP_HEADER_LENGTH as u16 + payload_length;
+        let total_length = u16::from(UDP_HEADER_LENGTH) + payload_length;
         BigEndian::write_u16(&mut self.raw[4..6], total_length);
     }
 

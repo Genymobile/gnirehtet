@@ -60,22 +60,22 @@ impl CommandLineArguments {
             }
         }
         Ok(Self {
-            serial: serial,
-            dns_servers: dns_servers,
-            routes: routes,
+            serial,
+            dns_servers,
+            routes,
         })
     }
 
-    pub fn serial(&self) -> Option<&String> {
-        self.serial.as_ref()
+    pub fn serial(&self) -> Option<&str> {
+        self.serial.as_ref().map(String::as_str)
     }
 
-    pub fn dns_servers(&self) -> Option<&String> {
-        self.dns_servers.as_ref()
+    pub fn dns_servers(&self) -> Option<&str> {
+        self.dns_servers.as_ref().map(String::as_str)
     }
 
-    pub fn routes(&self) -> Option<&String> {
-        self.routes.as_ref()
+    pub fn routes(&self) -> Option<&str> {
+        self.routes.as_ref().map(String::as_str)
     }
 }
 

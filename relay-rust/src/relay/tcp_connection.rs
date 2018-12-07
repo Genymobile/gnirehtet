@@ -36,7 +36,7 @@ use super::stream_buffer::StreamBuffer;
 use super::tcp_header::{self, TcpHeader, TcpHeaderMut};
 use super::transport_header::{TransportHeader, TransportHeaderMut};
 
-const TAG: &'static str = "TcpConnection";
+const TAG: &str = "TcpConnection";
 
 // same value as GnirehtetService.MTU in the client
 const MTU: u16 = 0x4000;
@@ -112,10 +112,10 @@ impl Tcb {
 
     fn remaining_client_window(&self) -> u16 {
         let wrapped_remaining = Wrapping(self.their_acknowledgement_number)
-            + Wrapping(self.client_window as u32)
+            + Wrapping(u32::from(self.client_window))
             - self.sequence_number;
         let remaining = wrapped_remaining.0;
-        if remaining <= self.client_window as u32 {
+        if remaining <= u32::from(self.client_window) {
             remaining as u16
         } else {
             0
@@ -131,7 +131,8 @@ impl Tcb {
 }
 
 impl TcpConnection {
-    pub fn new(
+    #[allow(clippy::needless_pass_by_value)] // semantically, headers are consumed
+    pub fn create(
         selector: &mut Selector,
         id: ConnectionId,
         client: Weak<RefCell<Client>>,
@@ -165,10 +166,10 @@ impl TcpConnection {
         let interests = Ready::writable();
         let rc = Rc::new(RefCell::new(Self {
             self_weak: Weak::new(),
-            id: id,
-            client: client,
-            stream: stream,
-            interests: interests,
+            id,
+            client,
+            stream,
+            interests,
             token: Token(0), // default value, will be set afterwards
             client_to_network: StreamBuffer::new(4 * MAX_PACKET_LENGTH),
             network_to_client: packetizer,
@@ -206,6 +207,7 @@ impl TcpConnection {
     }
 
     fn on_ready(&mut self, selector: &mut Selector, event: Event) {
+        #[allow(clippy::match_wild_err_arm)]
         match self.process(selector, event) {
             Ok(_) => (),
             Err(ref err) if err.kind() == io::ErrorKind::WouldBlock => {
@@ -436,7 +438,7 @@ impl TcpConnection {
     }
 
     #[inline]
-    fn tcp_header_of_transport<'a>(transport_header: TransportHeader<'a>) -> TcpHeader<'a> {
+    fn tcp_header_of_transport(transport_header: TransportHeader) -> TcpHeader {
         if let TransportHeader::Tcp(tcp_header) = transport_header {
             tcp_header
         } else {
@@ -445,9 +447,7 @@ impl TcpConnection {
     }
 
     #[inline]
-    fn tcp_header_of_transport_mut<'a>(
-        transport_header: TransportHeaderMut<'a>,
-    ) -> TcpHeaderMut<'a> {
+    fn tcp_header_of_transport_mut(transport_header: TransportHeaderMut) -> TcpHeaderMut {
         if let TransportHeaderMut::Tcp(tcp_header) = transport_header {
             tcp_header
         } else {
@@ -741,10 +741,10 @@ impl TcpConnection {
             ready = Ready::writable()
         } else {
             if self.may_read() {
-                ready = ready | Ready::readable()
+                ready |= Ready::readable()
             }
             if self.may_write() {
-                ready = ready | Ready::writable()
+                ready |= Ready::writable()
             }
         }
         cx_debug!(target: TAG, self.id, "interests: {:?}", ready);
@@ -827,7 +827,7 @@ impl PacketSource for TcpConnection {
             len,
             self.tcb.numbers()
         );
-        self.tcb.sequence_number += Wrapping(len as u32);
+        self.tcb.sequence_number += Wrapping(u32::from(len));
         self.packet_for_client_length = None;
         self.update_interests(selector);
     }

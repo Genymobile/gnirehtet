@@ -24,8 +24,8 @@ use super::net;
 use super::selector::Selector;
 use super::transport_header::TransportHeaderData;
 
-const LOCALHOST_FORWARD: u32 = 0x0A000202; // 10.0.2.2
-const LOCALHOST: u32 = 0x7F000001; // 127.0.0.1
+const LOCALHOST_FORWARD: u32 = 0x0A_00_02_02; // 10.0.2.2
+const LOCALHOST: u32 = 0x7F_00_00_01; // 127.0.0.1
 
 pub trait Connection {
     fn id(&self) -> &ConnectionId;
@@ -66,11 +66,11 @@ impl ConnectionId {
         );
         Self {
             protocol: ipv4_header_data.protocol(),
-            source_ip: source_ip,
-            source_port: source_port,
-            destination_ip: destination_ip,
-            destination_port: destination_port,
-            id_string: id_string,
+            source_ip,
+            source_port,
+            destination_ip,
+            destination_port,
+            id_string,
         }
     }
 

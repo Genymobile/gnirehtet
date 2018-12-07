@@ -59,8 +59,8 @@ where
 {
     pub fn new(read: &'a mut R, max_chunk_size: Option<usize>) -> Self {
         Self {
-            read: read,
-            max_chunk_size: max_chunk_size,
+            read,
+            max_chunk_size,
         }
     }
 }
