@@ -38,7 +38,7 @@ where
     }
 }
 pub struct AdbMonitor {
-    callback: Box<AdbMonitorCallback>,
+    callback: Box<dyn AdbMonitorCallback>,
     buf: ByteBuffer,
     connected_devices: Vec<String>,
 }
@@ -49,7 +49,7 @@ impl AdbMonitor {
     const RETRY_DELAY_ADB_DAEMON_OK: u64 = 1000;
     const RETRY_DELAY_ADB_DAEMON_KO: u64 = 5000;
 
-    pub fn new(callback: Box<AdbMonitorCallback>) -> Self {
+    pub fn new(callback: Box<dyn AdbMonitorCallback>) -> Self {
         Self {
             callback,
             buf: ByteBuffer::new(Self::BUFFER_SIZE),

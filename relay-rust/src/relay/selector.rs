@@ -38,7 +38,7 @@ where
 
 pub struct Selector {
     poll: Poll,
-    handlers: Slab<Rc<EventHandler>>,
+    handlers: Slab<Rc<dyn EventHandler>>,
     // tokens to be removed after all the current poll events are executed
     tokens_to_remove: Vec<Token>,
 }

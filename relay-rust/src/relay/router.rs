@@ -33,7 +33,7 @@ const TAG: &str = "Router";
 pub struct Router {
     client: Weak<RefCell<Client>>,
     // there are typically only few connections per client, HashMap would be less efficient
-    connections: Vec<Rc<RefCell<Connection>>>,
+    connections: Vec<Rc<RefCell<dyn Connection>>>,
 }
 
 impl Router {
@@ -114,7 +114,7 @@ impl Router {
         id: ConnectionId,
         client: Weak<RefCell<Client>>,
         ipv4_packet: &Ipv4Packet,
-    ) -> io::Result<Rc<RefCell<Connection>>> {
+    ) -> io::Result<Rc<RefCell<dyn Connection>>> {
         let (ipv4_header, transport_header) = ipv4_packet.headers();
         let transport_header = transport_header.expect("No transport");
         match id.protocol() {
@@ -145,7 +145,7 @@ impl Router {
             .position(|connection| connection.borrow().id() == id)
     }
 
-    pub fn remove(&mut self, connection: &Connection) {
+    pub fn remove(&mut self, connection: &dyn Connection) {
         let index = self
             .connections
             .iter()

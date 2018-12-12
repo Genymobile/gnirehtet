@@ -535,7 +535,7 @@ fn print_usage() {
     eprint!("{}", msg);
 }
 
-fn append_command_usage(msg: &mut String, command: &Command) {
+fn append_command_usage(msg: &mut String, command: &dyn Command) {
     msg.push_str("  gnirehtet ");
     msg.push_str(command.command());
     let accepted_parameters = command.accepted_parameters();
@@ -556,7 +556,7 @@ fn append_command_usage(msg: &mut String, command: &Command) {
     }
 }
 
-fn print_command_usage(command: &Command) {
+fn print_command_usage(command: &dyn Command) {
     let mut msg = String::new();
     append_command_usage(&mut msg, command);
     eprint!("{}", msg);

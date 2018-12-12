@@ -42,9 +42,9 @@ pub struct Client {
     client_to_network: Ipv4PacketBuffer,
     network_to_client: StreamBuffer,
     router: Router,
-    close_listener: Box<CloseListener<Client>>,
+    close_listener: Box<dyn CloseListener<Client>>,
     closed: bool,
-    pending_packet_sources: Vec<Rc<RefCell<PacketSource>>>,
+    pending_packet_sources: Vec<Rc<RefCell<dyn PacketSource>>>,
     // number of remaining bytes of "id" to send to the client before relaying any data
     pending_id_bytes: usize,
 }
@@ -113,7 +113,7 @@ impl Client {
         id: u32,
         selector: &mut Selector,
         stream: TcpStream,
-        close_listener: Box<CloseListener<Client>>,
+        close_listener: Box<dyn CloseListener<Client>>,
     ) -> io::Result<Rc<RefCell<Self>>> {
         // on start, we are interested only in writing (we must first send the client id)
         let interests = Ready::writable();
@@ -271,7 +271,7 @@ impl Client {
         }
     }
 
-    pub fn register_pending_packet_source(&mut self, source: Rc<RefCell<PacketSource>>) {
+    pub fn register_pending_packet_source(&mut self, source: Rc<RefCell<dyn PacketSource>>) {
         self.pending_packet_sources.push(source);
     }
 
