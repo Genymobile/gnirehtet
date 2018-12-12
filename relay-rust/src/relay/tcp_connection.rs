@@ -314,9 +314,7 @@ impl TcpConnection {
             &self.tcb,
             tcp_header::FLAG_ACK | tcp_header::FLAG_PSH,
         );
-        // the packet is bound to the lifetime of self, so we cannot borrow self to call methods
-        // defer the other branches in a separate match-block
-        let non_lexical_lifetime_workaround = match self
+        match self
             .network_to_client
             .packetize_read(&mut self.stream, max_payload_length)
         {
@@ -342,12 +340,7 @@ impl TcpConnection {
                         self.packet_for_client_length = Some(ipv4_packet.length());
                     }
                 };
-                Ok(Some(()))
             }
-            Ok(None) => Ok(None),
-            Err(err) => Err(err),
-        };
-        match non_lexical_lifetime_workaround {
             Ok(None) => {
                 self.eof(selector);
             }
@@ -366,7 +359,6 @@ impl TcpConnection {
                 self.send_empty_packet_to_client(selector, tcp_header::FLAG_RST);
                 self.close(selector);
             }
-            Ok(Some(_)) => (), // already handled
         }
         Ok(())
     }
