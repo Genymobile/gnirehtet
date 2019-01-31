@@ -63,6 +63,13 @@ public class GnirehtetControlReceiver extends BroadcastReceiver {
             startGnirehtet(context, config);
         } else if (ACTION_GNIREHTET_STOP.equals(action)) {
             stopGnirehtet(context);
+        } else if ("android.hardware.usb.action.USB_STATE".equals(action)){
+            if(intent.getExtras().getBoolean("connected")) {
+                // USB was connected
+            } else {
+                // USB was disconnected
+                stopGnirehtet(context);
+            }
         }
     }
 

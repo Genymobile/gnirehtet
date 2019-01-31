@@ -19,22 +19,16 @@ public class Notifier {
     private static final String CHANNEL_ID = "Gnirehtet";
 
     private final Service context;
-    private boolean failure;
 
     public Notifier(Service context) {
         this.context = context;
     }
 
-    private Notification createNotification(boolean failure) {
+    private Notification createNotification() {
         Notification.Builder notificationBuilder = createNotificationBuilder();
         notificationBuilder.setContentTitle(context.getString(R.string.app_name));
-        if (failure) {
-            notificationBuilder.setContentText(context.getString(R.string.relay_disconnected));
-            notificationBuilder.setSmallIcon(R.drawable.ic_report_problem_24dp);
-        } else {
-            notificationBuilder.setContentText(context.getString(R.string.relay_connected));
-            notificationBuilder.setSmallIcon(R.drawable.ic_usb_24dp);
-        }
+        notificationBuilder.setContentText(context.getString(R.string.relay_connected));
+        notificationBuilder.setSmallIcon(R.drawable.ic_usb_24dp);
         notificationBuilder.addAction(createStopAction());
         return notificationBuilder.build();
     }
@@ -60,11 +54,10 @@ public class Notifier {
     }
 
     public void start() {
-        failure = false; // reset failure flag
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannel();
         }
-        context.startForeground(NOTIFICATION_ID, createNotification(false));
+        context.startForeground(NOTIFICATION_ID, createNotification());
     }
 
     public void stop() {
@@ -74,14 +67,13 @@ public class Notifier {
         }
     }
 
-    public void setFailure(boolean failure) {
-        if (this.failure != failure) {
-            this.failure = failure;
-            Notification notification = createNotification(failure);
+    public void setFailure() {
+            Notification notification = createNotification();
             getNotificationManager().notify(NOTIFICATION_ID, notification);
-        }
     }
-
+    public void removeFailure() {
+        getNotificationManager().cancel(NOTIFICATION_ID);
+    }
     private Notification.Action createStopAction() {
         Intent stopIntent = GnirehtetService.createStopIntent(context);
         PendingIntent stopPendingIntent = PendingIntent.getService(context, 0, stopIntent, PendingIntent.FLAG_ONE_SHOT);
