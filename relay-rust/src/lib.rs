@@ -20,7 +20,6 @@ pub use crate::relay::byte_buffer;
 use crate::relay::Relay;
 use std::io;
 
-pub fn relay() -> io::Result<()> {
-    const PORT: u16 = 31416;
-    Relay::new(PORT).run()
+pub fn relay(port: u16) -> io::Result<()> {
+    Relay::new(port).run()
 }

@@ -18,11 +18,13 @@ pub const PARAM_NONE: u8 = 0;
 pub const PARAM_SERIAL: u8 = 1;
 pub const PARAM_DNS_SERVERS: u8 = 1 << 1;
 pub const PARAM_ROUTES: u8 = 1 << 2;
+pub const PARAM_PORT: u8 = 1 << 3;
 
 pub struct CommandLineArguments {
     serial: Option<String>,
     dns_servers: Option<String>,
     routes: Option<String>,
+    pub port: u16,
 }
 
 impl CommandLineArguments {
@@ -31,6 +33,7 @@ impl CommandLineArguments {
         let mut serial = None;
         let mut dns_servers = None;
         let mut routes = None;
+        let mut port = 31416;
 
         let mut iter = args.into_iter();
         while let Some(arg) = iter.next() {
@@ -53,6 +56,12 @@ impl CommandLineArguments {
                 } else {
                     return Err(String::from("Missing -r parameter"));
                 }
+            } else if (accepted_parameters & PARAM_PORT) != 0 && "-p" == arg {
+                if let Some(value) = iter.next() {
+                    port = value.into().parse().unwrap()
+                } else {
+                    return Err(String::from("Missing -p parameter"));
+                }
             } else if (accepted_parameters & PARAM_SERIAL) != 0 && serial.is_none() {
                 serial = Some(arg);
             } else {
@@ -63,6 +72,7 @@ impl CommandLineArguments {
             serial,
             dns_servers,
             routes,
+            port
         })
     }
 
