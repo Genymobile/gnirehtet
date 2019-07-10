@@ -53,11 +53,9 @@ public class Relay {
             Set<SelectionKey> selectedKeys = selector.selectedKeys();
 
             long now = System.currentTimeMillis();
-            if (now >= nextCleaningDeadline) {
+            if (now >= nextCleaningDeadline || selectedKeys.isEmpty()) {
                 tunnelServer.cleanUp();
                 nextCleaningDeadline = now + CLEANING_INTERVAL;
-            } else if (selectedKeys.isEmpty()) {
-                throw new AssertionError("selector.select() returned without any event, an invalid SelectionKey was probably been registered");
             }
 
             for (SelectionKey selectedKey : selectedKeys) {
