@@ -25,7 +25,7 @@ public class Relay {
 
     private static final String TAG = Relay.class.getSimpleName();
 
-    private static final int DEFAULT_PORT = 31416;
+    public static final int DEFAULT_PORT = 31416;
     private static final int CLEANING_INTERVAL = 60 * 1000;
 
     private final int port;
