@@ -34,7 +34,6 @@ public final class Binary {
             } else if (i % 8 == 0) {
                 builder.append(' ');
             }
-            ++i;
             builder.append(String.format("%02X ", b & 0xff));
         }
         return builder.toString();
