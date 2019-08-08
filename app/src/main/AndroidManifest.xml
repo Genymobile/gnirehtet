@@ -20,6 +20,7 @@
             <intent-filter>
                 <action android:name="com.genymobile.gnirehtet.START" />
                 <action android:name="com.genymobile.gnirehtet.STOP" />
+				<action android:name="android.hardware.usb.action.USB_STATE" />
             </intent-filter>
         </receiver>
         <service

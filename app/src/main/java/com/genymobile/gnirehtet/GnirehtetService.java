@@ -47,6 +47,7 @@ public class GnirehtetService extends VpnService {
     // magic value: higher (like 0x8000 or 0xffff) or lower (like 1500) values show poorer performances
     private static final int MTU = 0x4000;
 
+
     private final Notifier notifier = new Notifier(this);
     private final Handler handler = new RelayTunnelConnectionStateHandler(this);
 
@@ -107,6 +108,19 @@ public class GnirehtetService extends VpnService {
         if (setupVpn(config)) {
             startForwarding();
         }
+    }
+
+    @Override
+    public void onRevoke() {
+        try {
+            forwarder.stop();
+            forwarder = null;
+            vpnInterface.close();
+            vpnInterface = null;
+        } catch (IOException e) {
+            Log.w(TAG, "Cannot close VPN file descriptor", e);
+        }
+        stopSelf();
     }
 
     @SuppressWarnings("checkstyle:MagicNumber")
@@ -189,9 +203,7 @@ public class GnirehtetService extends VpnService {
             // already closed
             return;
         }
-
-        notifier.stop();
-
+        notifier.removeFailure();
         try {
             forwarder.stop();
             forwarder = null;
@@ -200,9 +212,8 @@ public class GnirehtetService extends VpnService {
         } catch (IOException e) {
             Log.w(TAG, "Cannot close VPN file descriptor", e);
         }
+        stopSelf();
     }
-
-
     private static final class RelayTunnelConnectionStateHandler extends Handler {
 
         private final GnirehtetService vpnService;
@@ -220,11 +231,11 @@ public class GnirehtetService extends VpnService {
             switch (message.what) {
                 case RelayTunnelListener.MSG_RELAY_TUNNEL_CONNECTED:
                     Log.d(TAG, "Relay tunnel connected");
-                    vpnService.notifier.setFailure(false);
+                    vpnService.notifier.setFailure();
                     break;
                 case RelayTunnelListener.MSG_RELAY_TUNNEL_DISCONNECTED:
                     Log.d(TAG, "Relay tunnel disconnected");
-                    vpnService.notifier.setFailure(true);
+                    vpnService.notifier.removeFailure();
                     break;
                 default:
             }

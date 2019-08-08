@@ -87,7 +87,6 @@ public class Forwarder {
         wakeUpReadWorkaround();
     }
 
-    @SuppressWarnings("checkstyle:MagicNumber")
     private void forwardDeviceToTunnel(Tunnel tunnel) throws IOException {
         Log.d(TAG, "Device to tunnel forwarding started");
         FileInputStream vpnInput = new FileInputStream(vpnFileDescriptor);
@@ -100,6 +99,7 @@ public class Forwarder {
                 break;
             }
             if (r > 0) {
+                // blocking send
                 int version = buffer[0] >> 4;
                 if (version == 4) {
                     // blocking send
