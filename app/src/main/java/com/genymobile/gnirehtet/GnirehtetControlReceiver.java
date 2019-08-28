@@ -66,7 +66,7 @@ public class GnirehtetControlReceiver extends BroadcastReceiver {
         }
     }
 
-    private static VpnConfiguration createConfig(Intent intent) {
+    public static VpnConfiguration createConfig(Intent intent) {
         String[] dnsServers = intent.getStringArrayExtra(EXTRA_DNS_SERVERS);
         if (dnsServers == null) {
             dnsServers = new String[0];
