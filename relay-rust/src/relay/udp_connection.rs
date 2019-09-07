@@ -271,7 +271,16 @@ impl Connection for UdpConnection {
     fn close(&mut self, selector: &mut Selector) {
         cx_info!(target: TAG, self.id, "Close");
         self.closed = true;
-        selector.deregister(&self.socket, self.token).unwrap();
+        if let Err(err) = selector.deregister(&self.socket, self.token) {
+            // do not panic, this can happen in mio
+            // see <https://github.com/Genymobile/gnirehtet/issues/136>
+            cx_warn!(
+                target: TAG,
+                self.id,
+                "Fail to deregister UDP stream: {:?}",
+                err
+            );
+        }
         // socket will be closed by RAII
     }
 

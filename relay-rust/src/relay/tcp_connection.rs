@@ -785,7 +785,16 @@ impl Connection for TcpConnection {
     fn close(&mut self, selector: &mut Selector) {
         cx_info!(target: TAG, self.id, "Close");
         self.closed = true;
-        selector.deregister(&self.stream, self.token).unwrap();
+        if let Err(err) = selector.deregister(&self.stream, self.token) {
+            // do not panic, this can happen in mio
+            // see <https://github.com/Genymobile/gnirehtet/issues/136>
+            cx_warn!(
+                target: TAG,
+                self.id,
+                "Fail to deregister TCP stream: {:?}",
+                err
+            );
+        }
         // socket will be closed by RAII
     }
 
