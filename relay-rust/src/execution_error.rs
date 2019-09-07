@@ -112,7 +112,7 @@ impl error::Error for ProcessStatusError {
         "Execution terminated with failure"
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         None
     }
 }
@@ -134,7 +134,7 @@ impl error::Error for ProcessIoError {
         "Execution I/O failed"
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         Some(&self.error)
     }
 }
@@ -158,7 +158,7 @@ impl error::Error for CommandExecutionError {
         }
     }
 
-    fn cause(&self) -> Option<&error::Error> {
+    fn cause(&self) -> Option<&dyn error::Error> {
         match *self {
             CommandExecutionError::ProcessIo(ref err) => Some(err),
             CommandExecutionError::ProcessStatus(ref err) => Some(err),

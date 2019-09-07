@@ -36,7 +36,7 @@ use std::time::Duration;
 const TAG: &str = "Main";
 const REQUIRED_APK_VERSION_CODE: &str = "6";
 
-const COMMANDS: &[&Command] = &[
+const COMMANDS: &[&dyn Command] = &[
     &InstallCommand,
     &UninstallCommand,
     &ReinstallCommand,
