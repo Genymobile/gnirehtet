@@ -257,8 +257,8 @@ public final class Main {
         cmdTunnel(serial);
 
         List<String> cmd = new ArrayList<>();
-        Collections.addAll(cmd, "shell", "am", "broadcast", "-a", "com.genymobile.gnirehtet.START", "-n",
-                "com.genymobile.gnirehtet/.GnirehtetControlReceiver");
+        Collections.addAll(cmd, "shell", "am", "start", "-a", "com.genymobile.gnirehtet.START", "-n",
+                "com.genymobile.gnirehtet/.GnirehtetActivity");
         if (dnsServers != null) {
             Collections.addAll(cmd, "--esa", "dnsServers", dnsServers);
         }
@@ -277,8 +277,8 @@ public final class Main {
 
     private static void cmdStop(String serial) throws InterruptedException, IOException, CommandExecutionException {
         Log.i(TAG, "Stopping client...");
-        execAdb(serial, "shell", "am", "broadcast", "-a", "com.genymobile.gnirehtet.STOP", "-n",
-                "com.genymobile.gnirehtet/.GnirehtetControlReceiver");
+        execAdb(serial, "shell", "am", "start", "-a", "com.genymobile.gnirehtet.STOP", "-n",
+                "com.genymobile.gnirehtet/.GnirehtetActivity");
     }
 
     private static void cmdRestart(String serial, String dnsServers, String routes) throws InterruptedException, IOException,

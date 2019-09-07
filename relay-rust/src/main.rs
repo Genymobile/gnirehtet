@@ -374,11 +374,11 @@ fn cmd_start(
     let mut adb_args = vec![
         "shell",
         "am",
-        "broadcast",
+        "start",
         "-a",
         "com.genymobile.gnirehtet.START",
         "-n",
-        "com.genymobile.gnirehtet/.GnirehtetControlReceiver",
+        "com.genymobile.gnirehtet/.GnirehtetActivity",
     ];
     if let Some(dns_servers) = dns_servers {
         adb_args.append(&mut vec!["--esa", "dnsServers", dns_servers]);
@@ -411,11 +411,11 @@ fn cmd_stop(serial: Option<&str>) -> Result<(), CommandExecutionError> {
         vec![
             "shell",
             "am",
-            "broadcast",
+            "start",
             "-a",
             "com.genymobile.gnirehtet.STOP",
             "-n",
-            "com.genymobile.gnirehtet/.GnirehtetControlReceiver",
+            "com.genymobile.gnirehtet/.GnirehtetActivity",
         ],
     )
 }
