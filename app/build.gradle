@@ -8,7 +8,7 @@ android {
         archivesBaseName = "gnirehtet" // change apk name
         applicationId "com.genymobile.gnirehtet"
         minSdkVersion 21
-        targetSdkVersion 28
+        targetSdkVersion 29
         versionCode 6
         versionName "2.3"
         testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
