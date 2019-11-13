@@ -19,13 +19,18 @@ package com.genymobile.gnirehtet;
 /**
  * Simple specific command-line arguments parser.
  */
+@SuppressWarnings("checkstyle:MagicNumber")
 public class CommandLineArguments {
 
     public static final int PARAM_NONE = 0;
     public static final int PARAM_SERIAL = 1;
     public static final int PARAM_DNS_SERVER = 1 << 1;
     public static final int PARAM_ROUTES = 1 << 2;
+    public static final int PARAM_PORT = 1 << 3;
 
+    public static final int DEFAULT_PORT = 31416;
+
+    private int port;
     private String serial;
     private String dnsServers;
     private String routes;
@@ -52,11 +57,26 @@ public class CommandLineArguments {
                 }
                 arguments.routes = args[i + 1];
                 ++i; // consume the -r parameter
+            } else if ((acceptedParameters & PARAM_PORT) != 0 && "-p".equals(arg)) {
+                if (arguments.port != 0) {
+                    throw new IllegalArgumentException("Port already set");
+                }
+                if (i == args.length - 1) {
+                    throw new IllegalArgumentException("Missing -p parameter");
+                }
+                arguments.port = Integer.parseInt(args[i + 1]);
+                if (arguments.port <= 0 || arguments.port >= 65536) {
+                    throw new IllegalArgumentException("Invalid port: " + arguments.port);
+                }
+                ++i;
             } else if ((acceptedParameters & PARAM_SERIAL) != 0 && arguments.serial == null) {
                 arguments.serial = arg;
             } else {
                 throw new IllegalArgumentException("Unexpected argument: \"" + arg + "\"");
             }
+        }
+        if (arguments.port == 0) {
+            arguments.port = DEFAULT_PORT;
         }
         return arguments;
     }
@@ -71,5 +91,9 @@ public class CommandLineArguments {
 
     public String getRoutes() {
         return routes;
+    }
+
+    public int getPort() {
+        return port;
     }
 }
