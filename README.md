@@ -182,7 +182,7 @@ lower-level commands. You can call them manually instead.
 
 To start the relay server:
 
-    java -jar gnirehtet.jar relay
+    ./gnirehtet relay
 
 To install the apk:
 
@@ -191,13 +191,13 @@ To install the apk:
 To start a client:
 
     adb reverse localabstract:gnirehtet tcp:31416
-    adb shell am broadcast -a com.genymobile.gnirehtet.START \
-        -n com.genymobile.gnirehtet/.GnirehtetControlReceiver
+    adb shell am start -a com.genymobile.gnirehtet.START \
+        -n com.genymobile.gnirehtet/.GnirehtetActivity
 
 To stop a client:
 
-    adb shell am broadcast -a com.genymobile.gnirehtet.STOP \
-        -n com.genymobile.gnirehtet/.GnirehtetControlReceiver
+    adb shell am start -a com.genymobile.gnirehtet.STOP \
+        -n com.genymobile.gnirehtet/.GnirehtetActivity
 
 
 ## Why _gnirehtet_?
