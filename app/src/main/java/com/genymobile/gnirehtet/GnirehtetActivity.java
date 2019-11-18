@@ -26,7 +26,7 @@ public class GnirehtetActivity extends Activity {
 
     private static final int VPN_REQUEST_CODE = 0;
 
-    private VpnConfiguration config;
+    private VpnConfiguration requestedConfig;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,7 +81,7 @@ public class GnirehtetActivity extends Activity {
     }
 
     private void requestAuthorization(Intent vpnIntent, VpnConfiguration config) {
-        this.config = config;
+        this.requestedConfig = config;
         startActivityForResult(vpnIntent, VPN_REQUEST_CODE);
     }
 
@@ -89,9 +89,9 @@ public class GnirehtetActivity extends Activity {
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == VPN_REQUEST_CODE && resultCode == RESULT_OK) {
-            GnirehtetService.start(this, config);
+            GnirehtetService.start(this, requestedConfig);
         }
-        config = null;
+        requestedConfig = null;
         finish();
     }
 }
