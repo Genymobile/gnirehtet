@@ -34,7 +34,7 @@ use std::thread;
 use std::time::Duration;
 
 const TAG: &str = "Main";
-const REQUIRED_APK_VERSION_CODE: &str = "6";
+const REQUIRED_APK_VERSION_CODE: &str = "7";
 
 const COMMANDS: &[&dyn Command] = &[
     &InstallCommand,
