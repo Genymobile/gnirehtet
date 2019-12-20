@@ -36,6 +36,15 @@ use std::time::Duration;
 const TAG: &str = "Main";
 const REQUIRED_APK_VERSION_CODE: &str = "7";
 
+#[inline]
+fn get_adb_path() -> String {
+    if let Some(env_adb) = std::env::var_os("ADB") {
+        env_adb.into_string().expect("invalid ADB value")
+    } else {
+        "adb".to_string()
+    }
+}
+
 const COMMANDS: &[&dyn Command] = &[
     &InstallCommand,
     &UninstallCommand,
@@ -498,18 +507,19 @@ fn exec_adb<S: Into<String>>(
     args: Vec<S>,
 ) -> Result<(), CommandExecutionError> {
     let adb_args = create_adb_args(serial, args);
-    debug!(target: TAG, "Execute: adb {:?}", adb_args);
-    match process::Command::new("adb").args(&adb_args[..]).status() {
+    let adb = get_adb_path();
+    debug!(target: TAG, "Execute: {:?} {:?}", adb, adb_args);
+    match process::Command::new(&adb).args(&adb_args[..]).status() {
         Ok(exit_status) => {
             if exit_status.success() {
                 Ok(())
             } else {
-                let cmd = Cmd::new("adb", adb_args);
+                let cmd = Cmd::new(adb, adb_args);
                 Err(ProcessStatusError::new(cmd, exit_status).into())
             }
         }
         Err(err) => {
-            let cmd = Cmd::new("adb", adb_args);
+            let cmd = Cmd::new(adb, adb_args);
             Err(ProcessIoError::new(cmd, err).into())
         }
     }
@@ -521,8 +531,9 @@ fn must_install_client(serial: Option<&str>) -> Result<bool, CommandExecutionErr
         serial,
         vec!["shell", "dumpsys", "package", "com.genymobile.gnirehtet"],
     );
-    debug!(target: TAG, "Execute: adb {:?}", args);
-    match process::Command::new("adb").args(&args[..]).output() {
+    let adb = get_adb_path();
+    debug!(target: TAG, "Execute: {:?} {:?}", adb, args);
+    match process::Command::new(&adb).args(&args[..]).output() {
         Ok(output) => {
             if output.status.success() {
                 // the "regex" crate makes the binary far bigger, so just parse the versionCode
@@ -543,12 +554,12 @@ fn must_install_client(serial: Option<&str>) -> Result<bool, CommandExecutionErr
                     Ok(true)
                 }
             } else {
-                let cmd = Cmd::new("adb", args);
+                let cmd = Cmd::new(adb, args);
                 Err(ProcessStatusError::new(cmd, output.status).into())
             }
         }
         Err(err) => {
-            let cmd = Cmd::new("adb", args);
+            let cmd = Cmd::new(adb, args);
             Err(ProcessIoError::new(cmd, err).into())
         }
     }
