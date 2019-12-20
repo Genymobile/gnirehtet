@@ -45,6 +45,15 @@ fn get_adb_path() -> String {
     }
 }
 
+#[inline]
+fn get_apk_path() -> String {
+    if let Some(env_adb) = std::env::var_os("GNIREHTET_APK") {
+        env_adb.into_string().expect("invalid GNIREHTET_APK value")
+    } else {
+        "gnirehtet.apk".to_string()
+    }
+}
+
 const COMMANDS: &[&dyn Command] = &[
     &InstallCommand,
     &UninstallCommand,
@@ -334,7 +343,7 @@ impl Command for RelayCommand {
 
 fn cmd_install(serial: Option<&str>) -> Result<(), CommandExecutionError> {
     info!(target: TAG, "Installing gnirehtet client...");
-    exec_adb(serial, vec!["install", "-r", "gnirehtet.apk"])
+    exec_adb(serial, vec!["install".into(), "-r".into(), get_apk_path()])
 }
 
 fn cmd_uninstall(serial: Option<&str>) -> Result<(), CommandExecutionError> {

@@ -208,6 +208,12 @@ To stop a client:
 ADB=/path/to/my/adb ./gnirehtet run
 ```
 
+`GNIREHTET_APK` defines a custom path to `gnirehtet.apk`:
+
+```bash
+GNIREHTET_APK=/usr/share/gnirehtet/gnirehtet.apk ./gnirehtet run
+```
+
 
 ## Why _gnirehtet_?
 
