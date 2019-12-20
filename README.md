@@ -200,6 +200,20 @@ To stop a client:
         -n com.genymobile.gnirehtet/.GnirehtetActivity
 
 
+## Environment variables
+
+`ADB` defines a custom path to the `adb` executable:
+
+```bash
+ADB=/path/to/my/adb ./gnirehtet run
+```
+
+`GNIREHTET_APK` defines a custom path to `gnirehtet.apk`:
+
+```bash
+GNIREHTET_APK=/usr/share/gnirehtet/gnirehtet.apk ./gnirehtet run
+```
+
 ## Why _gnirehtet_?
 
     rev <<< tethering

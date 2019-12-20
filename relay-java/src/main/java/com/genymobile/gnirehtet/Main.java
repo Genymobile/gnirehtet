@@ -38,6 +38,16 @@ public final class Main {
         // not instantiable
     }
 
+    private static String getAdbPath() {
+        String adb = System.getenv("ADB");
+        return adb != null ? adb : "adb";
+    }
+
+    private static String getApkPath() {
+        String apk = System.getenv("GNIREHTET_APK");
+        return apk != null ? apk : "gnirehtet.apk";
+    }
+
     enum Command {
         INSTALL("install", CommandLineArguments.PARAM_SERIAL) {
             @Override
@@ -208,7 +218,7 @@ public final class Main {
 
     private static void cmdInstall(String serial) throws InterruptedException, IOException, CommandExecutionException {
         Log.i(TAG, "Installing gnirehtet client...");
-        execAdb(serial, "install", "-r", "gnirehtet.apk");
+        execAdb(serial, "install", "-r", getApkPath());
     }
 
     private static void cmdUninstall(String serial) throws InterruptedException, IOException, CommandExecutionException {
