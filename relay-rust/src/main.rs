@@ -448,7 +448,7 @@ fn cmd_autostart(
         let routes = start_routes.as_ref().map(String::as_ref);
         async_start(Some(serial), dns_servers, routes, port)
     }));
-    adb_monitor.monitor()?;
+    adb_monitor.monitor();
     Ok(())
 }
 
