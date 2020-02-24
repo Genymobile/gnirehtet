@@ -16,6 +16,7 @@ chrono = "0.4"    # for formatting timestamp in logs
 byteorder = "1.3" # for reading/writing binary
 rand = "0.7"      # for random TCP sequence number
 ctrlc = { version = "3.0", features = ["termination"] }     # for handling Ctrl+C
+clap = "2"        # CLI Argument Parsing
 
 [profile.release]
 lto = true     # link-time optimization

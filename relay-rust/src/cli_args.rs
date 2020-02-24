@@ -14,168 +14,256 @@
  * limitations under the License.
  */
 
-pub const PARAM_NONE: u8 = 0;
-pub const PARAM_SERIAL: u8 = 1;
-pub const PARAM_DNS_SERVERS: u8 = 1 << 1;
-pub const PARAM_ROUTES: u8 = 1 << 2;
-pub const PARAM_PORT: u8 = 1 << 3;
+use std::net::Ipv4Addr;
 
-pub const DEFAULT_PORT: u16 = 31416;
+use clap::{
+    crate_authors, crate_version, value_t_or_exit, App, AppSettings, Arg, ArgMatches, SubCommand,
+};
 
-pub struct CommandLineArguments {
-    serial: Option<String>,
-    dns_servers: Option<String>,
-    routes: Option<String>,
-    port: u16,
+pub const DEFAULT_PORT: &str = "31416";
+
+fn valid_port(s: String) -> Result<(), String> {
+    s.parse::<u16>()
+        .map_err(|_| format!("{} is not a valid number between 1-65,535", s))
+        .and_then(|port| {
+            if port == 0 {
+                Err(String::from(
+                    "0 is not a valid port number (must be between 1 and 65,535 inclusive)",
+                ))
+            } else {
+                Ok(())
+            }
+        })
 }
 
-impl CommandLineArguments {
-    // simple String as errors is sufficient, we never need to inspect them
-    pub fn parse<S: Into<String>>(accepted_parameters: u8, args: Vec<S>) -> Result<Self, String> {
-        let mut serial = None;
-        let mut dns_servers = None;
-        let mut routes = None;
-        let mut port = 0;
+fn valid_ip(s: String) -> Result<(), String> {
+    for ip in s.split(",") {
+        match ip.parse::<Ipv4Addr>() {
+            Ok(_) => (),
+            Err(_) => return Err(format!("{} is not a valid IPv4 Addres", ip)),
+        }
+    }
 
-        let mut iter = args.into_iter();
-        while let Some(arg) = iter.next() {
-            let arg = arg.into();
-            if (accepted_parameters & PARAM_DNS_SERVERS) != 0 && "-d" == arg {
-                if dns_servers.is_some() {
-                    return Err(String::from("DNS servers already set"));
-                }
-                if let Some(value) = iter.next() {
-                    dns_servers = Some(value.into());
-                } else {
-                    return Err(String::from("Missing -d parameter"));
-                }
-            } else if (accepted_parameters & PARAM_ROUTES) != 0 && "-r" == arg {
-                if routes.is_some() {
-                    return Err(String::from("Routes already set"));
-                }
-                if let Some(value) = iter.next() {
-                    routes = Some(value.into());
-                } else {
-                    return Err(String::from("Missing -r parameter"));
-                }
-            } else if (accepted_parameters & PARAM_PORT) != 0 && "-p" == arg {
-                if port != 0 {
-                    return Err(String::from("Port already set"));
-                }
-                if let Some(value) = iter.next() {
-                    port = value.into().parse().unwrap();
-                    if port == 0 {
-                        return Err(String::from("Invalid port: 0"));
-                    }
-                } else {
-                    return Err(String::from("Missing -p parameter"));
-                }
-            } else if (accepted_parameters & PARAM_SERIAL) != 0 && serial.is_none() {
-                serial = Some(arg);
-            } else {
-                return Err(format!("Unexpected argument: \"{}\"", arg));
+    Ok(())
+}
+
+fn valid_route(s: String) -> Result<(), String> {
+    for route in s.split(",") {
+        let mut r_split = route.split("/");
+        if let Some(ip) = r_split.next() {
+            match ip.parse::<Ipv4Addr>() {
+                Ok(_) => (),
+                Err(_) => return Err(format!("{} is not a valid IPv4 Addres", ip)),
             }
+        } else {
+            return Err(String::from(
+                "each route must be in IP/CIDR format, such as 24.24.24.24/8",
+            ));
         }
-        if port == 0 {
-            port = DEFAULT_PORT;
+        if let Some(cidr) = r_split.next() {
+            match cidr.parse::<u8>() {
+                Ok(c) => {
+                    if c > 32 {
+                        return Err(format!(
+                            "{} is not a valid CIDR (must be between 0 and 32 inclusive)",
+                            c
+                        ));
+                    }
+                }
+                Err(_) => {
+                    return Err(format!(
+                        "{} is not a valid CIDR (must be between 0 and 32 inclusive)",
+                        cidr
+                    ))
+                }
+            }
+        } else {
+            return Err(String::from(
+                "each route must be in IP/CIDR format, such as 24.24.24.24/8",
+            ));
         }
-        Ok(Self {
-            serial,
-            dns_servers,
-            routes,
-            port,
-        })
     }
 
-    pub fn serial(&self) -> Option<&str> {
-        self.serial.as_ref().map(String::as_str)
-    }
+    Ok(())
+}
 
-    pub fn dns_servers(&self) -> Option<&str> {
-        self.dns_servers.as_ref().map(String::as_str)
-    }
+pub(crate) fn build() -> App<'static, 'static> {
+    let serial = Arg::with_name("serial")
+        .help("The serial of the device (from `adb devices`) to install on")
+        .long_help(
+            "The serial of the device (from `adb devices`) to install \
+                    on. If multiple devices are connected, then this option \
+                    must be used. If only one device is connectd, the default \
+                    is to simply connect to it.",
+        )
+        .takes_value(true);
+    // @TODO validator for IP/CIDR
+    let route = Arg::with_name("routes")
+        .help("Only reverse tether the specified routes")
+        .long_help(
+            "Only reverse tether the specified routes, \
+            whereas the default is to reverse all traffic. \
+            Multiple routes may be specified by delimiting \
+            with a comma (',')",
+        )
+        .takes_value(true)
+        .short("r")
+        .long("routes")
+        .alias("route")
+        .use_delimiter(false)
+        .validator(valid_route)
+        .default_value("0.0.0.0/0");
+    let dns = Arg::with_name("dns-servers")
+        .help("Make the device use the specified DNS server(s)")
+        .long_help(
+            "Make the device use the specified DNS server(s). \
+             The default uses Google public DNS. Multiple DNS \
+             servers may be specified by delimiting with a comma \
+             (',')",
+        )
+        .takes_value(true)
+        .use_delimiter(false)
+        .short("d")
+        .long("dns-servers")
+        .alias("dns-server")
+        .alias("dns")
+        .validator(valid_ip)
+        .default_value("8.8.8.8");
+    let port = Arg::with_name("port")
+        .help("Make the relay server listen on the specified port")
+        .takes_value(true)
+        .short("p")
+        .long("port")
+        .default_value(DEFAULT_PORT)
+        .validator(valid_port);
 
-    pub fn routes(&self) -> Option<&str> {
-        self.routes.as_ref().map(String::as_str)
-    }
+    App::new("gnirehtet")
+        .author(crate_authors!())
+        .version(crate_version!())
+        .setting(AppSettings::VersionlessSubcommands)
+        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .set_term_width(80)
+        .subcommand(
+            SubCommand::with_name("run")
+                .alias("rt")
+                .about("Enable reverse tethering for a specific device")
+                .long_about(
+                    "Enable reverse tethering for a specific device:{n}    \
+                - install the client if necessary{n}    \
+                - start the client{n}    \
+                - start the relay server{n}    \
+                - on Ctrl+C, stop both the relay server and the client.",
+                )
+                .arg(&serial)
+                .arg(&dns)
+                .arg(&port)
+                .arg(&route),
+        )
+        .subcommand(
+            SubCommand::with_name("install")
+                .about("Install the client on the device and exit")
+                .arg(&serial),
+        )
+        .subcommand(
+            SubCommand::with_name("uninstall")
+                .about("Uninstall the client from the Android device and exit")
+                .arg(&serial),
+        )
+        .subcommand(
+            SubCommand::with_name("reinstall")
+                .about("Uninstall then reinstall client on the device")
+                .arg(&serial),
+        )
+        .subcommand(
+            SubCommand::with_name("autorun")
+                .about("Enable reverse tethering for all devices")
+                .long_about(
+                    "Enable reverse tethering for all devices:{n}    \
+                - monitor for connected devices and autostart clients{n}    \
+                - start the relay server",
+                )
+                .arg(&dns)
+                .arg(&port)
+                .arg(&route),
+        )
+        .subcommand(
+            SubCommand::with_name("start")
+                .about(
+                    "Start a client on the device and exit (10.0.2.2 is mapped to the host 'localhost')",
+                )
+                .arg(&serial)
+                .arg(&dns)
+                .arg(&port)
+                .arg(&route),
+        )
+        .subcommand(
+            SubCommand::with_name("autostart")
+                .about("Listen for device connections and start a client on every detected device")
+                .arg(&dns)
+                .arg(&port)
+                .arg(&route),
+        )
+        .subcommand(
+            SubCommand::with_name("stop")
+                .about("Stop the client on the device and exit")
+                .arg(&serial),
+        )
+        .subcommand(
+            SubCommand::with_name("restart")
+                .about("Stop client (if running) and then restart on a specific device")
+                .arg(&serial)
+                .arg(&dns)
+                .arg(&port)
+                .arg(&route),
+        )
+        .subcommand(
+            SubCommand::with_name("tunnel")
+                .about("Set up the 'adb reverse' tunnel")
+                .long_about("Set up the 'adb reverse' tunnel.{n}    \
+                Note: If a device is unplugged then plugged back while gnirehtet is{n}\
+                active, resetting the tunnel is sufficient to get the{n}\
+                connection back.",
+                )
+                .arg(&serial)
+                .arg(&port),
+        )
+        .subcommand(
+            SubCommand::with_name("relay")
+                .about("Start the relay server in the current terminal.")
+                .arg(&port),
+        )
+}
 
-    pub fn port(&self) -> u16 {
+#[derive(Clone, Default)]
+pub(crate) struct Args {
+    pub(crate) serial: Option<String>,
+    pub(crate) dns_servers: Option<String>,
+    pub(crate) routes: Option<String>,
+    pub(crate) port: u16,
+}
+
+impl Args {
+    pub(crate) fn serial(&self) -> Option<&str> {
+        self.serial.as_deref()
+    }
+    pub(crate) fn routes(&self) -> Option<&str> {
+        self.routes.as_deref()
+    }
+    pub(crate) fn dns_servers(&self) -> Option<&str> {
+        self.dns_servers.as_deref()
+    }
+    pub(crate) fn port(&self) -> u16 {
         self.port
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    const ACCEPT_ALL: u8 = PARAM_SERIAL | PARAM_DNS_SERVERS | PARAM_ROUTES;
-
-    #[test]
-    fn test_no_args() {
-        let args = CommandLineArguments::parse(ACCEPT_ALL, Vec::<&str>::new()).unwrap();
-        assert!(args.serial.is_none());
-        assert!(args.dns_servers.is_none());
-    }
-
-    #[test]
-    fn test_serial_only() {
-        let raw_args = vec!["myserial"];
-        let args = CommandLineArguments::parse(ACCEPT_ALL, raw_args).unwrap();
-        assert_eq!("myserial", args.serial.unwrap());
-    }
-
-    #[test]
-    fn test_invalid_paramater() {
-        let raw_args = vec!["myserial", "other"];
-        assert!(CommandLineArguments::parse(ACCEPT_ALL, raw_args).is_err());
-    }
-
-    #[test]
-    fn test_dns_servers_only() {
-        let raw_args = vec!["-d", "8.8.8.8"];
-        let args = CommandLineArguments::parse(ACCEPT_ALL, raw_args).unwrap();
-        assert!(args.serial.is_none());
-        assert_eq!("8.8.8.8", args.dns_servers.unwrap());
-    }
-
-    #[test]
-    fn test_serial_and_dns_servers() {
-        let raw_args = vec!["myserial", "-d", "8.8.8.8"];
-        let args = CommandLineArguments::parse(ACCEPT_ALL, raw_args).unwrap();
-        assert_eq!("myserial", args.serial.unwrap());
-        assert_eq!("8.8.8.8", args.dns_servers.unwrap());
-    }
-
-    #[test]
-    fn test_dns_servers_and_serial() {
-        let raw_args = vec!["-d", "8.8.8.8", "myserial"];
-        let args = CommandLineArguments::parse(ACCEPT_ALL, raw_args).unwrap();
-        assert_eq!("myserial", args.serial.unwrap());
-        assert_eq!("8.8.8.8", args.dns_servers.unwrap());
-    }
-
-    #[test]
-    fn test_serial_with_no_dns_servers_parameter() {
-        let raw_args = vec!["myserial", "-d"];
-        assert!(CommandLineArguments::parse(ACCEPT_ALL, raw_args).is_err());
-    }
-
-    #[test]
-    fn test_no_dns_servers_parameter() {
-        let raw_args = vec!["-d"];
-        assert!(CommandLineArguments::parse(ACCEPT_ALL, raw_args).is_err());
-    }
-
-    #[test]
-    fn test_routes_parameter() {
-        let raw_args = vec!["-r", "1.2.3.0/24"];
-        let args = CommandLineArguments::parse(ACCEPT_ALL, raw_args).unwrap();
-        assert_eq!("1.2.3.0/24", args.routes.unwrap());
-    }
-
-    #[test]
-    fn test_no_routes_parameter() {
-        let raw_args = vec!["-r"];
-        assert!(CommandLineArguments::parse(ACCEPT_ALL, raw_args).is_err());
+impl<'a, 'b> From<&'a ArgMatches<'b>> for Args {
+    fn from(m: &'a ArgMatches<'b>) -> Self {
+        Args {
+            serial: m.value_of("serial").map(ToOwned::to_owned),
+            dns_servers: m.value_of("dns-servers").map(ToOwned::to_owned),
+            routes: m.value_of("routes").map(ToOwned::to_owned),
+            port: value_t_or_exit!(m.value_of("port"), u16),
+        }
     }
 }
