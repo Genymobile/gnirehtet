@@ -40,7 +40,7 @@ public class Router {
         if (!packet.isValid()) {
             Log.w(TAG, "Dropping invalid packet");
             if (Log.isVerboseEnabled()) {
-                Log.v(TAG, Binary.toString(packet.getRaw()));
+                Log.v(TAG, Binary.buildPacketString(packet.getRaw()));
             }
             return;
         }

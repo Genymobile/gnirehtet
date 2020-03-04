@@ -15,7 +15,10 @@
  */
 
 use byteorder::{BigEndian, ByteOrder};
+use std::cmp::min;
 use std::fmt::Write;
+
+const MAX_STRING_PACKET_SIZE: usize = 20;
 
 pub fn to_byte_array(value: u32) -> [u8; 4] {
     let mut raw = [0u8; 4];
@@ -23,15 +26,18 @@ pub fn to_byte_array(value: u32) -> [u8; 4] {
     raw
 }
 
-pub fn to_string(data: &[u8]) -> String {
+pub fn build_packet_string(data: &[u8]) -> String {
     let mut s = String::new();
-    for (i, &byte) in data.iter().enumerate() {
-        if i % 16 == 0 {
-            writeln!(&mut s).unwrap();
-        } else if i % 8 == 0 {
-            write!(&mut s, " ").unwrap();
+    let limit = min(MAX_STRING_PACKET_SIZE, data.len());
+    for (i, &byte) in data.iter().take(limit).enumerate() {
+        if i != 0 {
+            let sep = if (i % 4) == 0 { "  " } else { " " };
+            write!(&mut s, "{}", sep).unwrap();
         }
-        write!(&mut s, "{:02X} ", byte).unwrap();
+        write!(&mut s, "{:02X}", byte).unwrap();
+    }
+    if limit < data.len() {
+        write!(&mut s, "  ... +{} bytes", data.len() - limit).unwrap();
     }
     s
 }

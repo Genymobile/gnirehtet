@@ -76,7 +76,8 @@ public final class RelayTunnel implements Tunnel {
     @Override
     public void send(byte[] packet, int len) throws IOException {
         if (GnirehtetService.VERBOSE) {
-            Log.d(TAG, "Sending..." + Binary.toString(packet, len));
+
+            Log.d(TAG, "Sending packet:" + Binary.buildPacketString(packet, len));
         }
         localSocket.getOutputStream().write(packet, 0, len);
     }
@@ -85,7 +86,7 @@ public final class RelayTunnel implements Tunnel {
     public int receive(byte[] packet) throws IOException {
         int r = localSocket.getInputStream().read(packet);
         if (GnirehtetService.VERBOSE) {
-            Log.d(TAG, "Receiving..." + Binary.toString(packet, r));
+            Log.d(TAG, "Receiving packet:" + Binary.buildPacketString(packet, r));
         }
         return r;
     }

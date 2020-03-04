@@ -129,9 +129,6 @@ public class Forwarder {
                 break;
             }
             if (w > 0) {
-                if (GnirehtetService.VERBOSE) {
-                    Log.d(TAG, "WRITING " + w + "..." + Binary.toString(buffer, w));
-                }
                 // blocking write
                 packetOutputStream.write(buffer, 0, w);
             } else {

@@ -682,7 +682,7 @@ impl TcpConnection {
                 target: TAG,
                 self.id,
                 "{}",
-                binary::to_string(ipv4_packet.raw())
+                binary::build_packet_string(ipv4_packet.raw())
             );
         }
 
@@ -720,7 +720,12 @@ impl TcpConnection {
         }
         let ipv4_packet = packetizer.packetize_empty_payload();
         if log_enabled!(target: TAG, Level::Trace) {
-            cx_trace!(target: TAG, id, "{}", binary::to_string(ipv4_packet.raw()));
+            cx_trace!(
+                target: TAG,
+                id,
+                "{}",
+                binary::build_packet_string(ipv4_packet.raw())
+            );
         }
         ipv4_packet
     }

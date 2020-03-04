@@ -21,30 +21,31 @@ import java.nio.ByteBuffer;
 @SuppressWarnings("checkstyle:MagicNumber")
 public final class Binary {
 
+    private static final int MAX_STRING_PACKET_SIZE = 20;
+
     private Binary() {
         // not instantiable
     }
 
-    public static String toString(byte[] data, int offset, int length) {
+    public static String buildPacketString(byte[] data, int offset, int len) {
+        int limit = Math.min(MAX_STRING_PACKET_SIZE, len);
         StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < length; ++i) {
-            byte b = data[offset + i];
-            if (i % 16 == 0) {
-                builder.append('\n');
-            } else if (i % 8 == 0) {
-                builder.append(' ');
+        builder.append('[').append(len).append(" bytes] ");
+        for (int i = 0; i < limit; ++i) {
+            if (i != 0) {
+                String sep = i % 4 == 0 ? "  " : " ";
+                builder.append(sep);
             }
-            builder.append(String.format("%02X ", b & 0xff));
+            builder.append(String.format("%02X", data[offset + i] & 0xff));
+        }
+        if (limit < len) {
+            builder.append("  ... +").append(len - limit).append(" bytes");
         }
         return builder.toString();
     }
 
-    public static String toString(byte[] data) {
-        return toString(data, 0, data.length);
-    }
-
-    public static String toString(ByteBuffer buffer) {
-        return toString(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
+    public static String buildPacketString(ByteBuffer buffer) {
+        return buildPacketString(buffer.array(), buffer.arrayOffset() + buffer.position(), buffer.remaining());
     }
 
     public static ByteBuffer copy(ByteBuffer buffer) {

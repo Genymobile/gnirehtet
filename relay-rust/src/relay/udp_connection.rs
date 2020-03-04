@@ -206,7 +206,7 @@ impl UdpConnection {
                         target: TAG,
                         self.id,
                         "{}",
-                        binary::to_string(ipv4_packet.raw())
+                        binary::build_packet_string(ipv4_packet.raw())
                     );
                 }
             }
