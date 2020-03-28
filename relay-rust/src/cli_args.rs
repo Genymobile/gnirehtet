@@ -88,15 +88,15 @@ impl CommandLineArguments {
     }
 
     pub fn serial(&self) -> Option<&str> {
-        self.serial.as_ref().map(String::as_str)
+        self.serial.as_deref()
     }
 
     pub fn dns_servers(&self) -> Option<&str> {
-        self.dns_servers.as_ref().map(String::as_str)
+        self.dns_servers.as_deref()
     }
 
     pub fn routes(&self) -> Option<&str> {
-        self.routes.as_ref().map(String::as_str)
+        self.routes.as_deref()
     }
 
     pub fn port(&self) -> u16 {
