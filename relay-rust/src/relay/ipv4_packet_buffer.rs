@@ -30,7 +30,7 @@ impl Ipv4PacketBuffer {
         }
     }
 
-    pub fn read_from<R: io::Read>(&mut self, source: &mut R) -> io::Result<(bool)> {
+    pub fn read_from<R: io::Read>(&mut self, source: &mut R) -> io::Result<bool> {
         self.buf.read_from(source)
     }
 

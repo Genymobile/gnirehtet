@@ -107,15 +107,7 @@ impl fmt::Display for ProcessStatusError {
     }
 }
 
-impl error::Error for ProcessStatusError {
-    fn description(&self) -> &str {
-        "Execution terminated with failure"
-    }
-
-    fn cause(&self) -> Option<&dyn error::Error> {
-        None
-    }
-}
+impl error::Error for ProcessStatusError {}
 
 impl ProcessIoError {
     pub fn new(cmd: Cmd, error: io::Error) -> Self {
@@ -130,11 +122,7 @@ impl fmt::Display for ProcessIoError {
 }
 
 impl error::Error for ProcessIoError {
-    fn description(&self) -> &str {
-        "Execution I/O failed"
-    }
-
-    fn cause(&self) -> Option<&dyn error::Error> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         Some(&self.error)
     }
 }
@@ -150,15 +138,7 @@ impl fmt::Display for CommandExecutionError {
 }
 
 impl error::Error for CommandExecutionError {
-    fn description(&self) -> &str {
-        match *self {
-            CommandExecutionError::ProcessIo(ref err) => err.description(),
-            CommandExecutionError::ProcessStatus(ref err) => err.description(),
-            CommandExecutionError::Io(ref err) => err.description(),
-        }
-    }
-
-    fn cause(&self) -> Option<&dyn error::Error> {
+    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
         match *self {
             CommandExecutionError::ProcessIo(ref err) => Some(err),
             CommandExecutionError::ProcessStatus(ref err) => Some(err),

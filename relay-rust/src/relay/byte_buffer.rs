@@ -30,7 +30,7 @@ impl ByteBuffer {
         }
     }
 
-    pub fn read_from<R: io::Read>(&mut self, source: &mut R) -> io::Result<(bool)> {
+    pub fn read_from<R: io::Read>(&mut self, source: &mut R) -> io::Result<bool> {
         let target_slice = &mut self.buf[self.head..];
         let r = source.read(target_slice)?;
         self.head += r;
