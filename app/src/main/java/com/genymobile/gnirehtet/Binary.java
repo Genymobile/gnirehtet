@@ -49,7 +49,7 @@ public final class Binary {
             builder.append(String.format("%02X", data[i] & 0xff));
         }
         if (limit < len) {
-            builder.append(" ... +").append(len - limit). append(" bytes");
+            builder.append(" ... +").append(len - limit).append(" bytes");
         }
         return builder.toString();
     }
