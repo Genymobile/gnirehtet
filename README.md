@@ -1,4 +1,4 @@
-# Gnirehtet (v2.4)
+# Gnirehtet (v2.5)
 
 This project provides **reverse tethering** over `adb` for Android: it
 allows devices to use the internet connection of the computer they are plugged
@@ -72,16 +72,16 @@ Download the [latest release][latest] in the flavor you want.
 
 ### Rust
 
- - **Linux:** [`gnirehtet-rust-linux64-v2.4.zip`][direct-rust-linux64]  
-   (SHA-256: _b5df9c20327ab96edc95a3336fdb65c2b03b01828b98eb18c33efa65bbb06f2f_)
- - **Windows:** [`gnirehtet-rust-win64-v2.4.zip`][direct-rust-win64]  
-   (SHA-256: _ea90ebcd1d497df32257e7b6d162775c0df17cd86ab02455fa6f1bbc34221ef2_)
+ - **Linux:** [`gnirehtet-rust-linux64-v2.5.zip`][direct-rust-linux64]  
+   (SHA-256: _2b1ce04540e8de5df5ddbebb64bb01e27c13d556b3a04a8563dcce3786765705_)
+ - **Windows:** [`gnirehtet-rust-win64-v2.5.zip`][direct-rust-win64]  
+   (SHA-256: _9f6d7700368f45d2fa43923324660eca9f879e837e10fc45d8d975273eae4755_)
  - **MacOS:** [`gnirehtet-rust-macos64-v2.2.1.zip`][direct-rust-macos64]
    _(old release)_  
    (SHA-256: _902103e6497f995e1e9b92421be212559950cca4a8b557e1f0403769aee06fc8_)
 
-[direct-rust-linux64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.4/gnirehtet-rust-linux64-v2.4.zip
-[direct-rust-win64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.4/gnirehtet-rust-win64-v2.4.zip
+[direct-rust-linux64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.5/gnirehtet-rust-linux64-v2.5.zip
+[direct-rust-win64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.5/gnirehtet-rust-win64-v2.5.zip
 [direct-rust-macos64]: https://github.com/Genymobile/gnirehtet/releases/download/v2.2.1/gnirehtet-rust-macos64-v2.2.1.zip
 
 Then extract it.
@@ -98,10 +98,10 @@ The Windows archive contains:
 
 ### Java
 
- - **All platforms:** [`gnirehtet-java-v2.4.zip`][direct-java]  
-   (SHA-256: _10b6cca49a76231fbf8ac3428cf95e9f1c193c4f47abe2b8e2aa16746eb8cc21_)
+ - **All platforms:** [`gnirehtet-java-v2.5.zip`][direct-java]  
+   (SHA-256: _c65fc1a35e6b169ab6aa45e695c043e933f6fd650363aea7c2add0ecb0db27ca_)
 
-[direct-java]: https://github.com/Genymobile/gnirehtet/releases/download/v2.4/gnirehtet-java-v2.4.zip
+[direct-java]: https://github.com/Genymobile/gnirehtet/releases/download/v2.5/gnirehtet-java-v2.5.zip
 
 Then extract it. The archive contains:
  - `gnirehtet.apk`
