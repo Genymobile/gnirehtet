@@ -32,7 +32,7 @@ import java.util.regex.Pattern;
 public final class Main {
     private static final String TAG = "Gnirehtet";
     private static final String NL = System.lineSeparator();
-    private static final String REQUIRED_APK_VERSION_CODE = "7";
+    private static final String REQUIRED_APK_VERSION_CODE = "8";
 
     private Main() {
         // not instantiable
