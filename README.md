@@ -64,13 +64,25 @@ Make sure you [enabled adb debugging][enable-adb] on your device(s).
 [platform-tools-windows]: https://dl.google.com/android/repository/platform-tools-latest-windows.zip
 
 
-## Download
+## Get the app
+
+### Homebrew
+
+If you use [Homebrew](https://brew.sh/), getting up and running is very quick.
+To install the Rust version:
+
+```
+brew install gnirehtet
+```
+
+### Download
 
 Download the [latest release][latest] in the flavor you want.
 
 [latest]: https://github.com/Genymobile/gnirehtet/releases/latest
 
-### Rust
+
+#### Rust
 
  - **Linux:** [`gnirehtet-rust-linux64-v2.5.zip`][direct-rust-linux64]  
    (SHA-256: _2b1ce04540e8de5df5ddbebb64bb01e27c13d556b3a04a8563dcce3786765705_)
@@ -96,7 +108,7 @@ The Windows archive contains:
  - `gnirehtet-run.cmd`
 
 
-### Java
+#### Java
 
  - **All platforms:** [`gnirehtet-java-v2.5.zip`][direct-java]  
    (SHA-256: _c65fc1a35e6b169ab6aa45e695c043e933f6fd650363aea7c2add0ecb0db27ca_)
