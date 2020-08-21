@@ -70,6 +70,14 @@ Download the [latest release][latest] in the flavor you want.
 
 [latest]: https://github.com/Genymobile/gnirehtet/releases/latest
 
+### Homebrew
+
+If you use [Homebrew](https://brew.sh/), getting up and running is very quick. To install the Rust version of the CLI, run the following.
+
+```
+brew install gnirehtet
+```
+
 ### Rust
 
  - **Linux:** [`gnirehtet-rust-linux64-v2.5.zip`][direct-rust-linux64]  
