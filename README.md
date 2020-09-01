@@ -1,8 +1,8 @@
 # Gnirehtet (v2.5)
-My mod from https://github.com/Genymobile/gnirehtet
+My mod for https://github.com/Genymobile/gnirehtet
 
-* fix disconnected usb, remove vpnservice and restore main internet connection
-- remove disconnected notify, notification see only when gnirehtet-connection
-* fix connection multidevice
+* fixed usb disconnection, removed vpn service and restored main internet connection
+- removed notify disconnection, now notifications may be seen only when gnirehtet connected
+* fixed connection multidevice
 + add script to setup some app.apk in application folder in host machine. Move any apk in application folder and rename.
-* fix stop vpn service
+* added script to setup some app.apk in application folder in host machine. Moved and renamed any apk in application folder.
