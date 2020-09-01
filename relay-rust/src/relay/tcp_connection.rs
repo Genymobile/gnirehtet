@@ -682,7 +682,7 @@ impl TcpConnection {
                 target: TAG,
                 self.id,
                 "{}",
-                binary::to_string(ipv4_packet.raw())
+                binary::build_packet_string(ipv4_packet.raw())
             );
         }
 
@@ -720,7 +720,12 @@ impl TcpConnection {
         }
         let ipv4_packet = packetizer.packetize_empty_payload();
         if log_enabled!(target: TAG, Level::Trace) {
-            cx_trace!(target: TAG, id, "{}", binary::to_string(ipv4_packet.raw()));
+            cx_trace!(
+                target: TAG,
+                id,
+                "{}",
+                binary::build_packet_string(ipv4_packet.raw())
+            );
         }
         ipv4_packet
     }
@@ -785,7 +790,16 @@ impl Connection for TcpConnection {
     fn close(&mut self, selector: &mut Selector) {
         cx_info!(target: TAG, self.id, "Close");
         self.closed = true;
-        selector.deregister(&self.stream, self.token).unwrap();
+        if let Err(err) = selector.deregister(&self.stream, self.token) {
+            // do not panic, this can happen in mio
+            // see <https://github.com/Genymobile/gnirehtet/issues/136>
+            cx_warn!(
+                target: TAG,
+                self.id,
+                "Fail to deregister TCP stream: {:?}",
+                err
+            );
+        }
         // socket will be closed by RAII
     }
 

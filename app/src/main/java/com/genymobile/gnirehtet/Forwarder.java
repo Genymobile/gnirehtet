@@ -37,7 +37,7 @@ public class Forwarder {
 
     private static final String TAG = Forwarder.class.getSimpleName();
 
-    private static final int BUFSIZE = 4096;
+    private static final int BUFSIZE = 0x10000;
 
     private static final byte[] DUMMY_ADDRESS = {42, 42, 42, 42};
     private static final int DUMMY_PORT = 4242;
@@ -87,6 +87,7 @@ public class Forwarder {
         wakeUpReadWorkaround();
     }
 
+    @SuppressWarnings("checkstyle:MagicNumber")
     private void forwardDeviceToTunnel(Tunnel tunnel) throws IOException {
         Log.d(TAG, "Device to tunnel forwarding started");
         FileInputStream vpnInput = new FileInputStream(vpnFileDescriptor);
@@ -99,7 +100,6 @@ public class Forwarder {
                 break;
             }
             if (r > 0) {
-                // blocking send
                 int version = buffer[0] >> 4;
                 if (version == 4) {
                     // blocking send
@@ -129,9 +129,6 @@ public class Forwarder {
                 break;
             }
             if (w > 0) {
-                if (GnirehtetService.VERBOSE) {
-                    Log.d(TAG, "WRITING " + w + "..." + Binary.toString(buffer, w));
-                }
                 // blocking write
                 packetOutputStream.write(buffer, 0, w);
             } else {

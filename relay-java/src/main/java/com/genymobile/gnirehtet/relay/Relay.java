@@ -25,14 +25,9 @@ public class Relay {
 
     private static final String TAG = Relay.class.getSimpleName();
 
-    private static final int DEFAULT_PORT = 31416;
     private static final int CLEANING_INTERVAL = 60 * 1000;
 
     private final int port;
-
-    public Relay() {
-        this(DEFAULT_PORT);
-    }
 
     public Relay(int port) {
         this.port = port;
@@ -53,11 +48,9 @@ public class Relay {
             Set<SelectionKey> selectedKeys = selector.selectedKeys();
 
             long now = System.currentTimeMillis();
-            if (now >= nextCleaningDeadline) {
+            if (now >= nextCleaningDeadline || selectedKeys.isEmpty()) {
                 tunnelServer.cleanUp();
                 nextCleaningDeadline = now + CLEANING_INTERVAL;
-            } else if (selectedKeys.isEmpty()) {
-                throw new AssertionError("selector.select() returned without any event, an invalid SelectionKey was probably been registered");
             }
 
             for (SelectionKey selectedKey : selectedKeys) {

@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-          xmlns:tools="http://schemas.android.com/tools"
-          package="com.genymobile.gnirehtet">
+    xmlns:tools="http://schemas.android.com/tools"
+    package="com.genymobile.gnirehtet">
 
-    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
     <application
         android:allowBackup="false"
@@ -13,14 +14,22 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
+        <activity
+            android:name="com.genymobile.gnirehtet.GnirehtetActivity"
+            android:exported="true"
+            android:permission="android.permission.WRITE_SECURE_SETTINGS"
+            android:theme="@style/Theme.Transparent">
+            <intent-filter>
+                <action android:name="com.genymobile.gnirehtet.START" />
+                <action android:name="com.genymobile.gnirehtet.STOP" />
+            </intent-filter>
+        </activity>
         <receiver
             android:name="com.genymobile.gnirehtet.GnirehtetControlReceiver"
             android:exported="true"
             android:permission="android.permission.WRITE_SECURE_SETTINGS">
             <intent-filter>
-                <action android:name="com.genymobile.gnirehtet.START" />
-                <action android:name="com.genymobile.gnirehtet.STOP" />
-				<action android:name="android.hardware.usb.action.USB_STATE" />
+                <action android:name="android.hardware.usb.action.USB_STATE" />
             </intent-filter>
         </receiver>
         <service
@@ -32,10 +41,6 @@
                 <action android:name="android.net.VpnService" />
             </intent-filter>
         </service>
-
-        <activity
-            android:name="com.genymobile.gnirehtet.AuthorizationActivity"
-            android:theme="@style/Theme.Transparent" />
     </application>
 
 </manifest>

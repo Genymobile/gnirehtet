@@ -353,7 +353,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         }
 
         if (Log.isVerboseEnabled()) {
-            logv(TAG, Binary.toString(packet.getRaw()));
+            logv(TAG, Binary.buildPacketString(packet.getRaw()));
         }
 
         int payloadLength = packet.getPayloadLength();
@@ -405,7 +405,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
         IPv4Packet packet = networkToClient.packetizeEmptyPayload();
         logd(TAG, "Forging empty response (flags=" + flags + ") " + numbers());
         if (Log.isVerboseEnabled()) {
-            logd(TAG, Binary.toString(packet.getRaw()));
+            logd(TAG, Binary.buildPacketString(packet.getRaw()));
         }
         if ((flags & TCPHeader.FLAG_ACK) != 0) {
             logd(TAG, "Acking " + numbers());
@@ -478,7 +478,7 @@ public class TCPConnection extends AbstractConnection implements PacketSource {
     public void next() {
         logd(TAG, "Packet (" + packetForClient.getPayloadLength() + " bytes) sent to client " + numbers());
         if (Log.isVerboseEnabled()) {
-            logv(TAG, Binary.toString(packetForClient.getRaw()));
+            logv(TAG, Binary.buildPacketString(packetForClient.getRaw()));
         }
         sequenceNumber += packetForClient.getPayloadLength();
         packetForClient = null;

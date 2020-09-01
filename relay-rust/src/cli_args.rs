@@ -18,11 +18,15 @@ pub const PARAM_NONE: u8 = 0;
 pub const PARAM_SERIAL: u8 = 1;
 pub const PARAM_DNS_SERVERS: u8 = 1 << 1;
 pub const PARAM_ROUTES: u8 = 1 << 2;
+pub const PARAM_PORT: u8 = 1 << 3;
+
+pub const DEFAULT_PORT: u16 = 31416;
 
 pub struct CommandLineArguments {
     serial: Option<String>,
     dns_servers: Option<String>,
     routes: Option<String>,
+    port: u16,
 }
 
 impl CommandLineArguments {
@@ -31,6 +35,7 @@ impl CommandLineArguments {
         let mut serial = None;
         let mut dns_servers = None;
         let mut routes = None;
+        let mut port = 0;
 
         let mut iter = args.into_iter();
         while let Some(arg) = iter.next() {
@@ -53,29 +58,49 @@ impl CommandLineArguments {
                 } else {
                     return Err(String::from("Missing -r parameter"));
                 }
+            } else if (accepted_parameters & PARAM_PORT) != 0 && "-p" == arg {
+                if port != 0 {
+                    return Err(String::from("Port already set"));
+                }
+                if let Some(value) = iter.next() {
+                    port = value.into().parse().unwrap();
+                    if port == 0 {
+                        return Err(String::from("Invalid port: 0"));
+                    }
+                } else {
+                    return Err(String::from("Missing -p parameter"));
+                }
             } else if (accepted_parameters & PARAM_SERIAL) != 0 && serial.is_none() {
                 serial = Some(arg);
             } else {
                 return Err(format!("Unexpected argument: \"{}\"", arg));
             }
         }
+        if port == 0 {
+            port = DEFAULT_PORT;
+        }
         Ok(Self {
             serial,
             dns_servers,
             routes,
+            port,
         })
     }
 
     pub fn serial(&self) -> Option<&str> {
-        self.serial.as_ref().map(String::as_str)
+        self.serial.as_deref()
     }
 
     pub fn dns_servers(&self) -> Option<&str> {
-        self.dns_servers.as_ref().map(String::as_str)
+        self.dns_servers.as_deref()
     }
 
     pub fn routes(&self) -> Option<&str> {
-        self.routes.as_ref().map(String::as_str)
+        self.routes.as_deref()
+    }
+
+    pub fn port(&self) -> u16 {
+        self.port
     }
 }
 

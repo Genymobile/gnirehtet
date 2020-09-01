@@ -57,7 +57,7 @@ impl AdbMonitor {
         }
     }
 
-    pub fn monitor(&mut self) -> io::Result<()> {
+    pub fn monitor(&mut self) {
         loop {
             if let Err(err) = self.track_devices() {
                 error!(target: TAG, "Failed to monitor adb devices: {}", err);

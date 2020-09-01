@@ -287,7 +287,7 @@ impl Client {
         self.channel().update_interests(selector);
     }
 
-    fn read(&mut self) -> io::Result<(bool)> {
+    fn read(&mut self) -> io::Result<bool> {
         self.client_to_network.read_from(&mut self.stream)
     }
 

@@ -1,6 +1,6 @@
 [package]
 name = "gnirehtet"
-version = "2.3.0"
+version = "2.5.0"
 authors = ["Romain Vimont <rom@rom1v.com>"]
 edition = "2018"
 
@@ -13,8 +13,8 @@ mio = "0.6"       # for async I/O
 slab = "0.4"      # helper for mio Tokens
 log = "0.4"       # for logs
 chrono = "0.4"    # for formatting timestamp in logs
-byteorder = "1.2" # for reading/writing binary
-rand = "0.5"      # for random TCP sequence number
+byteorder = "1.3" # for reading/writing binary
+rand = "0.7"      # for random TCP sequence number
 ctrlc = { version = "3.0", features = ["termination"] }     # for handling Ctrl+C
 
 [profile.release]

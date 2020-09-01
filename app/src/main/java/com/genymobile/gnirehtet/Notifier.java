@@ -68,12 +68,10 @@ public class Notifier {
     }
 
     public void setFailure() {
-            Notification notification = createNotification();
-            getNotificationManager().notify(NOTIFICATION_ID, notification);
+        Notification notification = createNotification();
+        getNotificationManager().notify(NOTIFICATION_ID, notification);
     }
-    public void removeFailure() {
-        getNotificationManager().cancel(NOTIFICATION_ID);
-    }
+
     private Notification.Action createStopAction() {
         Intent stopIntent = GnirehtetService.createStopIntent(context);
         PendingIntent stopPendingIntent = PendingIntent.getService(context, 0, stopIntent, PendingIntent.FLAG_ONE_SHOT);

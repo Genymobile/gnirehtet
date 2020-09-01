@@ -137,7 +137,7 @@ public class UDPConnection extends AbstractConnection {
         }
         logd(TAG, "Packet (" + packet.getPayloadLength() + " bytes) sent to client");
         if (Log.isVerboseEnabled()) {
-            logv(TAG, Binary.toString(packet.getRaw()));
+            logv(TAG, Binary.buildPacketString(packet.getRaw()));
         }
     }
 

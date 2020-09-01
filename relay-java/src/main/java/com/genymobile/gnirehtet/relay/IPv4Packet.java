@@ -33,6 +33,10 @@ public class IPv4Packet {
         this.raw = raw;
         raw.rewind();
 
+        if (Log.isVerboseEnabled()) {
+            Log.v(TAG, "IPv4Packet: " + Binary.buildPacketString(raw));
+        }
+
         ipv4Header = new IPv4Header(raw.duplicate());
         if (!ipv4Header.isSupported()) {
             Log.d(TAG, "Unsupported IPv4 headers");

@@ -34,9 +34,27 @@ use std::thread;
 use std::time::Duration;
 
 const TAG: &str = "Main";
-const REQUIRED_APK_VERSION_CODE: &str = "6";
+const REQUIRED_APK_VERSION_CODE: &str = "8";
 
-const COMMANDS: &[&Command] = &[
+#[inline]
+fn get_adb_path() -> String {
+    if let Some(env_adb) = std::env::var_os("ADB") {
+        env_adb.into_string().expect("invalid ADB value")
+    } else {
+        "adb".to_string()
+    }
+}
+
+#[inline]
+fn get_apk_path() -> String {
+    if let Some(env_adb) = std::env::var_os("GNIREHTET_APK") {
+        env_adb.into_string().expect("invalid GNIREHTET_APK value")
+    } else {
+        "gnirehtet.apk".to_string()
+    }
+}
+
+const COMMANDS: &[&dyn Command] = &[
     &InstallCommand,
     &UninstallCommand,
     &ReinstallCommand,
@@ -133,7 +151,10 @@ impl Command for RunCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_SERIAL | cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES
+        cli_args::PARAM_SERIAL
+            | cli_args::PARAM_DNS_SERVERS
+            | cli_args::PARAM_ROUTES
+            | cli_args::PARAM_PORT
     }
 
     fn description(&self) -> &'static str {
@@ -145,7 +166,12 @@ impl Command for RunCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_run(args.serial(), args.dns_servers(), args.routes())
+        cmd_run(
+            args.serial(),
+            args.dns_servers(),
+            args.routes(),
+            args.port(),
+        )
     }
 }
 
@@ -155,7 +181,7 @@ impl Command for AutorunCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES
+        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES | cli_args::PARAM_PORT
     }
 
     fn description(&self) -> &'static str {
@@ -165,7 +191,7 @@ impl Command for AutorunCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_autorun(args.dns_servers(), args.routes())
+        cmd_autorun(args.dns_servers(), args.routes(), args.port())
     }
 }
 
@@ -175,7 +201,10 @@ impl Command for StartCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_SERIAL | cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES
+        cli_args::PARAM_SERIAL
+            | cli_args::PARAM_DNS_SERVERS
+            | cli_args::PARAM_ROUTES
+            | cli_args::PARAM_PORT
     }
 
     fn description(&self) -> &'static str {
@@ -186,13 +215,20 @@ impl Command for StartCommand {
          DNS server(s). Otherwise, use 8.8.8.8 (Google public DNS).\n\
          If -r is given, then only reverse tether the specified routes.\n\
          Otherwise, use 0.0.0.0/0 (redirect the whole traffic).\n\
+         If -p is given, then make the relay server listen on the specified\n\
+         port. Otherwise, use port 31416.\n\
          If the client is already started, then do nothing, and ignore\n\
          the other parameters.\n\
          10.0.2.2 is mapped to the host 'localhost'."
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_start(args.serial(), args.dns_servers(), args.routes())
+        cmd_start(
+            args.serial(),
+            args.dns_servers(),
+            args.routes(),
+            args.port(),
+        )
     }
 }
 
@@ -202,7 +238,7 @@ impl Command for AutostartCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES
+        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES | cli_args::PARAM_PORT
     }
 
     fn description(&self) -> &'static str {
@@ -213,7 +249,7 @@ impl Command for AutostartCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_autostart(args.dns_servers(), args.routes())
+        cmd_autostart(args.dns_servers(), args.routes(), args.port())
     }
 }
 
@@ -243,7 +279,10 @@ impl Command for RestartCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_SERIAL | cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES
+        cli_args::PARAM_SERIAL
+            | cli_args::PARAM_DNS_SERVERS
+            | cli_args::PARAM_ROUTES
+            | cli_args::PARAM_PORT
     }
 
     fn description(&self) -> &'static str {
@@ -252,7 +291,12 @@ impl Command for RestartCommand {
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
         cmd_stop(args.serial())?;
-        cmd_start(args.serial(), args.dns_servers(), args.routes())?;
+        cmd_start(
+            args.serial(),
+            args.dns_servers(),
+            args.routes(),
+            args.port(),
+        )?;
         Ok(())
     }
 }
@@ -263,7 +307,7 @@ impl Command for TunnelCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_SERIAL
+        cli_args::PARAM_SERIAL | cli_args::PARAM_PORT
     }
 
     fn description(&self) -> &'static str {
@@ -274,7 +318,7 @@ impl Command for TunnelCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_tunnel(args.serial())
+        cmd_tunnel(args.serial(), args.port())
     }
 }
 
@@ -284,22 +328,22 @@ impl Command for RelayCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_NONE
+        cli_args::PARAM_NONE | cli_args::PARAM_PORT
     }
 
     fn description(&self) -> &'static str {
         "Start the relay server in the current terminal."
     }
 
-    fn execute(&self, _: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_relay()?;
+    fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
+        cmd_relay(args.port())?;
         Ok(())
     }
 }
 
 fn cmd_install(serial: Option<&str>) -> Result<(), CommandExecutionError> {
     info!(target: TAG, "Installing gnirehtet client...");
-    exec_adb(serial, vec!["install", "-r", "gnirehtet.apk"])
+    exec_adb(serial, vec!["install".into(), "-r".into(), get_apk_path()])
 }
 
 fn cmd_uninstall(serial: Option<&str>) -> Result<(), CommandExecutionError> {
@@ -317,9 +361,10 @@ fn cmd_run(
     serial: Option<&str>,
     dns_servers: Option<&str>,
     routes: Option<&str>,
+    port: u16,
 ) -> Result<(), CommandExecutionError> {
     // start in parallel so that the relay server is ready when the client connects
-    async_start(serial, dns_servers, routes);
+    async_start(serial, dns_servers, routes, port);
 
     let ctrlc_serial = serial.map(String::from);
     ctrlc::set_handler(move || {
@@ -334,12 +379,13 @@ fn cmd_run(
     })
     .expect("Error setting Ctrl-C handler");
 
-    cmd_relay()
+    cmd_relay(port)
 }
 
 fn cmd_autorun(
     dns_servers: Option<&str>,
     routes: Option<&str>,
+    port: u16,
 ) -> Result<(), CommandExecutionError> {
     {
         let autostart_dns_servers = dns_servers.map(String::from);
@@ -347,19 +393,20 @@ fn cmd_autorun(
         thread::spawn(move || {
             let dns_servers = autostart_dns_servers.as_ref().map(String::as_ref);
             let routes = autostart_routes.as_ref().map(String::as_ref);
-            if let Err(err) = cmd_autostart(dns_servers, routes) {
+            if let Err(err) = cmd_autostart(dns_servers, routes, port) {
                 error!(target: TAG, "Cannot auto start clients: {}", err);
             }
         });
     }
 
-    cmd_relay()
+    cmd_relay(port)
 }
 
 fn cmd_start(
     serial: Option<&str>,
     dns_servers: Option<&str>,
     routes: Option<&str>,
+    port: u16,
 ) -> Result<(), CommandExecutionError> {
     if must_install_client(serial)? {
         cmd_install(serial)?;
@@ -369,16 +416,16 @@ fn cmd_start(
     }
 
     info!(target: TAG, "Starting client...");
-    cmd_tunnel(serial)?;
+    cmd_tunnel(serial, port)?;
 
     let mut adb_args = vec![
         "shell",
         "am",
-        "broadcast",
+        "start",
         "-a",
         "com.genymobile.gnirehtet.START",
         "-n",
-        "com.genymobile.gnirehtet/.GnirehtetControlReceiver",
+        "com.genymobile.gnirehtet/.GnirehtetActivity",
     ];
     if let Some(dns_servers) = dns_servers {
         adb_args.append(&mut vec!["--esa", "dnsServers", dns_servers]);
@@ -392,15 +439,16 @@ fn cmd_start(
 fn cmd_autostart(
     dns_servers: Option<&str>,
     routes: Option<&str>,
+    port: u16,
 ) -> Result<(), CommandExecutionError> {
     let start_dns_servers = dns_servers.map(String::from);
     let start_routes = routes.map(String::from);
     let mut adb_monitor = AdbMonitor::new(Box::new(move |serial: &str| {
         let dns_servers = start_dns_servers.as_ref().map(String::as_ref);
         let routes = start_routes.as_ref().map(String::as_ref);
-        async_start(Some(serial), dns_servers, routes)
+        async_start(Some(serial), dns_servers, routes, port)
     }));
-    adb_monitor.monitor()?;
+    adb_monitor.monitor();
     Ok(())
 }
 
@@ -411,29 +459,33 @@ fn cmd_stop(serial: Option<&str>) -> Result<(), CommandExecutionError> {
         vec![
             "shell",
             "am",
-            "broadcast",
+            "start",
             "-a",
             "com.genymobile.gnirehtet.STOP",
             "-n",
-            "com.genymobile.gnirehtet/.GnirehtetControlReceiver",
+            "com.genymobile.gnirehtet/.GnirehtetActivity",
         ],
     )
 }
 
-fn cmd_tunnel(serial: Option<&str>) -> Result<(), CommandExecutionError> {
+fn cmd_tunnel(serial: Option<&str>, port: u16) -> Result<(), CommandExecutionError> {
     exec_adb(
         serial,
-        vec!["reverse", "localabstract:gnirehtet", "tcp:31416"],
+        vec![
+            "reverse",
+            "localabstract:gnirehtet",
+            format!("tcp:{}", port).as_str(),
+        ],
     )
 }
 
-fn cmd_relay() -> Result<(), CommandExecutionError> {
-    info!(target: TAG, "Starting relay server...");
-    relaylib::relay()?;
+fn cmd_relay(port: u16) -> Result<(), CommandExecutionError> {
+    info!(target: TAG, "Starting relay server on port {}...", port);
+    relaylib::relay(port)?;
     Ok(())
 }
 
-fn async_start(serial: Option<&str>, dns_servers: Option<&str>, routes: Option<&str>) {
+fn async_start(serial: Option<&str>, dns_servers: Option<&str>, routes: Option<&str>, port: u16) {
     let start_serial = serial.map(String::from);
     let start_dns_servers = dns_servers.map(String::from);
     let start_routes = routes.map(String::from);
@@ -441,7 +493,7 @@ fn async_start(serial: Option<&str>, dns_servers: Option<&str>, routes: Option<&
         let serial = start_serial.as_ref().map(String::as_ref);
         let dns_servers = start_dns_servers.as_ref().map(String::as_ref);
         let routes = start_routes.as_ref().map(String::as_ref);
-        if let Err(err) = cmd_start(serial, dns_servers, routes) {
+        if let Err(err) = cmd_start(serial, dns_servers, routes, port) {
             error!(target: TAG, "Cannot start client: {}", err);
         }
     });
@@ -464,18 +516,19 @@ fn exec_adb<S: Into<String>>(
     args: Vec<S>,
 ) -> Result<(), CommandExecutionError> {
     let adb_args = create_adb_args(serial, args);
-    debug!(target: TAG, "Execute: adb {:?}", adb_args);
-    match process::Command::new("adb").args(&adb_args[..]).status() {
+    let adb = get_adb_path();
+    debug!(target: TAG, "Execute: {:?} {:?}", adb, adb_args);
+    match process::Command::new(&adb).args(&adb_args[..]).status() {
         Ok(exit_status) => {
             if exit_status.success() {
                 Ok(())
             } else {
-                let cmd = Cmd::new("adb", adb_args);
+                let cmd = Cmd::new(adb, adb_args);
                 Err(ProcessStatusError::new(cmd, exit_status).into())
             }
         }
         Err(err) => {
-            let cmd = Cmd::new("adb", adb_args);
+            let cmd = Cmd::new(adb, adb_args);
             Err(ProcessIoError::new(cmd, err).into())
         }
     }
@@ -487,8 +540,9 @@ fn must_install_client(serial: Option<&str>) -> Result<bool, CommandExecutionErr
         serial,
         vec!["shell", "dumpsys", "package", "com.genymobile.gnirehtet"],
     );
-    debug!(target: TAG, "Execute: adb {:?}", args);
-    match process::Command::new("adb").args(&args[..]).output() {
+    let adb = get_adb_path();
+    debug!(target: TAG, "Execute: {:?} {:?}", adb, args);
+    match process::Command::new(&adb).args(&args[..]).output() {
         Ok(output) => {
             if output.status.success() {
                 // the "regex" crate makes the binary far bigger, so just parse the versionCode
@@ -509,12 +563,12 @@ fn must_install_client(serial: Option<&str>) -> Result<bool, CommandExecutionErr
                     Ok(true)
                 }
             } else {
-                let cmd = Cmd::new("adb", args);
+                let cmd = Cmd::new(adb, args);
                 Err(ProcessStatusError::new(cmd, output.status).into())
             }
         }
         Err(err) => {
-            let cmd = Cmd::new("adb", args);
+            let cmd = Cmd::new(adb, args);
             Err(ProcessIoError::new(cmd, err).into())
         }
     }
@@ -544,6 +598,9 @@ fn append_command_usage(msg: &mut String, command: &dyn Command) {
     }
     if (accepted_parameters & cli_args::PARAM_DNS_SERVERS) != 0 {
         msg.push_str(" [-d DNS[,DNS2,...]]");
+    }
+    if (accepted_parameters & cli_args::PARAM_PORT) != 0 {
+        msg.push_str(" [-p PORT]");
     }
     if (accepted_parameters & cli_args::PARAM_ROUTES) != 0 {
         msg.push_str(" [-r ROUTE[,ROUTE2,...]]");

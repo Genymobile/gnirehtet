@@ -19,6 +19,8 @@ package com.genymobile.gnirehtet;
 @SuppressWarnings("checkstyle:MagicNumber")
 public final class Binary {
 
+    private static final int MAX_STRING_PACKET_SIZE = 20;
+
     private Binary() {
         // not instantiable
     }
@@ -35,15 +37,20 @@ public final class Binary {
         return value & 0xffffffffL;
     }
 
-    public static String toString(byte[] data, int len) {
+    public static String buildPacketString(byte[] data, int len) {
+        int limit = Math.min(MAX_STRING_PACKET_SIZE, len);
         StringBuilder builder = new StringBuilder();
-        for (int i = 0; i < len; ++i) {
-            if (i % 8 == 0) {
-                builder.append('\n');
+        builder.append('[').append(len).append(" bytes] ");
+        for (int i = 0; i < limit; ++i) {
+            if (i != 0) {
+                String sep = i % 4 == 0 ? "  " : " ";
+                builder.append(sep);
             }
-            builder.append(String.format("%02X ", data[i] & 0xff));
+            builder.append(String.format("%02X", data[i] & 0xff));
+        }
+        if (limit < len) {
+            builder.append(" ... +").append(len - limit).append(" bytes");
         }
         return builder.toString();
     }
-
 }

@@ -15,7 +15,7 @@
  */
 
 use log::*;
-use mio::tcp::TcpListener;
+use mio::net::TcpListener;
 use mio::{Event, PollOpt, Ready};
 use std::cell::RefCell;
 use std::io;
