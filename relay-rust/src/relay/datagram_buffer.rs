@@ -63,8 +63,9 @@ impl DatagramBuffer {
             // there is at least the extra space for storing 1 packet
             return true;
         }
-        let remaining = self.tail - self.head + 1;
-        HEADER_LENGTH + datagram_length < remaining
+        // 1 extra byte to distinguish empty vs full
+        let remaining = self.tail - self.head - 1;
+        HEADER_LENGTH + datagram_length <= remaining
     }
 
     pub fn write_to<S: DatagramSender>(&mut self, destination: &mut S) -> io::Result<()> {

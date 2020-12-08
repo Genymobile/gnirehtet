@@ -65,8 +65,8 @@ public class DatagramBuffer {
             // there is at least the extra space for storing 1 packet
             return true;
         }
-        int remaining = tail - head - 1;
-        return HEADER_LENGTH + datagramLength < remaining;
+        int remaining = tail - head - 1; // 1 extra byte to distinguish empty vs full
+        return HEADER_LENGTH + datagramLength <= remaining;
     }
 
     public int capacity() {
