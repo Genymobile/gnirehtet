@@ -62,7 +62,7 @@ public class DatagramBuffer {
 
     public boolean hasEnoughSpaceFor(int datagramLength) {
         if (head >= tail) {
-            // there is at leat the extra space for storing 1 packet
+            // there is at least the extra space for storing 1 packet
             return true;
         }
         int remaining = tail - head - 1;
