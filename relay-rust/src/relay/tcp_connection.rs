@@ -228,6 +228,9 @@ impl TcpConnection {
                     } else {
                         self.process_send(selector)?;
                     }
+                    if !self.closed {
+                        self.update_interests(selector);
+                    }
                 }
                 if !self.closed && ready.is_readable() {
                     self.process_receive(selector)?;
