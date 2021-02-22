@@ -227,13 +227,19 @@ impl TcpConnection {
                         self.process_connect(selector);
                     } else {
                         self.process_send(selector)?;
-                    }
-                    if !self.closed {
-                        self.update_interests(selector);
-                    }
+                    }                    
                 }
                 if !self.closed && ready.is_readable() {
-                    self.process_receive(selector)?;
+                    match self.process_receive(selector) {
+                        Ok(_) => (),
+                        Err(err) => {
+                            if err.kind() == io::ErrorKind::WouldBlock && ready.is_writable() {
+                                cx_debug!(target: TAG, self.id, "already write, update interests here");                                
+                                self.update_interests(selector);                                                                
+                            }
+                            return Err(err);
+                        }
+                    }
                 }
                 if !self.closed {
                     self.update_interests(selector);
