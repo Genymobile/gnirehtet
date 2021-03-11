@@ -20,12 +20,16 @@ import com.genymobile.gnirehtet.relay.CommandExecutionException;
 import com.genymobile.gnirehtet.relay.Log;
 import com.genymobile.gnirehtet.relay.Relay;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -353,25 +357,34 @@ public final class Main {
     }
 
     private static boolean mustInstallClient(String serial) throws InterruptedException, IOException, CommandExecutionException {
-        Log.i(TAG, "Checking gnirehtet client...");
+        Log.i(TAG, "Checking gnirehtet client " + serial);
         List<String> command = createAdbCommand(serial, "shell", "dumpsys", "package", "com.genymobile.gnirehtet");
         Log.d(TAG, "Execute: " + command);
-        Process process = new ProcessBuilder(command).start();
-        int exitCode = process.waitFor();
-        if (exitCode != 0) {
-            throw new CommandExecutionException(command, exitCode);
-        }
-        Scanner scanner = new Scanner(process.getInputStream());
-        // read the versionCode of the installed package
-        Pattern pattern = Pattern.compile("^    versionCode=(\\p{Digit}+).*");
-        while (scanner.hasNextLine()) {
-            Matcher matcher = pattern.matcher(scanner.nextLine());
-            if (matcher.matches()) {
-                String installedVersionCode = matcher.group(1);
-                return !REQUIRED_APK_VERSION_CODE.equals(installedVersionCode);
+        Path tmpFile = null;
+        try {
+            tmpFile = Files.createTempFile("gnirehtet_" + serial, ".log");
+            Process process = new ProcessBuilder(command).redirectOutput(tmpFile.toFile()).start();
+            boolean exitCode = process.waitFor(10, TimeUnit.SECONDS);
+            if (!exitCode) {
+                throw new CommandExecutionException(command, -1);
+            }
+            try (Scanner scanner = new Scanner(new FileInputStream(tmpFile.toFile()))) {
+                // read the versionCode of the installed package
+                Pattern pattern = Pattern.compile("^    versionCode=(\\p{Digit}+).*");
+                while (scanner.hasNextLine()) {
+                    Matcher matcher = pattern.matcher(scanner.nextLine());
+                    if (matcher.matches()) {
+                        String installedVersionCode = matcher.group(1);
+                        return !REQUIRED_APK_VERSION_CODE.equals(installedVersionCode);
+                    }
+                }
+            }
+            return true;
+        } finally {
+            if (tmpFile != null) {
+                tmpFile.toFile().delete();
             }
         }
-        return true;
     }
 
 
