@@ -357,7 +357,7 @@ public final class Main {
     }
 
     private static boolean mustInstallClient(String serial) throws InterruptedException, IOException, CommandExecutionException {
-        Log.i(TAG, "Checking gnirehtet client " + serial);
+        Log.i(TAG, "Checking gnirehtet client...");
         List<String> command = createAdbCommand(serial, "shell", "dumpsys", "package", "com.genymobile.gnirehtet");
         Log.d(TAG, "Execute: " + command);
         Path tmpFile = null;
