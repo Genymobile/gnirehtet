@@ -357,18 +357,22 @@ public final class Main {
         List<String> command = createAdbCommand(serial, "shell", "dumpsys", "package", "com.genymobile.gnirehtet");
         Log.d(TAG, "Execute: " + command);
         Process process = new ProcessBuilder(command).start();
-        int exitCode = process.waitFor();
-        if (exitCode != 0) {
-            throw new CommandExecutionException(command, exitCode);
-        }
-        Scanner scanner = new Scanner(process.getInputStream());
-        // read the versionCode of the installed package
-        Pattern pattern = Pattern.compile("^    versionCode=(\\p{Digit}+).*");
-        while (scanner.hasNextLine()) {
-            Matcher matcher = pattern.matcher(scanner.nextLine());
-            if (matcher.matches()) {
-                String installedVersionCode = matcher.group(1);
-                return !REQUIRED_APK_VERSION_CODE.equals(installedVersionCode);
+        try {
+            Scanner scanner = new Scanner(process.getInputStream());
+            // read the versionCode of the installed package
+            Pattern pattern = Pattern.compile("^    versionCode=(\\p{Digit}+).*");
+            while (scanner.hasNextLine()) {
+                Matcher matcher = pattern.matcher(scanner.nextLine());
+                if (matcher.matches()) {
+                    String installedVersionCode = matcher.group(1);
+                    return !REQUIRED_APK_VERSION_CODE.equals(installedVersionCode);
+                }
+            }
+        } finally {
+            int exitCode = process.waitFor();
+            if (exitCode != 0) {
+                // Overwrite any pending exception, the command just failed
+                throw new CommandExecutionException(command, exitCode);
             }
         }
         return true;
