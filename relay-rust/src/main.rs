@@ -29,6 +29,7 @@ use crate::adb_monitor::AdbMonitor;
 use crate::cli_args::CommandLineArguments;
 use crate::execution_error::{Cmd, CommandExecutionError, ProcessIoError, ProcessStatusError};
 use std::env;
+use std::ffi::OsString;
 use std::process::{self, exit};
 use std::thread;
 use std::time::Duration;
@@ -46,11 +47,14 @@ fn get_adb_path() -> String {
 }
 
 #[inline]
-fn get_apk_path() -> String {
+fn get_apk_path() -> Result<OsString, CommandExecutionError> {
     if let Some(env_adb) = std::env::var_os("GNIREHTET_APK") {
-        env_adb.into_string().expect("invalid GNIREHTET_APK value")
+        Ok(env_adb)
     } else {
-        "gnirehtet.apk".to_string()
+        let bin_path = env::current_exe().map_err(CommandExecutionError::Io)?;
+        let real_path = bin_path.read_link().unwrap_or(bin_path);
+        let apk_path = real_path.parent().unwrap().join("gnirehtet.apk");
+        Ok(apk_path.into_os_string())
     }
 }
 
@@ -343,7 +347,7 @@ impl Command for RelayCommand {
 
 fn cmd_install(serial: Option<&str>) -> Result<(), CommandExecutionError> {
     info!(target: TAG, "Installing gnirehtet client...");
-    exec_adb(serial, vec!["install".into(), "-r".into(), get_apk_path()])
+    exec_adb(serial, vec!["install".into(), "-r".into(), get_apk_path()?])
 }
 
 fn cmd_uninstall(serial: Option<&str>) -> Result<(), CommandExecutionError> {
@@ -499,11 +503,11 @@ fn async_start(serial: Option<&str>, dns_servers: Option<&str>, routes: Option<&
     });
 }
 
-fn create_adb_args<S: Into<String>>(serial: Option<&str>, args: Vec<S>) -> Vec<String> {
-    let mut command = Vec::<String>::new();
+fn create_adb_args<S: Into<OsString>>(serial: Option<&str>, args: Vec<S>) -> Vec<OsString> {
+    let mut command = Vec::new();
     if let Some(serial) = serial {
         command.push("-s".into());
-        command.push(serial.to_string());
+        command.push(serial.into());
     }
     for arg in args {
         command.push(arg.into());
@@ -511,12 +515,12 @@ fn create_adb_args<S: Into<String>>(serial: Option<&str>, args: Vec<S>) -> Vec<S
     command
 }
 
-fn exec_adb<S: Into<String>>(
+fn exec_adb<S: Into<OsString>>(
     serial: Option<&str>,
     args: Vec<S>,
 ) -> Result<(), CommandExecutionError> {
     let adb_args = create_adb_args(serial, args);
-    let adb = get_adb_path();
+    let adb = get_adb_path().into();
     debug!(target: TAG, "Execute: {:?} {:?}", adb, adb_args);
     match process::Command::new(&adb).args(&adb_args[..]).status() {
         Ok(exit_status) => {
@@ -540,7 +544,7 @@ fn must_install_client(serial: Option<&str>) -> Result<bool, CommandExecutionErr
         serial,
         vec!["shell", "dumpsys", "package", "com.genymobile.gnirehtet"],
     );
-    let adb = get_adb_path();
+    let adb = get_adb_path().into();
     debug!(target: TAG, "Execute: {:?} {:?}", adb, args);
     match process::Command::new(&adb).args(&args[..]).output() {
         Ok(output) => {
