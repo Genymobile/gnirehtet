@@ -19,15 +19,21 @@ public class Notifier {
     private static final String CHANNEL_ID = "Gnirehtet";
 
     private final Service context;
-
+    private boolean failure;
     public Notifier(Service context) {
         this.context = context;
     }
 
-    private Notification createNotification() {
+    private Notification createNotification(boolean failure) {
         Notification.Builder notificationBuilder = createNotificationBuilder();
-        notificationBuilder.setContentText(context.getString(R.string.relay_connected));
-        notificationBuilder.setSmallIcon(R.drawable.ic_usb_24dp);
+        notificationBuilder.setContentTitle(context.getString(R.string.app_name));
+        if (failure) {
+            notificationBuilder.setContentText(context.getString(R.string.relay_disconnected));
+            notificationBuilder.setSmallIcon(R.drawable.ic_report_problem_24dp);
+        } else {
+            notificationBuilder.setContentText(context.getString(R.string.relay_connected));
+            notificationBuilder.setSmallIcon(R.drawable.ic_usb_24dp);
+        }
         return notificationBuilder.build();
     }
 
@@ -52,10 +58,11 @@ public class Notifier {
     }
 
     public void start() {
+        failure = false; // reset failure flag
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             createNotificationChannel();
         }
-        context.startForeground(NOTIFICATION_ID, createNotification());
+        context.startForeground(NOTIFICATION_ID, createNotification(failure));
     }
 
     public void stop() {
@@ -65,9 +72,12 @@ public class Notifier {
         }
     }
 
-    public void setFailure() {
-            Notification notification = createNotification();
+    public void setFailure(boolean failure) {
+        if (this.failure != failure) {
+            this.failure = failure;
+            Notification notification = createNotification(failure);
             getNotificationManager().notify(NOTIFICATION_ID, notification);
+        }
     }
 
     private NotificationManager getNotificationManager() {

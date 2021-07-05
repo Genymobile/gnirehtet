@@ -220,10 +220,11 @@ public class GnirehtetService extends VpnService {
             switch (message.what) {
                 case RelayTunnelListener.MSG_RELAY_TUNNEL_CONNECTED:
                     Log.d(TAG, "Relay tunnel connected");
-                    vpnService.notifier.setFailure();
+                    vpnService.notifier.setFailure(false);
                     break;
                 case RelayTunnelListener.MSG_RELAY_TUNNEL_DISCONNECTED:
                     Log.d(TAG, "Relay tunnel disconnected");
+                    vpnService.notifier.setFailure(true);
                     vpnService.stop(vpnService);
                     break;
                 default:
