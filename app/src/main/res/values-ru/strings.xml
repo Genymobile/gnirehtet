@@ -1,5 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Gnirehtet</string>
-    <string name="relay_connected">Включена передача по Gnirehtet</string>
-    <string name="stop_vpn">Остановить Gnirehtet</string>
+    <string name="relay_connected">Передача по USB активирована</string>
+    <string name="stop_vpn">Остановить передачу по USB</string>
 </resources>

@@ -200,21 +200,8 @@ public class GnirehtetService extends VpnService {
         } catch (IOException e) {
             Log.w(TAG, "Cannot close VPN file descriptor", e);
         }
-        stopSelf();
     }
 
-    @Override
-    public void onRevoke() {
-        try {
-            forwarder.stop();
-            forwarder = null;
-            vpnInterface.close();
-            vpnInterface = null;
-        } catch (IOException e) {
-            Log.w(TAG, "Cannot close VPN file descriptor", e);
-        }
-        stopSelf();
-    }
 
     private static final class RelayTunnelConnectionStateHandler extends Handler {
 
@@ -237,7 +224,7 @@ public class GnirehtetService extends VpnService {
                     break;
                 case RelayTunnelListener.MSG_RELAY_TUNNEL_DISCONNECTED:
                     Log.d(TAG, "Relay tunnel disconnected");
-                    vpnService.close();
+                    vpnService.stop(vpnService);
                     break;
                 default:
             }

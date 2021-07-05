@@ -26,10 +26,8 @@ public class Notifier {
 
     private Notification createNotification() {
         Notification.Builder notificationBuilder = createNotificationBuilder();
-        notificationBuilder.setContentTitle(context.getString(R.string.app_name));
         notificationBuilder.setContentText(context.getString(R.string.relay_connected));
         notificationBuilder.setSmallIcon(R.drawable.ic_usb_24dp);
-        notificationBuilder.addAction(createStopAction());
         return notificationBuilder.build();
     }
 
@@ -68,18 +66,8 @@ public class Notifier {
     }
 
     public void setFailure() {
-        Notification notification = createNotification();
-        getNotificationManager().notify(NOTIFICATION_ID, notification);
-    }
-
-    private Notification.Action createStopAction() {
-        Intent stopIntent = GnirehtetService.createStopIntent(context);
-        PendingIntent stopPendingIntent = PendingIntent.getService(context, 0, stopIntent, PendingIntent.FLAG_ONE_SHOT);
-        // the non-deprecated constructor is not available in API 21
-        @SuppressWarnings("deprecation")
-        Notification.Action.Builder actionBuilder = new Notification.Action.Builder(R.drawable.ic_close_24dp, context.getString(R.string.stop_vpn),
-                stopPendingIntent);
-        return actionBuilder.build();
+            Notification notification = createNotification();
+            getNotificationManager().notify(NOTIFICATION_ID, notification);
     }
 
     private NotificationManager getNotificationManager() {

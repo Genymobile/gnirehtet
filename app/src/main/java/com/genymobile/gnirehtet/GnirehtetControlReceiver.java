@@ -24,4 +24,5 @@ public class GnirehtetControlReceiver extends BroadcastReceiver {
     private void stopGnirehtet(Context context) {
         GnirehtetService.stop(context);
     }
+
 }

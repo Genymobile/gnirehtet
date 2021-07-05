@@ -81,7 +81,7 @@ public class GnirehtetActivity extends Activity {
     }
 
     private void requestAuthorization(Intent vpnIntent, VpnConfiguration config) {
-        this.requestedConfig = config;
+        requestedConfig = config;
         startActivityForResult(vpnIntent, VPN_REQUEST_CODE);
     }
 
