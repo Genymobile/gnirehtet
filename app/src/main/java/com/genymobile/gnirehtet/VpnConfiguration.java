@@ -26,15 +26,18 @@ public class VpnConfiguration implements Parcelable {
 
     private final InetAddress[] dnsServers;
     private final CIDR[] routes;
+    private final boolean stopOnDisconnect;
 
     public VpnConfiguration() {
         this.dnsServers = new InetAddress[0];
         this.routes = new CIDR[0];
+        this.stopOnDisconnect = false;
     }
 
-    public VpnConfiguration(InetAddress[] dnsServers, CIDR[] routes) {
+    public VpnConfiguration(InetAddress[] dnsServers, CIDR[] routes, boolean stopOnDisconnect) {
         this.dnsServers = dnsServers;
         this.routes = routes;
+        this.stopOnDisconnect = stopOnDisconnect;
     }
 
     private VpnConfiguration(Parcel source) {
@@ -48,6 +51,7 @@ public class VpnConfiguration implements Parcelable {
             throw new AssertionError("Invalid address", e);
         }
         routes = source.createTypedArray(CIDR.CREATOR);
+        stopOnDisconnect = source.readByte() == 1;
     }
 
     public InetAddress[] getDnsServers() {
@@ -58,6 +62,10 @@ public class VpnConfiguration implements Parcelable {
         return routes;
     }
 
+    public boolean getIsStopOnDisconnect() {
+        return stopOnDisconnect;
+    }
+
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeInt(dnsServers.length);
@@ -65,6 +73,7 @@ public class VpnConfiguration implements Parcelable {
             dest.writeByteArray(addr.getAddress());
         }
         dest.writeTypedArray(routes, 0);
+        dest.writeByte(stopOnDisconnect ? (byte) 1 : (byte) 0);
     }
 
     @Override

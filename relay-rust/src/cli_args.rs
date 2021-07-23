@@ -19,6 +19,7 @@ pub const PARAM_SERIAL: u8 = 1;
 pub const PARAM_DNS_SERVERS: u8 = 1 << 1;
 pub const PARAM_ROUTES: u8 = 1 << 2;
 pub const PARAM_PORT: u8 = 1 << 3;
+pub const PARAM_STOP_ON_DISCONNECT: u8 = 1 << 4;
 
 pub const DEFAULT_PORT: u16 = 31416;
 
@@ -27,6 +28,7 @@ pub struct CommandLineArguments {
     dns_servers: Option<String>,
     routes: Option<String>,
     port: u16,
+    stop_on_disconnect: bool,
 }
 
 impl CommandLineArguments {
@@ -36,6 +38,7 @@ impl CommandLineArguments {
         let mut dns_servers = None;
         let mut routes = None;
         let mut port = 0;
+        let mut stop_on_disconnect = false;
 
         let mut iter = args.into_iter();
         while let Some(arg) = iter.next() {
@@ -70,6 +73,11 @@ impl CommandLineArguments {
                 } else {
                     return Err(String::from("Missing -p parameter"));
                 }
+            } else if (accepted_parameters & PARAM_STOP_ON_DISCONNECT) != 0 && "-s" == arg {
+                if stop_on_disconnect {
+                    return Err(String::from("Stop on disconnect already set"));
+                }
+                stop_on_disconnect = true;
             } else if (accepted_parameters & PARAM_SERIAL) != 0 && serial.is_none() {
                 serial = Some(arg);
             } else {
@@ -84,6 +92,7 @@ impl CommandLineArguments {
             dns_servers,
             routes,
             port,
+            stop_on_disconnect,
         })
     }
 
@@ -102,13 +111,18 @@ impl CommandLineArguments {
     pub fn port(&self) -> u16 {
         self.port
     }
+
+    pub fn stop_on_disconnect(&self) -> bool {
+        self.stop_on_disconnect
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    const ACCEPT_ALL: u8 = PARAM_SERIAL | PARAM_DNS_SERVERS | PARAM_ROUTES;
+    const ACCEPT_ALL: u8 =
+        PARAM_SERIAL | PARAM_DNS_SERVERS | PARAM_ROUTES | PARAM_STOP_ON_DISCONNECT;
 
     #[test]
     fn test_no_args() {
@@ -177,5 +191,19 @@ mod tests {
     fn test_no_routes_parameter() {
         let raw_args = vec!["-r"];
         assert!(CommandLineArguments::parse(ACCEPT_ALL, raw_args).is_err());
+    }
+
+    #[test]
+    fn test_stop_on_disconnect_parameter() {
+        let raw_args = vec!["-s"];
+        let args = CommandLineArguments::parse(ACCEPT_ALL, raw_args).unwrap();
+        assert!(args.stop_on_disconnect())
+    }
+
+    #[test]
+    fn test_no_stop_on_disconnect_parameter() {
+        let raw_args = Vec::<&str>::new();
+        let args = CommandLineArguments::parse(ACCEPT_ALL, raw_args).unwrap();
+        assert!(!args.stop_on_disconnect())
     }
 }

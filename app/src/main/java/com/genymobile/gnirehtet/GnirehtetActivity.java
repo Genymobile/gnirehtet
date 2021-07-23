@@ -23,6 +23,7 @@ public class GnirehtetActivity extends Activity {
 
     public static final String EXTRA_DNS_SERVERS = "dnsServers";
     public static final String EXTRA_ROUTES = "routes";
+    public static final String EXTRA_STOP_ON_DISCONNECT = "stopOnDisconnect";
 
     private static final int VPN_REQUEST_CODE = 0;
 
@@ -59,7 +60,8 @@ public class GnirehtetActivity extends Activity {
         if (routes == null) {
             routes = new String[0];
         }
-        return new VpnConfiguration(Net.toInetAddresses(dnsServers), Net.toCIDRs(routes));
+        boolean stopOnDisconnect = intent.getBooleanExtra(EXTRA_STOP_ON_DISCONNECT, false);
+        return new VpnConfiguration(Net.toInetAddresses(dnsServers), Net.toCIDRs(routes), stopOnDisconnect);
     }
 
     private boolean startGnirehtet(VpnConfiguration config) {
