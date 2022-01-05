@@ -55,6 +55,15 @@ impl Router {
         client_channel: &mut ClientChannel,
         ipv4_packet: &Ipv4Packet,
     ) {
+
+        let (ipv4_header_data, _transport_header_data) = ipv4_packet.headers_data();
+
+        //TODO: add proxy check
+        if ipv4_header_data.protocol() == Protocol::Udp {
+            debug!(target: TAG, "proxy mode : Dropping udp packet");
+            return;
+        }
+
         if ipv4_packet.is_valid() {
             match self.connection(selector, ipv4_packet) {
                 Ok(index) => {

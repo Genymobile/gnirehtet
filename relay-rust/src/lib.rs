@@ -14,12 +14,13 @@
  * limitations under the License.
  */
 
+#![allow(dead_code)]
 mod relay;
 pub use crate::relay::byte_buffer;
 
 use crate::relay::Relay;
 use std::io;
 
-pub fn relay(port: u16) -> io::Result<()> {
-    Relay::new(port).run()
+pub fn relay(port: u16, conf: String) -> io::Result<()> {
+    Relay::new(port, conf).run()
 }

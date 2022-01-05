@@ -60,6 +60,7 @@ impl UdpConnection {
     ) -> io::Result<Rc<RefCell<Self>>> {
         cx_info!(target: TAG, id, "Open");
         let socket = Self::create_socket(&id)?;
+        //let socket = Self::create_proxy_socket(&id)?;
         let packetizer = Packetizer::new(&ipv4_header, &transport_header);
         let interests = Ready::readable();
         let rc = Rc::new(RefCell::new(Self {
@@ -94,7 +95,7 @@ impl UdpConnection {
         udp_socket.connect(id.rewritten_destination().into())?;
         Ok(udp_socket)
     }
-
+    
     fn remove_from_router(&self) {
         // route is embedded in router which is embedded in client: the client necessarily exists
         let client_rc = self.client.upgrade().expect("Expected client not found");

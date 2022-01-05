@@ -26,20 +26,29 @@ use std::time::Duration;
 use super::selector::Selector;
 use super::tunnel_server::TunnelServer;
 use super::udp_connection::IDLE_TIMEOUT_SECONDS;
+use super::CONF_PATH;
+
+use super::proxy_config::get_proxy_for_addr;
 
 const TAG: &str = "Relay";
 const CLEANING_INTERVAL_SECONDS: i64 = 60;
 
 pub struct Relay {
     port: u16,
+    conf: String
 }
 
 impl Relay {
-    pub fn new(port: u16) -> Self {
-        Self { port }
+    pub fn new(port: u16, conf: String) -> Self {
+        Self { port, conf }
     }
 
     pub fn run(&self) -> io::Result<()> {
+
+        // make lazy_static not so lazy.
+        let _ = CONF_PATH.set(self.conf.clone());
+        let _ = get_proxy_for_addr("127.0.0.1:1080".parse().unwrap());
+
         let mut selector = Selector::create().unwrap();
         let tunnel_server = TunnelServer::create(self.port, &mut selector)?;
         info!(target: TAG, "Relay server started");

@@ -155,6 +155,7 @@ impl Command for RunCommand {
             | cli_args::PARAM_DNS_SERVERS
             | cli_args::PARAM_ROUTES
             | cli_args::PARAM_PORT
+            | cli_args::PARAM_CONF
     }
 
     fn description(&self) -> &'static str {
@@ -171,6 +172,7 @@ impl Command for RunCommand {
             args.dns_servers(),
             args.routes(),
             args.port(),
+            args.conf(),
         )
     }
 }
@@ -181,7 +183,7 @@ impl Command for AutorunCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES | cli_args::PARAM_PORT
+        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES | cli_args::PARAM_PORT | cli_args::PARAM_CONF
     }
 
     fn description(&self) -> &'static str {
@@ -191,7 +193,7 @@ impl Command for AutorunCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_autorun(args.dns_servers(), args.routes(), args.port())
+        cmd_autorun(args.dns_servers(), args.routes(), args.port(), args.conf())
     }
 }
 
@@ -205,6 +207,7 @@ impl Command for StartCommand {
             | cli_args::PARAM_DNS_SERVERS
             | cli_args::PARAM_ROUTES
             | cli_args::PARAM_PORT
+            | cli_args::PARAM_CONF
     }
 
     fn description(&self) -> &'static str {
@@ -228,6 +231,7 @@ impl Command for StartCommand {
             args.dns_servers(),
             args.routes(),
             args.port(),
+            args.conf()
         )
     }
 }
@@ -238,7 +242,7 @@ impl Command for AutostartCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES | cli_args::PARAM_PORT
+        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES | cli_args::PARAM_PORT | cli_args::PARAM_CONF
     }
 
     fn description(&self) -> &'static str {
@@ -249,7 +253,7 @@ impl Command for AutostartCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_autostart(args.dns_servers(), args.routes(), args.port())
+        cmd_autostart(args.dns_servers(), args.routes(), args.port(), args.conf())
     }
 }
 
@@ -283,6 +287,7 @@ impl Command for RestartCommand {
             | cli_args::PARAM_DNS_SERVERS
             | cli_args::PARAM_ROUTES
             | cli_args::PARAM_PORT
+            | cli_args::PARAM_CONF
     }
 
     fn description(&self) -> &'static str {
@@ -296,6 +301,7 @@ impl Command for RestartCommand {
             args.dns_servers(),
             args.routes(),
             args.port(),
+            args.conf()
         )?;
         Ok(())
     }
@@ -328,7 +334,7 @@ impl Command for RelayCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_NONE | cli_args::PARAM_PORT
+        cli_args::PARAM_NONE | cli_args::PARAM_PORT | cli_args::PARAM_CONF
     }
 
     fn description(&self) -> &'static str {
@@ -336,7 +342,7 @@ impl Command for RelayCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_relay(args.port())?;
+        cmd_relay(args.port(), args.conf().to_string())?;
         Ok(())
     }
 }
@@ -362,9 +368,10 @@ fn cmd_run(
     dns_servers: Option<&str>,
     routes: Option<&str>,
     port: u16,
+    conf: &str,
 ) -> Result<(), CommandExecutionError> {
     // start in parallel so that the relay server is ready when the client connects
-    async_start(serial, dns_servers, routes, port);
+    async_start(serial, dns_servers, routes, port, conf);
 
     let ctrlc_serial = serial.map(String::from);
     ctrlc::set_handler(move || {
@@ -379,27 +386,30 @@ fn cmd_run(
     })
     .expect("Error setting Ctrl-C handler");
 
-    cmd_relay(port)
+    cmd_relay(port, conf.to_string())
 }
 
 fn cmd_autorun(
     dns_servers: Option<&str>,
     routes: Option<&str>,
     port: u16,
+    conf: &str
 ) -> Result<(), CommandExecutionError> {
     {
         let autostart_dns_servers = dns_servers.map(String::from);
         let autostart_routes = routes.map(String::from);
+        let autostart_conf = String::from(conf);
         thread::spawn(move || {
             let dns_servers = autostart_dns_servers.as_ref().map(String::as_ref);
             let routes = autostart_routes.as_ref().map(String::as_ref);
-            if let Err(err) = cmd_autostart(dns_servers, routes, port) {
+            let conf = &autostart_conf;
+            if let Err(err) = cmd_autostart(dns_servers, routes, port, conf) {
                 error!(target: TAG, "Cannot auto start clients: {}", err);
             }
         });
     }
 
-    cmd_relay(port)
+    cmd_relay(port, conf.to_string())
 }
 
 fn cmd_start(
@@ -407,6 +417,7 @@ fn cmd_start(
     dns_servers: Option<&str>,
     routes: Option<&str>,
     port: u16,
+    conf: &str
 ) -> Result<(), CommandExecutionError> {
     if must_install_client(serial)? {
         cmd_install(serial)?;
@@ -433,6 +444,8 @@ fn cmd_start(
     if let Some(routes) = routes {
         adb_args.append(&mut vec!["--esa", "routes", routes]);
     }
+    adb_args.append(&mut vec!["--esa", "conf", conf]);
+
     exec_adb(serial, adb_args)
 }
 
@@ -440,13 +453,16 @@ fn cmd_autostart(
     dns_servers: Option<&str>,
     routes: Option<&str>,
     port: u16,
+    conf: &str
 ) -> Result<(), CommandExecutionError> {
     let start_dns_servers = dns_servers.map(String::from);
     let start_routes = routes.map(String::from);
+    let start_conf = String::from(conf);
     let mut adb_monitor = AdbMonitor::new(Box::new(move |serial: &str| {
         let dns_servers = start_dns_servers.as_ref().map(String::as_ref);
         let routes = start_routes.as_ref().map(String::as_ref);
-        async_start(Some(serial), dns_servers, routes, port)
+        let conf = &start_conf;
+        async_start(Some(serial), dns_servers, routes, port, conf)
     }));
     adb_monitor.monitor();
     Ok(())
@@ -479,21 +495,23 @@ fn cmd_tunnel(serial: Option<&str>, port: u16) -> Result<(), CommandExecutionErr
     )
 }
 
-fn cmd_relay(port: u16) -> Result<(), CommandExecutionError> {
-    info!(target: TAG, "Starting relay server on port {}...", port);
-    relaylib::relay(port)?;
+fn cmd_relay(port: u16, conf: String) -> Result<(), CommandExecutionError> {
+    info!(target: TAG, "Starting relay server on port {} with conf file {}...", port, conf);
+    relaylib::relay(port, conf)?;
     Ok(())
 }
 
-fn async_start(serial: Option<&str>, dns_servers: Option<&str>, routes: Option<&str>, port: u16) {
+fn async_start(serial: Option<&str>, dns_servers: Option<&str>, routes: Option<&str>, port: u16, conf: &str) {
     let start_serial = serial.map(String::from);
     let start_dns_servers = dns_servers.map(String::from);
     let start_routes = routes.map(String::from);
+    let start_conf = String::from(conf);
     thread::spawn(move || {
         let serial = start_serial.as_ref().map(String::as_ref);
         let dns_servers = start_dns_servers.as_ref().map(String::as_ref);
         let routes = start_routes.as_ref().map(String::as_ref);
-        if let Err(err) = cmd_start(serial, dns_servers, routes, port) {
+        let conf = &start_conf;
+        if let Err(err) = cmd_start(serial, dns_servers, routes, port, conf) {
             error!(target: TAG, "Cannot start client: {}", err);
         }
     });
@@ -605,6 +623,9 @@ fn append_command_usage(msg: &mut String, command: &dyn Command) {
     if (accepted_parameters & cli_args::PARAM_ROUTES) != 0 {
         msg.push_str(" [-r ROUTE[,ROUTE2,...]]");
     }
+    if (accepted_parameters & cli_args::PARAM_CONF) != 0 {
+        msg.push_str(" -c path_to_proxy.toml");
+    }
     msg.push('\n');
     for desc_line in command.description().split('\n') {
         msg.push_str("      ");
@@ -623,6 +644,7 @@ fn main() {
     logger::init().unwrap();
     let mut args = env::args();
     // args.nth(1) will consume the two first arguments (the binary name and the command name)
+
     if let Some(command_name) = args.nth(1) {
         let command = COMMANDS
             .iter()
