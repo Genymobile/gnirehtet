@@ -1,0 +1,19 @@
+tcp_read_time_out = 15000
+tcp_connect_time_out = 15000
+
+lan_host = [
+    "10.0.0.0/8",
+    "172.16.0.0/16",
+    "192.168.1.0/24"
+]
+
+[special_proxy_config]
+proxy = { proxy_addr = "119.9.77.88:1080", proxy_type = "socks5", username = "gnirehtet", password = "gnirehtet" }
+hosts = [
+    "8.8.8.8",
+    "119.29.29.29"
+]
+
+[default_proxy_config]
+proxy = { proxy_addr = "127.0.0.1:10080", proxy_type = "socks5", username = "", password = "" }
+hosts = []

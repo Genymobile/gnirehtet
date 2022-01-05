@@ -22,7 +22,16 @@ use std::cell::RefCell;
 use std::cmp;
 use std::io;
 use std::num::Wrapping;
+use std::net::{SocketAddrV4};
 use std::rc::{Rc, Weak};
+
+use byteorder::{WriteBytesExt};
+
+use super::proxy_config::ProxyConfig;
+use super::proxy_config::get_proxy_for_addr;
+use super::socks5_protocol::{Socks5State, Authentication};
+use super::socks5_protocol;
+use super::socks5_protocol::MAX_ADDR_LEN;
 
 use super::binary;
 use super::client::{Client, ClientChannel};
@@ -55,6 +64,7 @@ pub struct TcpConnection {
     packet_for_client_length: Option<u16>,
     closed: bool,
     tcb: Tcb,
+    socks5_state : Socks5State,    
 }
 
 // Transport Control Block
@@ -140,7 +150,20 @@ impl TcpConnection {
         transport_header: TransportHeader,
     ) -> io::Result<Rc<RefCell<Self>>> {
         cx_info!(target: TAG, id, "Open");
-        let stream = Self::create_stream(&id)?;
+
+        // determine if we should use proxy for destination ip
+        let stream : TcpStream;
+        let proxy_init_state : Socks5State;    
+        match get_proxy_for_addr(id.rewritten_destination().into()) {
+            None => {
+                stream = Self::create_stream(&id)?;
+                proxy_init_state = Socks5State::NoProxy;
+            }
+            Some(cnf) => {
+                stream = Self::create_proxy_stream(&cnf)?;
+                proxy_init_state = Socks5State::Socks5HostNotConnected;
+            },
+        }
 
         let tcp_header = Self::tcp_header_of_transport(transport_header);
 
@@ -176,6 +199,7 @@ impl TcpConnection {
             packet_for_client_length: None,
             closed: false,
             tcb: Tcb::new(),
+            socks5_state : proxy_init_state,
         }));
 
         {
@@ -198,7 +222,11 @@ impl TcpConnection {
     fn create_stream(id: &ConnectionId) -> io::Result<TcpStream> {
         TcpStream::connect(&id.rewritten_destination().into())
     }
-
+    
+    fn create_proxy_stream(proxy_config: &ProxyConfig ) -> io::Result<TcpStream> {
+        TcpStream::connect(&proxy_config.proxy_addr.into())
+    }
+    
     fn remove_from_router(&self) {
         // route is embedded in router which is embedded in client: the client necessarily exists
         let client_rc = self.client.upgrade().expect("Expected client not found");
@@ -216,31 +244,285 @@ impl TcpConnection {
             Err(_) => panic!("Unexpected unhandled error"),
         }
     }
+
+    fn socks5_update_interests(&mut self, selector: &mut Selector, new_interests: Ready) {
+        assert!(!self.closed);                    
+
+        cx_debug!(target: TAG, self.id, "socks5_update_interests: {:?}", new_interests);
+        if self.interests != new_interests {
+            // interests must be changed
+            self.interests = new_interests;
+            selector
+                .reregister(&self.stream, self.token, new_interests, PollOpt::level())
+                .expect("Cannot register on poll");
+        }
+    }
+        
+    
+    fn handle_socks5_state(&mut self, selector: &mut Selector, ready: Ready) -> io::Result<()> {                
+        let proxy_config: ProxyConfig;
+
+        match get_proxy_for_addr(self.id.rewritten_destination().into()) {
+            None => panic!("don't set proxy parameters"),
+            Some(c) => proxy_config = c,
+        };
+
+        match self.socks5_state {
+            // Gnirehtet socks5 client -> socks5 server, request to authenticate
+            Socks5State::Socks5HostNotConnected => {
+                let auth : Authentication = match proxy_config.username.len() {
+                    0 => Authentication::None,
+                    _ => Authentication::Password { username: &* (proxy_config.username), password: &* proxy_config.password },
+                };
+
+                let packet_len = if auth.is_no_auth() { 3 } else { 4 };
+                let packet = [
+                    socks5_protocol::consts::SOCKS5_VERSION, // protocol version
+                    if auth.is_no_auth() { 1 } else { 2 }, // method count
+                    0, // no auth (always offered)
+                    auth.id(), // method
+                ];
+
+                self.client_to_network.read_from(&packet[..packet_len]);
+                match self.client_to_network.write_to(&mut self.stream) {
+                //match self.stream.write_all(packet[..packet_len]) {
+                    Ok(w) => {
+                        cx_debug!(target: TAG, self.id, "Write to socks5 for auth request {}, packet payload length: {}", auth.id(), w);
+                        self.socks5_update_interests(selector, Ready::readable()); // change interest to write after read
+                        self.socks5_state = Socks5State::Socks5AuthSend;
+                    }
+                    Err(err) => {
+                        if err.kind() == io::ErrorKind::WouldBlock {
+                            // rethrow
+                            return Err(err);
+                        }
+                        cx_error!(target: TAG, self.id, "Cannot write socks5 for auth request: [{:?}] {}", err.kind(), err );
+                        // error or hup
+                        self.close(selector);
+                    }
+                }
+            },
+            // socks5 server <- Gnirehtet socks5 client, no auth or username/password authenticate
+            Socks5State::Socks5AuthSend => {
+                if ready.is_readable() {
+                    match socks5_protocol::socks5_read_auth_method_response(&mut self.stream) {
+                        Ok(selected_method) =>{
+                            cx_debug!(target: TAG, self.id, "SOCKS5 LOG auth method = {}", selected_method);
+
+                            self.socks5_update_interests(selector, Ready::writable()); // change interest to write after read
+
+                            match selected_method {
+                                0 => {
+                                    // if no auth need, goto cmd connect
+                                    self.socks5_state = Socks5State::Socks5AuthDone;
+                                },
+                                2 => {
+                                    self.socks5_state = Socks5State::Socks5AuthUsernamePasswordSend;
+                                }
+                                _ => cx_error!(target: TAG, self.id, "SOCKS5 ERR unsupported auth method {}", selected_method)
+                            }
+                        }
+                        Err(err) => {
+                            if err.kind() == io::ErrorKind::WouldBlock {
+                                // rethrow
+                                return Err(err);
+                            }
+                            cx_error!(target: TAG, self.id, "SOCKS5 ERR Cannot read socks5 for auth response: [{:?}] {}", err.kind(), err);
+                            self.send_empty_packet_to_client(selector, tcp_header::FLAG_RST);
+                            self.close(selector);
+                        }
+                    }
+                }
+            },
+            // Gnirehtet socks5 client -> socks5 server, username/password authenticate
+            Socks5State::Socks5AuthUsernamePasswordSend => {
+                if ready.is_writable() {
+                    let mut packet = [0; MAX_ADDR_LEN];
+                    let username = proxy_config.username.as_bytes();
+                    let password = proxy_config.password.as_bytes();
+
+                    packet[0] = 1; // protocol version
+
+                    packet[1] = 0; // ulen
+                    let mut u: &mut [u8] = &mut packet[2..];
+                    let mut ulen: usize = 0;
+                    for byte in username { // copy_from_slice
+                        let _ = u.write_u8(*byte);
+                        ulen += 1;
+                    }
+                    packet[1] = ulen as u8; // ulen
+
+                    packet[2+ulen] = 0; // plen
+                    let mut p: &mut [u8] = &mut packet[2+ulen+1..];
+                    let mut plen: usize = 0;
+                    for byte in password { // copy_from_slice
+                        let _ = p.write_u8(*byte);
+                        plen += 1;
+                    }
+                    packet[2+ulen] = plen as u8; // plen
+
+                    self.client_to_network.read_from(&packet[..3+ulen+plen]);
+                    match self.client_to_network.write_to(&mut self.stream) {
+                        //match self.stream.write_all(packet[..packet_len]) {
+                        Ok(w) => {
+                            cx_debug!(target: TAG, self.id, "packets {:X?}", &packet[..3+ulen+plen]);
+                            cx_debug!(target: TAG, self.id, "Write to socks5 for username/password authenticate, packet payload length: {}", w);
+                            self.socks5_update_interests(selector, Ready::readable()); // change interest to write after read
+                            self.socks5_state = Socks5State::Socks5AuthUsernamePasswordDone;
+                        }
+                        Err(err) => {
+                            if err.kind() == io::ErrorKind::WouldBlock {
+                                // rethrow
+                                return Err(err);
+                            }
+                            cx_error!(target: TAG, self.id, "Cannot write socks5 for username/password authenticate: [{:?}] {}", err.kind(), err );
+                            // error or hup
+                            self.close(selector);
+                        }
+                    }
+                }
+            }
+            // socks5 server <- Gnirehtet socks5 client, check authenticate result, expect 5 1
+            Socks5State::Socks5AuthUsernamePasswordDone => {
+                if ready.is_readable() {
+                    match socks5_protocol::socks5_read_username_password_auth_response(&mut self.stream) {
+                        Ok(authenticate_status) =>{
+                            cx_debug!(target: TAG, self.id, "SOCKS5 LOG authenticate status = {}", authenticate_status);
+
+                            self.socks5_update_interests(selector, Ready::writable()); // change interest to write after read
+
+                            match authenticate_status {
+                                0 => {
+                                    // if no auth need, goto cmd connect
+                                    self.socks5_update_interests(selector, Ready::writable()); // change interest to write after read
+                                    self.socks5_state = Socks5State::Socks5AuthDone;
+                                },
+                                _ => {
+                                    cx_error!(target: TAG, self.id, "SOCKS5 ERR authenticate failed {}", authenticate_status);
+                                    self.send_empty_packet_to_client(selector, tcp_header::FLAG_RST);
+                                    self.close(selector);
+                                }
+                            }
+                        }
+                        Err(err) => {
+                            if err.kind() == io::ErrorKind::WouldBlock {
+                                // rethrow
+                                return Err(err);
+                            }
+                            cx_error!(target: TAG, self.id, "SOCKS5 ERR Cannot read socks5 for auth response: [{:?}] {}", err.kind(), err);
+                            self.send_empty_packet_to_client(selector, tcp_header::FLAG_RST);
+                            self.close(selector);
+                        }
+                    }
+                }
+            }
+            // Gnirehtet socks5 client -> socks5 server: cmd connect
+            Socks5State::Socks5AuthDone => {
+                if ready.is_writable() {
+
+                    let mut packet = [0; MAX_ADDR_LEN + 3];
+                    packet[0] = socks5_protocol::consts::SOCKS5_VERSION; // protocol version
+                    packet[1] = socks5_protocol::consts::SOCKS5_CMD_TCP_CONNECT; // command
+                    packet[2] = 0; // reserved
+                    packet[3] = 1; // ATYP address type of IP V4
+                
+                    let target_addr: SocketAddrV4 = self.id.rewritten_destination().into();
+                    let to_addr : [u8; 4] = target_addr.ip().octets();
+                    packet[4] = to_addr[0];
+                    packet[5] = to_addr[1];
+                    packet[6] = to_addr[2];
+                    packet[7] = to_addr[3];
+
+                    let to_port : [u8; 2] = target_addr.port().to_be_bytes();
+                    packet[8] = to_port[0];
+                    packet[9] = to_port[1];
+
+                    self.client_to_network.read_from(&packet[..10]);
+
+                    match self.client_to_network.write_to(&mut self.stream) {
+                        Ok(w) => {
+                            cx_debug!(target: TAG, self.id, "Write to socks5 for cmd connect, packet payload length:{}", w);
+                            self.socks5_update_interests(selector, Ready::readable()); // change interest to read after write
+                            self.socks5_state = Socks5State::TargetAddrSend;
+                        }
+                        Err(err) => {
+                            if err.kind() == io::ErrorKind::WouldBlock {
+                                // rethrow
+                                return Err(err);
+                            }
+                            cx_error!(target: TAG, self.id, "Cannot write socks5 for cmd connect: [{:?}] {}", err.kind(), err);
+                            // error or hup
+                            self.close(selector);
+                        }
+                    }
+                }
+            },
+            // check cmd connect result, if ok, all done.
+            Socks5State::TargetAddrSend => {
+                if ready.is_readable() {
+                    match socks5_protocol::socks5_read_response(&mut self.stream) {
+                        Ok(addr) => {
+                            // if no auth need, goto cmd connect
+                            cx_error!(target: TAG, self.id, "Read socks5 for cmd connect, OK, response: {}",  addr);
+
+                            self.socks5_update_interests(selector, Ready::writable()); // change interest to write after read
+                            self.socks5_state = Socks5State::RemoteConnected;
+                        }
+                        Err(err) => {
+                            if err.kind() == io::ErrorKind::WouldBlock {
+                                // rethrow
+                                return Err(err);
+                            }
+                            cx_error!(target: TAG, self.id, "Cannot read socks5 for auth response: [{:?}] {}", err.kind(), err);
+                            self.send_empty_packet_to_client(selector, tcp_header::FLAG_RST);
+                            self.close(selector);
+                        }
+                    }
+                }
+            },
+            _ => {
+                cx_debug!(target: TAG, self.id, "unknown socks5_state");
+            }
+        }
+
+        Ok(())
+    }
+
     // return Err(err) with err.kind() == io::ErrorKind::WouldBlock on spurious event
     fn process(&mut self, selector: &mut Selector, event: Event) -> io::Result<()> {
         if !self.closed {
             let ready = event.readiness();
             if ready.is_readable() || ready.is_writable() {
+                // if use proxy and proxy not ready to use, prepare socks5 connection first.
+                if self.socks5_state != Socks5State::NoProxy && self.socks5_state != Socks5State::RemoteConnected {
+                    // should connect proxy first
+                    let _ = self.handle_socks5_state(selector, ready);
+
+                    return Ok(())
+                }
+
                 if ready.is_writable() {
                     if self.tcb.state == TcpState::SynSent {
                         // writable is first triggered when the stream is connected
                         self.process_connect(selector);
                     } else {
                         self.process_send(selector)?;
-                    }                    
+                    }
                 }
+
                 if !self.closed && ready.is_readable() {
                     match self.process_receive(selector) {
                         Ok(_) => (),
                         Err(err) => {
                             if err.kind() == io::ErrorKind::WouldBlock && ready.is_writable() {
-                                cx_debug!(target: TAG, self.id, "already write, update interests here");                                
-                                self.update_interests(selector);                                                                
+                                cx_debug!(target: TAG, self.id, "already write, update interests here");
+                                self.update_interests(selector);
                             }
                             return Err(err);
                         }
                     }
                 }
+
                 if !self.closed {
                     self.update_interests(selector);
                 }
@@ -283,6 +565,7 @@ impl TcpConnection {
                         self.send_empty_packet_to_client(selector, tcp_header::FLAG_ACK);
                     }
                 } else {
+                    cx_debug!(target: TAG, self.id, "State = {:?}, process_send, close selector", self.tcb.state);
                     self.close(selector);
                 }
             }
@@ -593,6 +876,7 @@ impl TcpConnection {
     ) {
         let tcp_header = Self::tcp_header_of_packet(ipv4_packet);
         let their_sequence_number = tcp_header.sequence_number();
+        cx_debug!(target: TAG, self.id, "State = {:?}, handle_duplicate_syn", self.tcb.state);
         if self.tcb.state == TcpState::SynSent {
             // the connection is not established yet, we can accept this packet as if it were the
             // first SYN
@@ -658,11 +942,11 @@ impl TcpConnection {
     }
 
     fn handle_fin_ack(&mut self, selector: &mut Selector) {
+        cx_debug!(target: TAG, self.id, "State = {:?}", self.tcb.state);
         if self.tcb.state == TcpState::LastAck || self.tcb.state == TcpState::Closing {
             self.close(selector);
         } else if self.tcb.state == TcpState::FinWait1 {
             self.tcb.state = TcpState::FinWait2;
-            cx_debug!(target: TAG, self.id, "State = {:?}", self.tcb.state);
         } else if self.tcb.state != TcpState::FinWait2 {
             cx_warn!(
                 target: TAG,
@@ -847,3 +1131,29 @@ impl PacketSource for TcpConnection {
         self.update_interests(selector);
     }
 }
+
+/*
+impl AsyncRead for mio::net::TcpStream {
+    fn poll_read(
+        self: Pin<&mut Self>,
+        cx: &mut task::Context<'_>,
+        buf: &mut ReadBuf<'_>,
+    ) -> Poll<Result<(), io::Error>> {
+        self.project().stream.poll_read(cx, buf)
+    }
+}
+
+impl AsyncWrite for mio::net::TcpStream {
+    fn poll_write(self: Pin<&mut Self>, cx: &mut task::Context<'_>, buf: &[u8]) -> Poll<Result<usize, io::Error>> {
+        self.project().stream.poll_write(cx, buf)
+    }
+
+    fn poll_flush(self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Result<(), io::Error>> {
+        self.project().stream.poll_flush(cx)
+    }
+
+    fn poll_shutdown(self: Pin<&mut Self>, cx: &mut task::Context<'_>) -> Poll<Result<(), io::Error>> {
+        self.project().stream.poll_shutdown(cx)
+    }
+}
+*/

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-use log::*;
 use mio::{Event, Evented, Events, Poll, PollOpt, Ready, Token};
 use slab::Slab;
 use std::io;
@@ -40,7 +39,7 @@ pub struct Selector {
     poll: Poll,
     handlers: Slab<Rc<dyn EventHandler>>,
     // tokens to be removed after all the current poll events are executed
-    tokens_to_remove: Vec<Token>,
+    tokens_to_remove: Vec<Token>
 }
 
 impl Selector {
@@ -48,7 +47,7 @@ impl Selector {
         Ok(Self {
             poll: Poll::new()?,
             handlers: Slab::with_capacity(1024),
-            tokens_to_remove: Vec::new(),
+            tokens_to_remove: Vec::new()
         })
     }
 
@@ -109,7 +108,7 @@ impl Selector {
 
     pub fn run_handlers(&mut self, events: &Events) {
         for event in events {
-            debug!(target: TAG, "event={:?}", event);
+            //debug!(target: TAG, "event={:?}", event);
             let handler = self
                 .handlers
                 .get_mut(event.token().0)
