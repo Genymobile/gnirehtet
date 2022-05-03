@@ -125,13 +125,14 @@ impl CommandLineArguments {
 mod tests {
     use super::*;
 
-    const ACCEPT_ALL: u8 = PARAM_SERIAL | PARAM_DNS_SERVERS | PARAM_ROUTES;
+    const ACCEPT_ALL: u8 = PARAM_SERIAL | PARAM_DNS_SERVERS | PARAM_ROUTES | PARAM_WHITELIST_BUNDLE_ID;
 
     #[test]
     fn test_no_args() {
         let args = CommandLineArguments::parse(ACCEPT_ALL, Vec::<&str>::new()).unwrap();
         assert!(args.serial.is_none());
         assert!(args.dns_servers.is_none());
+        assert!(args.whitelist_bundle_id.is_none());
     }
 
     #[test]
@@ -193,6 +194,19 @@ mod tests {
     #[test]
     fn test_no_routes_parameter() {
         let raw_args = vec!["-r"];
+        assert!(CommandLineArguments::parse(ACCEPT_ALL, raw_args).is_err());
+    }
+
+    #[test]
+    fn test_bundle_id_parameter() {
+        let raw_args = vec!["-b", "com.myapp.xyz"];
+        let args = CommandLineArguments::parse(ACCEPT_ALL, raw_args).unwrap();
+        assert_eq!("com.myapp.xyz", args.whitelist_bundle_id.unwrap());
+    }
+
+    #[test]
+    fn test_no_bundle_id_parameter() {
+        let raw_args = vec!["-b"];
         assert!(CommandLineArguments::parse(ACCEPT_ALL, raw_args).is_err());
     }
 }

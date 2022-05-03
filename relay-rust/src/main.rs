@@ -220,7 +220,7 @@ impl Command for StartCommand {
          Otherwise, use 0.0.0.0/0 (redirect the whole traffic).\n\
          If -p is given, then make the relay server listen on the specified\n\
          port. Otherwise, use port 31416.\n\
-         If -b is given, then vpn will run only the given applications\n\
+         If -b is given, then reverse tethering will be enabled only for specified application's bundle ids\n\
          If the client is already started, then do nothing, and ignore\n\
          the other parameters.\n\
          10.0.2.2 is mapped to the host 'localhost'."
@@ -631,6 +631,9 @@ fn append_command_usage(msg: &mut String, command: &dyn Command) {
     }
     if (accepted_parameters & cli_args::PARAM_ROUTES) != 0 {
         msg.push_str(" [-r ROUTE[,ROUTE2,...]]");
+    }
+    if (accepted_parameters & cli_args::PARAM_WHITELIST_BUNDLE_ID) != 0 {
+        msg.push_str(" [-b BUNDLE_ID[,BUNDLE_ID2,...]]")
     }
     msg.push('\n');
     for desc_line in command.description().split('\n') {
