@@ -27,8 +27,8 @@ pub struct CommandLineArguments {
     serial: Option<String>,
     dns_servers: Option<String>,
     routes: Option<String>,
-    whitelist_bundle_id: Option<String>,
     port: u16,
+    whitelist_bundle_ids: Option<String>,
 }
 
 impl CommandLineArguments {
@@ -37,8 +37,8 @@ impl CommandLineArguments {
         let mut serial = None;
         let mut dns_servers = None;
         let mut routes = None;
-        let mut whitelist_bundle_id = None;
         let mut port = 0;
+        let mut whitelist_bundle_ids = None;
 
         let mut iter = args.into_iter();
         while let Some(arg) = iter.next() {
@@ -73,12 +73,12 @@ impl CommandLineArguments {
                 } else {
                     return Err(String::from("Missing -p parameter"));
                 }
-            } else if (accepted_parameters & PARAM_WHITELIST_BUNDLE_ID) != 0 && "-b" == arg {
-                if whitelist_bundle_id.is_some() {
+            } else if (accepted_parameters & PARAM_WHITELIST_BUNDLE_IDS) != 0 && "-b" == arg {
+                if whitelist_bundle_ids.is_some() {
                     return Err(String::from("Bundle id already set"));
                 }
                 if let Some(value) = iter.next() {
-                    whitelist_bundle_id = Some(value.into());
+                    whitelist_bundle_ids = Some(value.into());
                 } else {
                     return Err(String::from("Missing -b parameter"));
                 }
@@ -96,7 +96,7 @@ impl CommandLineArguments {
             dns_servers,
             routes,
             port,
-            whitelist_bundle_id
+            whitelist_bundle_ids
         })
     }
 
@@ -116,8 +116,8 @@ impl CommandLineArguments {
         self.port
     }
 
-    pub fn whitelist_bundle_id(&self) -> Option<&str> {
-        self.whitelist_bundle_id.as_deref()
+    pub fn whitelist_bundle_ids(&self) -> Option<&str> {
+        self.whitelist_bundle_ids.as_deref()
     }
 }
 
@@ -125,14 +125,14 @@ impl CommandLineArguments {
 mod tests {
     use super::*;
 
-    const ACCEPT_ALL: u8 = PARAM_SERIAL | PARAM_DNS_SERVERS | PARAM_ROUTES | PARAM_WHITELIST_BUNDLE_ID;
+    const ACCEPT_ALL: u8 = PARAM_SERIAL | PARAM_DNS_SERVERS | PARAM_ROUTES | PARAM_WHITELIST_BUNDLE_IDS;
 
     #[test]
     fn test_no_args() {
         let args = CommandLineArguments::parse(ACCEPT_ALL, Vec::<&str>::new()).unwrap();
         assert!(args.serial.is_none());
         assert!(args.dns_servers.is_none());
-        assert!(args.whitelist_bundle_id.is_none());
+        assert!(args.whitelist_bundle_ids.is_none());
     }
 
     #[test]
@@ -201,7 +201,7 @@ mod tests {
     fn test_bundle_id_parameter() {
         let raw_args = vec!["-b", "com.myapp.xyz"];
         let args = CommandLineArguments::parse(ACCEPT_ALL, raw_args).unwrap();
-        assert_eq!("com.myapp.xyz", args.whitelist_bundle_id.unwrap());
+        assert_eq!("com.myapp.xyz", args.whitelist_bundle_ids.unwrap());
     }
 
     #[test]

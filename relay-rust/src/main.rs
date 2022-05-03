@@ -155,7 +155,7 @@ impl Command for RunCommand {
             | cli_args::PARAM_DNS_SERVERS
             | cli_args::PARAM_ROUTES
             | cli_args::PARAM_PORT
-            | cli_args::PARAM_WHITELIST_BUNDLE_ID
+            | cli_args::PARAM_WHITELIST_BUNDLE_IDS
     }
 
     fn description(&self) -> &'static str {
@@ -171,8 +171,8 @@ impl Command for RunCommand {
             args.serial(),
             args.dns_servers(),
             args.routes(),
-            args.whitelist_bundle_id(),
             args.port(),
+            args.whitelist_bundle_ids(),
         )
     }
 }
@@ -183,7 +183,7 @@ impl Command for AutorunCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES | cli_args::PARAM_PORT
+        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES | cli_args::PARAM_PORT | cli_args::PARAM_WHITELIST_BUNDLE_IDS
     }
 
     fn description(&self) -> &'static str {
@@ -193,7 +193,7 @@ impl Command for AutorunCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_autorun(args.dns_servers(), args.routes(), args.whitelist_bundle_id(), args.port())
+        cmd_autorun(args.dns_servers(), args.routes(), args.port(), args.whitelist_bundle_ids())
     }
 }
 
@@ -207,7 +207,7 @@ impl Command for StartCommand {
             | cli_args::PARAM_DNS_SERVERS
             | cli_args::PARAM_ROUTES
             | cli_args::PARAM_PORT
-            | cli_args::PARAM_WHITELIST_BUNDLE_ID
+            | cli_args::PARAM_WHITELIST_BUNDLE_IDS
     }
 
     fn description(&self) -> &'static str {
@@ -231,8 +231,8 @@ impl Command for StartCommand {
             args.serial(),
             args.dns_servers(),
             args.routes(),
-            args.whitelist_bundle_id(),
             args.port(),
+            args.whitelist_bundle_ids(),
         )
     }
 }
@@ -243,7 +243,7 @@ impl Command for AutostartCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES | cli_args::PARAM_PORT | cli_args::PARAM_WHITELIST_BUNDLE_ID
+        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES | cli_args::PARAM_PORT | cli_args::PARAM_WHITELIST_BUNDLE_IDS
     }
 
     fn description(&self) -> &'static str {
@@ -254,7 +254,7 @@ impl Command for AutostartCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_autostart(args.dns_servers(), args.routes(), args.whitelist_bundle_id(), args.port())
+        cmd_autostart(args.dns_servers(), args.routes(), args.port(), args.whitelist_bundle_ids())
     }
 }
 
@@ -288,7 +288,7 @@ impl Command for RestartCommand {
             | cli_args::PARAM_DNS_SERVERS
             | cli_args::PARAM_ROUTES
             | cli_args::PARAM_PORT
-            | cli_args::PARAM_WHITELIST_BUNDLE_ID
+            | cli_args::PARAM_WHITELIST_BUNDLE_IDS
     }
 
     fn description(&self) -> &'static str {
@@ -301,8 +301,8 @@ impl Command for RestartCommand {
             args.serial(),
             args.dns_servers(),
             args.routes(),
-            args.whitelist_bundle_id(),
             args.port(),
+            args.whitelist_bundle_ids(),
         )?;
         Ok(())
     }
@@ -368,11 +368,11 @@ fn cmd_run(
     serial: Option<&str>,
     dns_servers: Option<&str>,
     routes: Option<&str>,
-    whitelist_bundle_id: Option<&str>,
     port: u16,
+    whitelist_bundle_ids: Option<&str>,
 ) -> Result<(), CommandExecutionError> {
     // start in parallel so that the relay server is ready when the client connects
-    async_start(serial, dns_servers, routes, whitelist_bundle_id, port);
+    async_start(serial, dns_servers, routes, port, whitelist_bundle_ids);
 
     let ctrlc_serial = serial.map(String::from);
     ctrlc::set_handler(move || {
@@ -393,18 +393,18 @@ fn cmd_run(
 fn cmd_autorun(
     dns_servers: Option<&str>,
     routes: Option<&str>,
-    whitelist_bundle_id: Option<&str>,
     port: u16,
+    whitelist_bundle_ids: Option<&str>,
 ) -> Result<(), CommandExecutionError> {
     {
         let autostart_dns_servers = dns_servers.map(String::from);
         let autostart_routes = routes.map(String::from);
-        let autostart_whitelist_bundle_id = whitelist_bundle_id.map(String::from);
+        let autostart_whitelist_bundle_ids = whitelist_bundle_ids.map(String::from);
         thread::spawn(move || {
             let dns_servers = autostart_dns_servers.as_ref().map(String::as_ref);
             let routes = autostart_routes.as_ref().map(String::as_ref);
-            let whitelist_bundle_id = autostart_whitelist_bundle_id.as_ref().map(String::as_ref);
-            if let Err(err) = cmd_autostart(dns_servers, routes, whitelist_bundle_id, port) {
+            let whitelist_bundle_ids = autostart_whitelist_bundle_ids.as_ref().map(String::as_ref);
+            if let Err(err) = cmd_autostart(dns_servers, routes, port, whitelist_bundle_ids) {
                 error!(target: TAG, "Cannot auto start clients: {}", err);
             }
         });
@@ -417,8 +417,8 @@ fn cmd_start(
     serial: Option<&str>,
     dns_servers: Option<&str>,
     routes: Option<&str>,
-    whitelist_bundle_id: Option<&str>,
     port: u16,
+    whitelist_bundle_ids: Option<&str>,
 ) -> Result<(), CommandExecutionError> {
     if must_install_client(serial)? {
         cmd_install(serial)?;
@@ -445,8 +445,8 @@ fn cmd_start(
     if let Some(routes) = routes {
         adb_args.append(&mut vec!["--esa", "routes", routes]);
     }
-    if let Some(whitelist_bundle_id) = whitelist_bundle_id {
-        adb_args.append(&mut vec!["--esa", "whitelistBundleId", whitelist_bundle_id]);
+    if let Some(whitelist_bundle_ids) = whitelist_bundle_ids {
+        adb_args.append(&mut vec!["--esa", "whitelistBundleIds", whitelist_bundle_ids]);
     }
     exec_adb(serial, adb_args)
 }
@@ -454,17 +454,17 @@ fn cmd_start(
 fn cmd_autostart(
     dns_servers: Option<&str>,
     routes: Option<&str>,
-    whitelist_bundle_id: Option<&str>,
     port: u16,
+    whitelist_bundle_ids: Option<&str>,
 ) -> Result<(), CommandExecutionError> {
     let start_dns_servers = dns_servers.map(String::from);
     let start_routes = routes.map(String::from);
-    let start_whitelist_bundle_id = whitelist_bundle_id.map(String::from);
+    let start_whitelist_bundle_ids = whitelist_bundle_ids.map(String::from);
     let mut adb_monitor = AdbMonitor::new(Box::new(move |serial: &str| {
         let dns_servers = start_dns_servers.as_ref().map(String::as_ref);
         let routes = start_routes.as_ref().map(String::as_ref);
-        let whitelist_bundle_id = start_whitelist_bundle_id.as_ref().map(String::as_ref);
-        async_start(Some(serial), dns_servers, routes, whitelist_bundle_id, port)
+        let whitelist_bundle_ids = start_whitelist_bundle_ids.as_ref().map(String::as_ref);
+        async_start(Some(serial), dns_servers, routes, port, whitelist_bundle_ids)
     }));
     adb_monitor.monitor();
     Ok(())
@@ -504,23 +504,23 @@ fn cmd_relay(port: u16) -> Result<(), CommandExecutionError> {
 }
 
 fn async_start(
-    serial: Option<&str>, 
-    dns_servers: Option<&str>, 
-    routes: Option<&str>, 
-    whitelist_bundle_id: Option<&str>, 
-    port: u16
+    serial: Option<&str>,
+    dns_servers: Option<&str>,
+    routes: Option<&str>,
+    port: u16,
+    whitelist_bundle_ids: Option<&str>
 ) {
     let start_serial = serial.map(String::from);
     let start_dns_servers = dns_servers.map(String::from);
     let start_routes = routes.map(String::from);
-    let start_whitelist_bundle_id = whitelist_bundle_id.map(String::from);
+    let start_whitelist_bundle_ids = whitelist_bundle_ids.map(String::from);
     
     thread::spawn(move || {
         let serial = start_serial.as_ref().map(String::as_ref);
         let dns_servers = start_dns_servers.as_ref().map(String::as_ref);
         let routes = start_routes.as_ref().map(String::as_ref);
-        let whitelist_bundle_id = start_whitelist_bundle_id.as_ref().map(String::as_ref);
-        if let Err(err) = cmd_start(serial, dns_servers, routes, whitelist_bundle_id, port) {
+        let whitelist_bundle_ids = start_whitelist_bundle_ids.as_ref().map(String::as_ref);
+        if let Err(err) = cmd_start(serial, dns_servers, routes, port, whitelist_bundle_ids) {
             error!(target: TAG, "Cannot start client: {}", err);
         }
     });
@@ -632,7 +632,7 @@ fn append_command_usage(msg: &mut String, command: &dyn Command) {
     if (accepted_parameters & cli_args::PARAM_ROUTES) != 0 {
         msg.push_str(" [-r ROUTE[,ROUTE2,...]]");
     }
-    if (accepted_parameters & cli_args::PARAM_WHITELIST_BUNDLE_ID) != 0 {
+    if (accepted_parameters & cli_args::PARAM_WHITELIST_BUNDLE_IDS) != 0 {
         msg.push_str(" [-b BUNDLE_ID[,BUNDLE_ID2,...]]")
     }
     msg.push('\n');
