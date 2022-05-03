@@ -19,6 +19,7 @@ pub const PARAM_SERIAL: u8 = 1;
 pub const PARAM_DNS_SERVERS: u8 = 1 << 1;
 pub const PARAM_ROUTES: u8 = 1 << 2;
 pub const PARAM_PORT: u8 = 1 << 3;
+pub const PARAM_WHITELIST_BUNDLE_ID: u8 = 1 << 4;
 
 pub const DEFAULT_PORT: u16 = 31416;
 
@@ -26,6 +27,7 @@ pub struct CommandLineArguments {
     serial: Option<String>,
     dns_servers: Option<String>,
     routes: Option<String>,
+    whitelist_bundle_id: Option<String>,
     port: u16,
 }
 
@@ -35,6 +37,7 @@ impl CommandLineArguments {
         let mut serial = None;
         let mut dns_servers = None;
         let mut routes = None;
+        let mut whitelist_bundle_id = None;
         let mut port = 0;
 
         let mut iter = args.into_iter();
@@ -70,6 +73,15 @@ impl CommandLineArguments {
                 } else {
                     return Err(String::from("Missing -p parameter"));
                 }
+            } else if (accepted_parameters & PARAM_WHITELIST_BUNDLE_ID) != 0 && "-b" == arg {
+                if whitelist_bundle_id.is_some() {
+                    return Err(String::from("Bundle id already set"));
+                }
+                if let Some(value) = iter.next() {
+                    whitelist_bundle_id = Some(value.into());
+                } else {
+                    return Err(String::from("Missing -b parameter"));
+                }
             } else if (accepted_parameters & PARAM_SERIAL) != 0 && serial.is_none() {
                 serial = Some(arg);
             } else {
@@ -84,6 +96,7 @@ impl CommandLineArguments {
             dns_servers,
             routes,
             port,
+            whitelist_bundle_id
         })
     }
 
@@ -101,6 +114,10 @@ impl CommandLineArguments {
 
     pub fn port(&self) -> u16 {
         self.port
+    }
+
+    pub fn whitelist_bundle_id(&self) -> Option<&str> {
+        self.whitelist_bundle_id.as_deref()
     }
 }
 

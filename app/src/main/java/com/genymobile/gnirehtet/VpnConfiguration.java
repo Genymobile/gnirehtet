@@ -26,15 +26,17 @@ public class VpnConfiguration implements Parcelable {
 
     private final InetAddress[] dnsServers;
     private final CIDR[] routes;
+    private String[] whitelistBundleIds = new String[0];
 
     public VpnConfiguration() {
         this.dnsServers = new InetAddress[0];
         this.routes = new CIDR[0];
     }
 
-    public VpnConfiguration(InetAddress[] dnsServers, CIDR[] routes) {
+    public VpnConfiguration(InetAddress[] dnsServers, CIDR[] routes, String[] whitelistBundleIds) {
         this.dnsServers = dnsServers;
         this.routes = routes;
+        this.whitelistBundleIds = whitelistBundleIds;
     }
 
     private VpnConfiguration(Parcel source) {
@@ -48,6 +50,7 @@ public class VpnConfiguration implements Parcelable {
             throw new AssertionError("Invalid address", e);
         }
         routes = source.createTypedArray(CIDR.CREATOR);
+        whitelistBundleIds = source.createStringArray();
     }
 
     public InetAddress[] getDnsServers() {
@@ -58,6 +61,10 @@ public class VpnConfiguration implements Parcelable {
         return routes;
     }
 
+    public String[] getWhitelistBundleIds() {
+        return this.whitelistBundleIds;
+    }
+
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeInt(dnsServers.length);
@@ -65,6 +72,7 @@ public class VpnConfiguration implements Parcelable {
             dest.writeByteArray(addr.getAddress());
         }
         dest.writeTypedArray(routes, 0);
+        dest.writeStringArray(whitelistBundleIds);
     }
 
     @Override
