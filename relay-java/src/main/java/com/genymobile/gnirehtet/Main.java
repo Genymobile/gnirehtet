@@ -87,7 +87,7 @@ public final class Main {
             }
         },
         RUN("run", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES
-                | CommandLineArguments.PARAM_PORT) {
+                | CommandLineArguments.PARAM_PORT | CommandLineArguments.PARAM_WHITELIST_BUNDLE_IDS ) {
             @Override
             String getDescription() {
                 return "Enable reverse tethering for exactly one device:\n"
@@ -102,7 +102,7 @@ public final class Main {
                 cmdRun(args.getSerial(), args.getDnsServers(), args.getRoutes(), args.getPort(), args.getWhitelistBundleIds());
             }
         },
-        AUTORUN("autorun", CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES | CommandLineArguments.PARAM_PORT | CommandLineArguments.PARAM_WHITELIST_BUNDLE_ID) {
+        AUTORUN("autorun", CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES | CommandLineArguments.PARAM_PORT | CommandLineArguments.PARAM_WHITELIST_BUNDLE_IDS) {
             @Override
             String getDescription() {
                 return "Enable reverse tethering for all devices:\n"
@@ -116,7 +116,7 @@ public final class Main {
             }
         },
         START("start", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES
-                | CommandLineArguments.PARAM_PORT | CommandLineArguments.PARAM_WHITELIST_BUNDLE_ID) {
+                | CommandLineArguments.PARAM_PORT | CommandLineArguments.PARAM_WHITELIST_BUNDLE_IDS) {
             @Override
             String getDescription() {
                 return "Start a client on the Android device and exit.\n"
@@ -139,7 +139,7 @@ public final class Main {
                 cmdStart(args.getSerial(), args.getDnsServers(), args.getRoutes(), args.getPort(), args.getWhitelistBundleIds());
             }
         },
-        AUTOSTART("autostart", CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES | CommandLineArguments.PARAM_PORT | CommandLineArguments.PARAM_WHITELIST_BUNDLE_ID) {
+        AUTOSTART("autostart", CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES | CommandLineArguments.PARAM_PORT | CommandLineArguments.PARAM_WHITELIST_BUNDLE_IDS) {
             @Override
             String getDescription() {
                 return "Listen for device connexions and start a client on every detected\n"
@@ -167,7 +167,7 @@ public final class Main {
             }
         },
         RESTART("restart", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES
-                | CommandLineArguments.PARAM_PORT | CommandLineArguments.PARAM_WHITELIST_BUNDLE_ID) {
+                | CommandLineArguments.PARAM_PORT | CommandLineArguments.PARAM_WHITELIST_BUNDLE_IDS) {
             @Override
             String getDescription() {
                 return "Stop then start.";
@@ -412,7 +412,7 @@ public final class Main {
         if ((command.acceptedParameters & CommandLineArguments.PARAM_ROUTES) != 0) {
             builder.append(" [-r ROUTE[,ROUTE2,...]]");
         }
-        if ((command.acceptedParameters & CommandLineArguments.PARAM_WHITELIST_BUNDLE_ID) != 0) {
+        if ((command.acceptedParameters & CommandLineArguments.PARAM_WHITELIST_BUNDLE_IDS) != 0) {
             builder.append(" [-b BUNDLE_ID[,BUNDLE_ID2,...]]");
         }
         builder.append(NL);

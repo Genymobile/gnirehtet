@@ -143,7 +143,7 @@ public class GnirehtetService extends VpnService {
                 try {
                     builder.addAllowedApplication(app);
                 } catch (PackageManager.NameNotFoundException e) {
-                    Log.i(TAG, app + " not found");
+                    Log.e(TAG, app + " not found");
                 }
             }
         }

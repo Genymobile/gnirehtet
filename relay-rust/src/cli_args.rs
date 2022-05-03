@@ -19,7 +19,7 @@ pub const PARAM_SERIAL: u8 = 1;
 pub const PARAM_DNS_SERVERS: u8 = 1 << 1;
 pub const PARAM_ROUTES: u8 = 1 << 2;
 pub const PARAM_PORT: u8 = 1 << 3;
-pub const PARAM_WHITELIST_BUNDLE_ID: u8 = 1 << 4;
+pub const PARAM_WHITELIST_BUNDLE_IDS: u8 = 1 << 4;
 
 pub const DEFAULT_PORT: u16 = 31416;
 
