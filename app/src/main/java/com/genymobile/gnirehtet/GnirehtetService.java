@@ -224,7 +224,7 @@ public class GnirehtetService extends VpnService {
                     break;
                 case RelayTunnelListener.MSG_RELAY_TUNNEL_DISCONNECTED:
                     Log.d(TAG, "Relay tunnel disconnected");
-                    vpnService.notifier.setFailure(true);
+                    vpnService.stop(vpnService);
                     break;
                 default:
             }
