@@ -13,6 +13,9 @@ support [IPv6] (yet?).
 [IPv4]: https://en.wikipedia.org/wiki/IPv4
 [IPv6]: https://en.wikipedia.org/wiki/IPv6
 
+_**This project is not actively maintained anymore, only major blockers (like
+build issues) are fixed. It should still work, though.**_
+
 
 ## Flavors
 
