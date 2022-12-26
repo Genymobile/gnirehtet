@@ -107,30 +107,30 @@ macro_rules! cx_format {
 
 macro_rules! cx_trace {
     (target: $target:expr, $id:expr, $($arg:tt)*) => {
-        log::trace!(target: $target, "{}", cx_format!($id, $($arg)+));
+        log::trace!(target: $target, "{}", cx_format!($id, $($arg)+))
     }
 }
 
 macro_rules! cx_debug {
     (target: $target:expr, $id:expr, $($arg:tt)*) => {
-        log::debug!(target: $target, "{}", cx_format!($id, $($arg)+));
+        log::debug!(target: $target, "{}", cx_format!($id, $($arg)+))
     }
 }
 
 macro_rules! cx_info {
     (target: $target:expr, $id:expr, $($arg:tt)*) => {
-        log::info!(target: $target, "{}", cx_format!($id, $($arg)+));
+        log::info!(target: $target, "{}", cx_format!($id, $($arg)+))
     }
 }
 
 macro_rules! cx_warn {
     (target: $target:expr, $id:expr, $($arg:tt)*) => {
-        log::warn!(target: $target, "{}", cx_format!($id, $($arg)+));
+        log::warn!(target: $target, "{}", cx_format!($id, $($arg)+))
     }
 }
 
 macro_rules! cx_error {
     (target: $target:expr, $id:expr, $($arg:tt)*) => {
-        log::error!(target: $target, "{}", cx_format!($id, $($arg)+));
+        log::error!(target: $target, "{}", cx_format!($id, $($arg)+))
     }
 }
