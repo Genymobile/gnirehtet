@@ -111,7 +111,7 @@ pub mod tests {
     impl DatagramSender for MockDatagramSocket {
         fn send(&mut self, buf: &[u8]) -> io::Result<usize> {
             let len = cmp::min(self.buf.len(), buf.len());
-            &mut self.buf[..len].copy_from_slice(&buf[..len]);
+            self.buf[..len].copy_from_slice(&buf[..len]);
             self.len = len;
             Ok(len)
         }
@@ -120,7 +120,7 @@ pub mod tests {
     impl DatagramReceiver for MockDatagramSocket {
         fn recv(&mut self, buf: &mut [u8]) -> io::Result<usize> {
             let len = cmp::min(self.len, buf.len());
-            &mut buf[..len].copy_from_slice(&self.buf[..len]);
+            buf[..len].copy_from_slice(&self.buf[..len]);
             Ok(len)
         }
     }
