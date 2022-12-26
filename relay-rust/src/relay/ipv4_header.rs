@@ -29,7 +29,7 @@ pub struct Ipv4HeaderMut<'a> {
 
 #[derive(Clone)]
 pub struct Ipv4HeaderData {
-    version: u8,
+    _version: u8,
     header_length: u8,
     total_length: u16,
     protocol: Protocol,
@@ -48,7 +48,7 @@ pub enum Protocol {
 impl Ipv4HeaderData {
     pub fn parse(raw: &[u8]) -> Self {
         Self {
-            version: raw[0] >> 4,
+            _version: raw[0] >> 4,
             header_length: (raw[0] & 0xf) << 2,
             total_length: BigEndian::read_u16(&raw[2..4]),
             protocol: match raw[9] {
@@ -231,7 +231,7 @@ mod tests {
     fn parse_header() {
         let raw = &create_header()[..];
         let data = Ipv4HeaderData::parse(raw);
-        assert_eq!(4, data.version);
+        assert_eq!(4, data._version);
         assert_eq!(20, data.header_length);
         assert_eq!(28, data.total_length);
         assert_eq!(Protocol::Udp, data.protocol);
