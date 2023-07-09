@@ -27,6 +27,7 @@ public class CommandLineArguments {
     public static final int PARAM_DNS_SERVER = 1 << 1;
     public static final int PARAM_ROUTES = 1 << 2;
     public static final int PARAM_PORT = 1 << 3;
+    public static final int PARAM_WHITELIST_BUNDLE_IDS = 1 << 4;
 
     public static final int DEFAULT_PORT = 31416;
 
@@ -34,6 +35,7 @@ public class CommandLineArguments {
     private String serial;
     private String dnsServers;
     private String routes;
+    private String whitelistBundleIds;
 
     public static CommandLineArguments parse(int acceptedParameters, String... args) {
         CommandLineArguments arguments = new CommandLineArguments();
@@ -69,6 +71,15 @@ public class CommandLineArguments {
                     throw new IllegalArgumentException("Invalid port: " + arguments.port);
                 }
                 ++i;
+            } else if ((acceptedParameters & PARAM_WHITELIST_BUNDLE_IDS) != 0 && "-b".equals(arg)) {
+                if (arguments.whitelistBundleIds != null) {
+                    throw new IllegalArgumentException("Whitelist bundle ids already set");
+                }
+                if (i == args.length - 1) {
+                throw new IllegalArgumentException("Missing -b parameter");
+                }
+                arguments.whitelistBundleIds = args[i + 1];
+                ++i;
             } else if ((acceptedParameters & PARAM_SERIAL) != 0 && arguments.serial == null) {
                 arguments.serial = arg;
             } else {
@@ -95,5 +106,9 @@ public class CommandLineArguments {
 
     public int getPort() {
         return port;
+    }
+
+    public String getWhitelistBundleIds() {
+        return whitelistBundleIds;
     }
 }

@@ -18,6 +18,7 @@ package com.genymobile.gnirehtet;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
@@ -132,6 +133,18 @@ public class GnirehtetService extends VpnService {
         } else {
             for (InetAddress dnsServer : dnsServers) {
                 builder.addDnsServer(dnsServer);
+            }
+        }
+
+        if (Build.VERSION.SDK_INT >= 21) {
+            Log.i(TAG, "Setting whitelist bundle id");
+            for (String app : config.getWhitelistBundleIds()) {
+                Log.i(TAG, app + " traffic is being routed through USB");
+                try {
+                    builder.addAllowedApplication(app);
+                } catch (PackageManager.NameNotFoundException e) {
+                    Log.e(TAG, app + " not found");
+                }
             }
         }
 
