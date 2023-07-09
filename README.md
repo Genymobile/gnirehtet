@@ -230,6 +230,11 @@ GNIREHTET_APK=/usr/share/gnirehtet/gnirehtet.apk ./gnirehtet run
 ```
 
 
+## Accessing services running on the host computer
+
+10.0.2.2 is mapped to the host 'localhost', so you can access services running at the host by using the ip 10.0.2.2 on the Android device.
+
+
 ## Why _gnirehtet_?
 
     rev <<< tethering
