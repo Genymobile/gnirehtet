@@ -15,6 +15,7 @@
  */
 
 use std::error;
+use std::ffi::OsString;
 use std::fmt;
 use std::io;
 #[cfg(unix)]
@@ -42,8 +43,8 @@ pub struct ProcessIoError {
 
 #[derive(Debug)]
 pub struct Cmd {
-    command: String,
-    args: Vec<String>,
+    command: OsString,
+    args: Vec<OsString>,
 }
 
 #[derive(Debug)]
@@ -67,20 +68,13 @@ impl Termination {
 
 impl fmt::Display for Cmd {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "{} {:?}", self.command, self.args)
+        write!(f, "{:?} {:?}", self.command, self.args)
     }
 }
 
 impl Cmd {
-    pub fn new<S1, S2>(command: S1, args: Vec<S2>) -> Cmd
-    where
-        S1: Into<String>,
-        S2: Into<String>,
-    {
-        Self {
-            command: command.into(),
-            args: args.into_iter().map(Into::into).collect::<Vec<_>>(),
-        }
+    pub fn new(command: OsString, args: Vec<OsString>) -> Cmd {
+        Self { command, args }
     }
 }
 
