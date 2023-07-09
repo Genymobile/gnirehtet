@@ -1,9 +1,11 @@
 # Gnirehtet (v2.5.1)
 
-This project provides **reverse tethering** over `adb` for Android: it
-allows devices to use the internet connection of the computer they are plugged
-on. It does not require any _root_ access (neither on the device nor on the
-computer). It works on _GNU/Linux_, _Windows_ and _Mac OS_.
+This project provides **reverse tethering** for Android over `adb`: it
+allows Android devices to use the internet connection of the computer to which
+they are physically connected. It does not require any _root_ access
+(neither on the Android devices, nor on the computer).  
+
+It works on _GNU/Linux_, _Windows_ and _Mac OS_.
 
 Currently, it relays [TCP] and [UDP] over [IPv4] traffic, but it does not
 support [IPv6] (yet?).
