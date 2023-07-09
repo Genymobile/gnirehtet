@@ -34,7 +34,7 @@ use std::thread;
 use std::time::Duration;
 
 const TAG: &str = "Main";
-const REQUIRED_APK_VERSION_CODE: &str = "8";
+const REQUIRED_APK_VERSION_CODE: &str = "9";
 
 #[inline]
 fn get_adb_path() -> String {
