@@ -48,7 +48,7 @@ public class GnirehtetService extends VpnService {
     private static final int MTU = 0x4000;
 
     private final Notifier notifier = new Notifier(this);
-    private final Handler handler = new RelayTunnelConnectionStateHandler(this);
+    private final RelayTunnelConnectionStateHandler handler = new RelayTunnelConnectionStateHandler(this);
 
     private ParcelFileDescriptor vpnInterface = null;
     private Forwarder forwarder;
@@ -111,6 +111,7 @@ public class GnirehtetService extends VpnService {
 
     @SuppressWarnings("checkstyle:MagicNumber")
     private boolean setupVpn(VpnConfiguration config) {
+        handler.setStopOnDisconnect(config.getIsStopOnDisconnect());
         Builder builder = new Builder();
         builder.addAddress(VPN_ADDRESS, 32);
         builder.setSession(getString(R.string.app_name));
@@ -206,6 +207,7 @@ public class GnirehtetService extends VpnService {
     private static final class RelayTunnelConnectionStateHandler extends Handler {
 
         private final GnirehtetService vpnService;
+        private boolean stopOnDisconnect = false;
 
         private RelayTunnelConnectionStateHandler(GnirehtetService vpnService) {
             this.vpnService = vpnService;
@@ -224,10 +226,18 @@ public class GnirehtetService extends VpnService {
                     break;
                 case RelayTunnelListener.MSG_RELAY_TUNNEL_DISCONNECTED:
                     Log.d(TAG, "Relay tunnel disconnected");
-                    vpnService.notifier.setFailure(true);
+                    if (stopOnDisconnect) {
+                        stop(vpnService);
+                    } else {
+                        vpnService.notifier.setFailure(true);
+                    }
                     break;
                 default:
             }
+        }
+
+        public void setStopOnDisconnect(boolean stopOnDisconnect) {
+            this.stopOnDisconnect = stopOnDisconnect;
         }
     }
 }
