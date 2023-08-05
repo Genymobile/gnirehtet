@@ -22,6 +22,7 @@ import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
+import android.net.ProxyInfo;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.Handler;
@@ -114,6 +115,9 @@ public class GnirehtetService extends VpnService {
         Builder builder = new Builder();
         builder.addAddress(VPN_ADDRESS, 32);
         builder.setSession(getString(R.string.app_name));
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            builder.setHttpProxy(ProxyInfo.buildDirectProxy("192.168.1.19", 8899));
+        }
 
         CIDR[] routes = config.getRoutes();
         if (routes.length == 0) {
