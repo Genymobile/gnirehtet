@@ -128,7 +128,7 @@ Then extract it. The archive contains:
 
 ## Run (simple)
 
-_Note: On Windows, replace `./gnirehtet` by `gnirehtet` in the following
+_Note: On Windows and Mac (if installed with Homebrew), replace `./gnirehtet` by `gnirehtet` in the following
 commands._
 
 The application has no UI, and is intended to be controlled from the computer
