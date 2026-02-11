@@ -154,6 +154,9 @@ impl Command for RunCommand {
         cli_args::PARAM_SERIAL
             | cli_args::PARAM_DNS_SERVERS
             | cli_args::PARAM_ROUTES
+            | cli_args::PARAM_PROXY_HOST
+            | cli_args::PARAM_PROXY_PORT
+            | cli_args::PARAM_PROXY_EXCLUSION_LIST
             | cli_args::PARAM_PORT
     }
 
@@ -170,6 +173,9 @@ impl Command for RunCommand {
             args.serial(),
             args.dns_servers(),
             args.routes(),
+            args.proxy_host(),
+            args.proxy_port(),
+            args.proxy_exclusion_list(),
             args.port(),
         )
     }
@@ -181,7 +187,12 @@ impl Command for AutorunCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES | cli_args::PARAM_PORT
+        cli_args::PARAM_DNS_SERVERS
+            | cli_args::PARAM_ROUTES
+            | cli_args::PARAM_PROXY_HOST
+            | cli_args::PARAM_PROXY_PORT
+            | cli_args::PARAM_PROXY_EXCLUSION_LIST
+            | cli_args::PARAM_PORT
     }
 
     fn description(&self) -> &'static str {
@@ -191,7 +202,14 @@ impl Command for AutorunCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_autorun(args.dns_servers(), args.routes(), args.port())
+        cmd_autorun(
+            args.dns_servers(),
+            args.routes(),
+            args.proxy_host(),
+            args.proxy_port(),
+            args.proxy_exclusion_list(),
+            args.port(),
+        )
     }
 }
 
@@ -204,6 +222,9 @@ impl Command for StartCommand {
         cli_args::PARAM_SERIAL
             | cli_args::PARAM_DNS_SERVERS
             | cli_args::PARAM_ROUTES
+            | cli_args::PARAM_PROXY_HOST
+            | cli_args::PARAM_PROXY_PORT
+            | cli_args::PARAM_PROXY_EXCLUSION_LIST
             | cli_args::PARAM_PORT
     }
 
@@ -214,6 +235,9 @@ impl Command for StartCommand {
          If -d is given, then make the Android device use the specified\n\
          DNS server(s). Otherwise, use 8.8.8.8 (Google public DNS).\n\
          If -r is given, then only reverse tether the specified routes.\n\
+         If --proxy-host and --proxy-port are given, set an HTTP proxy for\n\
+         the VPN network (Android 10+).\n\
+         If --proxy-exclusion-list is given, bypass proxy for these hosts.\n\
          Otherwise, use 0.0.0.0/0 (redirect the whole traffic).\n\
          If -p is given, then make the relay server listen on the specified\n\
          port. Otherwise, use port 31416.\n\
@@ -227,6 +251,9 @@ impl Command for StartCommand {
             args.serial(),
             args.dns_servers(),
             args.routes(),
+            args.proxy_host(),
+            args.proxy_port(),
+            args.proxy_exclusion_list(),
             args.port(),
         )
     }
@@ -238,7 +265,12 @@ impl Command for AutostartCommand {
     }
 
     fn accepted_parameters(&self) -> u8 {
-        cli_args::PARAM_DNS_SERVERS | cli_args::PARAM_ROUTES | cli_args::PARAM_PORT
+        cli_args::PARAM_DNS_SERVERS
+            | cli_args::PARAM_ROUTES
+            | cli_args::PARAM_PROXY_HOST
+            | cli_args::PARAM_PROXY_PORT
+            | cli_args::PARAM_PROXY_EXCLUSION_LIST
+            | cli_args::PARAM_PORT
     }
 
     fn description(&self) -> &'static str {
@@ -249,7 +281,14 @@ impl Command for AutostartCommand {
     }
 
     fn execute(&self, args: &CommandLineArguments) -> Result<(), CommandExecutionError> {
-        cmd_autostart(args.dns_servers(), args.routes(), args.port())
+        cmd_autostart(
+            args.dns_servers(),
+            args.routes(),
+            args.proxy_host(),
+            args.proxy_port(),
+            args.proxy_exclusion_list(),
+            args.port(),
+        )
     }
 }
 
@@ -282,6 +321,9 @@ impl Command for RestartCommand {
         cli_args::PARAM_SERIAL
             | cli_args::PARAM_DNS_SERVERS
             | cli_args::PARAM_ROUTES
+            | cli_args::PARAM_PROXY_HOST
+            | cli_args::PARAM_PROXY_PORT
+            | cli_args::PARAM_PROXY_EXCLUSION_LIST
             | cli_args::PARAM_PORT
     }
 
@@ -295,6 +337,9 @@ impl Command for RestartCommand {
             args.serial(),
             args.dns_servers(),
             args.routes(),
+            args.proxy_host(),
+            args.proxy_port(),
+            args.proxy_exclusion_list(),
             args.port(),
         )?;
         Ok(())
@@ -361,10 +406,21 @@ fn cmd_run(
     serial: Option<&str>,
     dns_servers: Option<&str>,
     routes: Option<&str>,
+    proxy_host: Option<&str>,
+    proxy_port: u16,
+    proxy_exclusion_list: Option<&str>,
     port: u16,
 ) -> Result<(), CommandExecutionError> {
     // start in parallel so that the relay server is ready when the client connects
-    async_start(serial, dns_servers, routes, port);
+    async_start(
+        serial,
+        dns_servers,
+        routes,
+        proxy_host,
+        proxy_port,
+        proxy_exclusion_list,
+        port,
+    );
 
     let ctrlc_serial = serial.map(String::from);
     ctrlc::set_handler(move || {
@@ -385,15 +441,29 @@ fn cmd_run(
 fn cmd_autorun(
     dns_servers: Option<&str>,
     routes: Option<&str>,
+    proxy_host: Option<&str>,
+    proxy_port: u16,
+    proxy_exclusion_list: Option<&str>,
     port: u16,
 ) -> Result<(), CommandExecutionError> {
     {
         let autostart_dns_servers = dns_servers.map(String::from);
         let autostart_routes = routes.map(String::from);
+        let autostart_proxy_host = proxy_host.map(String::from);
+        let autostart_proxy_exclusion_list = proxy_exclusion_list.map(String::from);
         thread::spawn(move || {
             let dns_servers = autostart_dns_servers.as_ref().map(String::as_ref);
             let routes = autostart_routes.as_ref().map(String::as_ref);
-            if let Err(err) = cmd_autostart(dns_servers, routes, port) {
+            let proxy_host = autostart_proxy_host.as_ref().map(String::as_ref);
+            let proxy_exclusion_list = autostart_proxy_exclusion_list.as_ref().map(String::as_ref);
+            if let Err(err) = cmd_autostart(
+                dns_servers,
+                routes,
+                proxy_host,
+                proxy_port,
+                proxy_exclusion_list,
+                port,
+            ) {
                 error!(target: TAG, "Cannot auto start clients: {}", err);
             }
         });
@@ -406,6 +476,9 @@ fn cmd_start(
     serial: Option<&str>,
     dns_servers: Option<&str>,
     routes: Option<&str>,
+    proxy_host: Option<&str>,
+    proxy_port: u16,
+    proxy_exclusion_list: Option<&str>,
     port: u16,
 ) -> Result<(), CommandExecutionError> {
     if must_install_client(serial)? {
@@ -419,19 +492,36 @@ fn cmd_start(
     cmd_tunnel(serial, port)?;
 
     let mut adb_args = vec![
-        "shell",
-        "am",
-        "start",
-        "-a",
-        "com.genymobile.gnirehtet.START",
-        "-n",
-        "com.genymobile.gnirehtet/.GnirehtetActivity",
+        "shell".to_string(),
+        "am".to_string(),
+        "start".to_string(),
+        "-a".to_string(),
+        "com.genymobile.gnirehtet.START".to_string(),
+        "-n".to_string(),
+        "com.genymobile.gnirehtet/.GnirehtetActivity".to_string(),
     ];
     if let Some(dns_servers) = dns_servers {
-        adb_args.append(&mut vec!["--esa", "dnsServers", dns_servers]);
+        adb_args.push("--esa".to_string());
+        adb_args.push("dnsServers".to_string());
+        adb_args.push(dns_servers.to_string());
     }
     if let Some(routes) = routes {
-        adb_args.append(&mut vec!["--esa", "routes", routes]);
+        adb_args.push("--esa".to_string());
+        adb_args.push("routes".to_string());
+        adb_args.push(routes.to_string());
+    }
+    if let Some(proxy_host) = proxy_host {
+        adb_args.push("--es".to_string());
+        adb_args.push("proxyHost".to_string());
+        adb_args.push(proxy_host.to_string());
+        adb_args.push("--ei".to_string());
+        adb_args.push("proxyPort".to_string());
+        adb_args.push(proxy_port.to_string());
+    }
+    if let Some(proxy_exclusion_list) = proxy_exclusion_list {
+        adb_args.push("--esa".to_string());
+        adb_args.push("proxyExclusionList".to_string());
+        adb_args.push(proxy_exclusion_list.to_string());
     }
     exec_adb(serial, adb_args)
 }
@@ -439,14 +529,29 @@ fn cmd_start(
 fn cmd_autostart(
     dns_servers: Option<&str>,
     routes: Option<&str>,
+    proxy_host: Option<&str>,
+    proxy_port: u16,
+    proxy_exclusion_list: Option<&str>,
     port: u16,
 ) -> Result<(), CommandExecutionError> {
     let start_dns_servers = dns_servers.map(String::from);
     let start_routes = routes.map(String::from);
+    let start_proxy_host = proxy_host.map(String::from);
+    let start_proxy_exclusion_list = proxy_exclusion_list.map(String::from);
     let mut adb_monitor = AdbMonitor::new(Box::new(move |serial: &str| {
         let dns_servers = start_dns_servers.as_ref().map(String::as_ref);
         let routes = start_routes.as_ref().map(String::as_ref);
-        async_start(Some(serial), dns_servers, routes, port)
+        let proxy_host = start_proxy_host.as_ref().map(String::as_ref);
+        let proxy_exclusion_list = start_proxy_exclusion_list.as_ref().map(String::as_ref);
+        async_start(
+            Some(serial),
+            dns_servers,
+            routes,
+            proxy_host,
+            proxy_port,
+            proxy_exclusion_list,
+            port,
+        )
     }));
     adb_monitor.monitor();
     Ok(())
@@ -485,15 +590,35 @@ fn cmd_relay(port: u16) -> Result<(), CommandExecutionError> {
     Ok(())
 }
 
-fn async_start(serial: Option<&str>, dns_servers: Option<&str>, routes: Option<&str>, port: u16) {
+fn async_start(
+    serial: Option<&str>,
+    dns_servers: Option<&str>,
+    routes: Option<&str>,
+    proxy_host: Option<&str>,
+    proxy_port: u16,
+    proxy_exclusion_list: Option<&str>,
+    port: u16,
+) {
     let start_serial = serial.map(String::from);
     let start_dns_servers = dns_servers.map(String::from);
     let start_routes = routes.map(String::from);
+    let start_proxy_host = proxy_host.map(String::from);
+    let start_proxy_exclusion_list = proxy_exclusion_list.map(String::from);
     thread::spawn(move || {
         let serial = start_serial.as_ref().map(String::as_ref);
         let dns_servers = start_dns_servers.as_ref().map(String::as_ref);
         let routes = start_routes.as_ref().map(String::as_ref);
-        if let Err(err) = cmd_start(serial, dns_servers, routes, port) {
+        let proxy_host = start_proxy_host.as_ref().map(String::as_ref);
+        let proxy_exclusion_list = start_proxy_exclusion_list.as_ref().map(String::as_ref);
+        if let Err(err) = cmd_start(
+            serial,
+            dns_servers,
+            routes,
+            proxy_host,
+            proxy_port,
+            proxy_exclusion_list,
+            port,
+        ) {
             error!(target: TAG, "Cannot start client: {}", err);
         }
     });
@@ -604,6 +729,12 @@ fn append_command_usage(msg: &mut String, command: &dyn Command) {
     }
     if (accepted_parameters & cli_args::PARAM_ROUTES) != 0 {
         msg.push_str(" [-r ROUTE[,ROUTE2,...]]");
+    }
+    if (accepted_parameters & cli_args::PARAM_PROXY_HOST) != 0 {
+        msg.push_str(" [--proxy-host HOST --proxy-port PORT]");
+    }
+    if (accepted_parameters & cli_args::PARAM_PROXY_EXCLUSION_LIST) != 0 {
+        msg.push_str(" [--proxy-exclusion-list HOST[,HOST2,...]]");
     }
     msg.push('\n');
     for desc_line in command.description().split('\n') {

@@ -30,7 +30,9 @@ import android.os.ParcelFileDescriptor;
 import android.util.Log;
 
 import java.io.IOException;
+import java.lang.reflect.Method;
 import java.net.InetAddress;
+import java.util.ArrayList;
 import java.util.List;
 
 public class GnirehtetService extends VpnService {
@@ -135,6 +137,8 @@ public class GnirehtetService extends VpnService {
             }
         }
 
+        configureHttpProxy(builder, config);
+
         // non-blocking by default, but FileChannel is not selectable, that's stupid!
         // so switch to synchronous I/O to avoid polling
         builder.setBlocking(true);
@@ -149,6 +153,57 @@ public class GnirehtetService extends VpnService {
 
         setAsUndernlyingNetwork();
         return true;
+    }
+
+    private void configureHttpProxy(Builder builder, VpnConfiguration config) {
+        String proxyHost = config.getProxyHost();
+        int proxyPort = config.getProxyPort();
+        if (proxyHost == null || proxyHost.isEmpty() || proxyPort == 0) {
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT < 29) {
+            Log.w(TAG, "HTTP proxy requested but only supported on Android 10+ (API 29+)");
+            return;
+        }
+
+        try {
+            Class<?> proxyInfoClass = Class.forName("android.net.ProxyInfo");
+            Object proxyInfo = createProxyInfo(proxyInfoClass, proxyHost, proxyPort, config.getProxyExclusionList());
+            Method setHttpProxyMethod = Builder.class.getMethod("setHttpProxy", proxyInfoClass);
+            setHttpProxyMethod.invoke(builder, proxyInfo);
+        } catch (ReflectiveOperationException e) {
+            Log.w(TAG, "Cannot configure HTTP proxy", e);
+        }
+    }
+
+    private static Object createProxyInfo(Class<?> proxyInfoClass, String host, int port, String[] exclusionList)
+            throws ReflectiveOperationException {
+        List<String> exclusions = toProxyExclusions(exclusionList);
+        try {
+            Method buildDirectProxyMethod = proxyInfoClass.getMethod("buildDirectProxy", String.class, int.class, List.class);
+            return buildDirectProxyMethod.invoke(null, host, port, exclusions);
+        } catch (NoSuchMethodException e) {
+            Method buildDirectProxyMethod = proxyInfoClass.getMethod("buildDirectProxy", String.class, int.class);
+            return buildDirectProxyMethod.invoke(null, host, port);
+        }
+    }
+
+    private static List<String> toProxyExclusions(String[] exclusionList) {
+        List<String> result = new ArrayList<>();
+        if (exclusionList == null) {
+            return result;
+        }
+        for (String rawValue : exclusionList) {
+            if (rawValue == null) {
+                continue;
+            }
+            String value = rawValue.trim();
+            if (!value.isEmpty()) {
+                result.add(value);
+            }
+        }
+        return result;
     }
 
     @SuppressWarnings("checkstyle:MagicNumber")

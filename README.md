@@ -175,6 +175,11 @@ In another terminal, for each client, execute:
 
     ./gnirehtet start [serial]
 
+To configure an HTTP proxy for the VPN network on Android 10+:
+
+    ./gnirehtet start [serial] --proxy-host HOST --proxy-port PORT \
+        --proxy-exclusion-list HOST[,HOST2,...]
+
 To stop a client:
 
     ./gnirehtet stop [serial]
@@ -208,6 +213,15 @@ To start a client:
     adb reverse localabstract:gnirehtet tcp:31416
     adb shell am start -a com.genymobile.gnirehtet.START \
         -n com.genymobile.gnirehtet/.GnirehtetActivity
+
+To start a client with an HTTP proxy and exclusions:
+
+    adb reverse localabstract:gnirehtet tcp:31416
+    adb shell am start -a com.genymobile.gnirehtet.START \
+        -n com.genymobile.gnirehtet/.GnirehtetActivity \
+        --es proxyHost HOST \
+        --ei proxyPort PORT \
+        --esa proxyExclusionList HOST,HOST2
 
 To stop a client:
 

@@ -6,6 +6,9 @@ import android.net.VpnService;
 import android.os.Bundle;
 import android.util.Log;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * This (invisible) activity receives the {@link #ACTION_GNIREHTET_START START} and
  * {@link #ACTION_GNIREHTET_STOP} actions from the command line.
@@ -23,6 +26,9 @@ public class GnirehtetActivity extends Activity {
 
     public static final String EXTRA_DNS_SERVERS = "dnsServers";
     public static final String EXTRA_ROUTES = "routes";
+    public static final String EXTRA_PROXY_HOST = "proxyHost";
+    public static final String EXTRA_PROXY_PORT = "proxyPort";
+    public static final String EXTRA_PROXY_EXCLUSION_LIST = "proxyExclusionList";
 
     private static final int VPN_REQUEST_CODE = 0;
 
@@ -59,7 +65,27 @@ public class GnirehtetActivity extends Activity {
         if (routes == null) {
             routes = new String[0];
         }
-        return new VpnConfiguration(Net.toInetAddresses(dnsServers), Net.toCIDRs(routes));
+        String proxyHost = intent.getStringExtra(EXTRA_PROXY_HOST);
+        int proxyPort = intent.getIntExtra(EXTRA_PROXY_PORT, 0);
+        String[] proxyExclusionList = normalizeProxyExclusionList(intent.getStringArrayExtra(EXTRA_PROXY_EXCLUSION_LIST));
+        return new VpnConfiguration(Net.toInetAddresses(dnsServers), Net.toCIDRs(routes), proxyHost, proxyPort, proxyExclusionList);
+    }
+
+    private static String[] normalizeProxyExclusionList(String[] rawList) {
+        if (rawList == null) {
+            return new String[0];
+        }
+        List<String> values = new ArrayList<>(rawList.length);
+        for (String rawValue : rawList) {
+            if (rawValue == null) {
+                continue;
+            }
+            String value = rawValue.trim();
+            if (!value.isEmpty()) {
+                values.add(value);
+            }
+        }
+        return values.toArray(new String[0]);
     }
 
     private boolean startGnirehtet(VpnConfiguration config) {

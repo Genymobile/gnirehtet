@@ -21,14 +21,19 @@ import org.junit.Test;
 
 public class CommandLineArgumentsTest {
 
+    private static final int PROXY_PORT = 8080;
+
     private static final int ACCEPT_ALL = CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER
-            | CommandLineArguments.PARAM_ROUTES;
+            | CommandLineArguments.PARAM_ROUTES | CommandLineArguments.PARAM_PROXY_HOST
+            | CommandLineArguments.PARAM_PROXY_PORT | CommandLineArguments.PARAM_PROXY_EXCLUSION_LIST;
 
     @Test
     public void testNoArgs() {
         CommandLineArguments args = CommandLineArguments.parse(ACCEPT_ALL);
         Assert.assertNull(args.getSerial());
         Assert.assertNull(args.getDnsServers());
+        Assert.assertNull(args.getProxyHost());
+        Assert.assertEquals(0, args.getProxyPort());
     }
 
     @Test
@@ -83,5 +88,43 @@ public class CommandLineArgumentsTest {
     @Test(expected = IllegalArgumentException.class)
     public void testNoRoutesParameter() {
         CommandLineArguments.parse(ACCEPT_ALL, "-r");
+    }
+
+    @Test
+    public void testProxyHostAndPort() {
+        CommandLineArguments args =
+                CommandLineArguments.parse(ACCEPT_ALL, "--proxy-host", "127.0.0.1", "--proxy-port", Integer.toString(PROXY_PORT));
+        Assert.assertEquals("127.0.0.1", args.getProxyHost());
+        Assert.assertEquals(PROXY_PORT, args.getProxyPort());
+        Assert.assertNull(args.getProxyExclusionList());
+    }
+
+    @Test
+    public void testProxyExclusionList() {
+        CommandLineArguments args = CommandLineArguments.parse(ACCEPT_ALL,
+                "--proxy-host", "127.0.0.1",
+                "--proxy-port", Integer.toString(PROXY_PORT),
+                "--proxy-exclusion-list", "localhost,*.example.org");
+        Assert.assertEquals("localhost,*.example.org", args.getProxyExclusionList());
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testProxyHostWithoutProxyPort() {
+        CommandLineArguments.parse(ACCEPT_ALL, "--proxy-host", "127.0.0.1");
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testProxyPortWithoutProxyHost() {
+        CommandLineArguments.parse(ACCEPT_ALL, "--proxy-port", Integer.toString(PROXY_PORT));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testEmptyProxyHost() {
+        CommandLineArguments.parse(ACCEPT_ALL, "--proxy-host", "   ", "--proxy-port", Integer.toString(PROXY_PORT));
+    }
+
+    @Test(expected = IllegalArgumentException.class)
+    public void testProxyExclusionListWithoutProxy() {
+        CommandLineArguments.parse(ACCEPT_ALL, "--proxy-exclusion-list", "localhost");
     }
 }
