@@ -19,6 +19,9 @@ pub const PARAM_SERIAL: u8 = 1;
 pub const PARAM_DNS_SERVERS: u8 = 1 << 1;
 pub const PARAM_ROUTES: u8 = 1 << 2;
 pub const PARAM_PORT: u8 = 1 << 3;
+pub const PARAM_PROXY_HOST: u8 = 1 << 4;
+pub const PARAM_PROXY_PORT: u8 = 1 << 5;
+pub const PARAM_PROXY_EXCLUSION_LIST: u8 = 1 << 6;
 
 pub const DEFAULT_PORT: u16 = 31416;
 
@@ -26,6 +29,9 @@ pub struct CommandLineArguments {
     serial: Option<String>,
     dns_servers: Option<String>,
     routes: Option<String>,
+    proxy_host: Option<String>,
+    proxy_port: u16,
+    proxy_exclusion_list: Option<String>,
     port: u16,
 }
 
@@ -35,6 +41,9 @@ impl CommandLineArguments {
         let mut serial = None;
         let mut dns_servers = None;
         let mut routes = None;
+        let mut proxy_host = None;
+        let mut proxy_port = 0;
+        let mut proxy_exclusion_list = None;
         let mut port = 0;
 
         let mut iter = args.into_iter();
@@ -63,12 +72,42 @@ impl CommandLineArguments {
                     return Err(String::from("Port already set"));
                 }
                 if let Some(value) = iter.next() {
-                    port = value.into().parse().unwrap();
-                    if port == 0 {
-                        return Err(String::from("Invalid port: 0"));
-                    }
+                    port = parse_port(&value.into(), "-p")?;
                 } else {
                     return Err(String::from("Missing -p parameter"));
+                }
+            } else if (accepted_parameters & PARAM_PROXY_HOST) != 0 && "--proxy-host" == arg {
+                if proxy_host.is_some() {
+                    return Err(String::from("Proxy host already set"));
+                }
+                if let Some(value) = iter.next() {
+                    let value = value.into();
+                    if value.trim().is_empty() {
+                        return Err(String::from("Proxy host must not be empty"));
+                    }
+                    proxy_host = Some(value);
+                } else {
+                    return Err(String::from("Missing --proxy-host parameter"));
+                }
+            } else if (accepted_parameters & PARAM_PROXY_PORT) != 0 && "--proxy-port" == arg {
+                if proxy_port != 0 {
+                    return Err(String::from("Proxy port already set"));
+                }
+                if let Some(value) = iter.next() {
+                    proxy_port = parse_port(&value.into(), "--proxy-port")?;
+                } else {
+                    return Err(String::from("Missing --proxy-port parameter"));
+                }
+            } else if (accepted_parameters & PARAM_PROXY_EXCLUSION_LIST) != 0
+                && "--proxy-exclusion-list" == arg
+            {
+                if proxy_exclusion_list.is_some() {
+                    return Err(String::from("Proxy exclusion list already set"));
+                }
+                if let Some(value) = iter.next() {
+                    proxy_exclusion_list = Some(value.into());
+                } else {
+                    return Err(String::from("Missing --proxy-exclusion-list parameter"));
                 }
             } else if (accepted_parameters & PARAM_SERIAL) != 0 && serial.is_none() {
                 serial = Some(arg);
@@ -76,6 +115,18 @@ impl CommandLineArguments {
                 return Err(format!("Unexpected argument: \"{}\"", arg));
             }
         }
+
+        if proxy_host.is_some() != (proxy_port != 0) {
+            return Err(String::from(
+                "Both --proxy-host and --proxy-port must be provided together",
+            ));
+        }
+        if proxy_exclusion_list.is_some() && proxy_host.is_none() {
+            return Err(String::from(
+                "Proxy exclusion list requires --proxy-host and --proxy-port",
+            ));
+        }
+
         if port == 0 {
             port = DEFAULT_PORT;
         }
@@ -83,6 +134,9 @@ impl CommandLineArguments {
             serial,
             dns_servers,
             routes,
+            proxy_host,
+            proxy_port,
+            proxy_exclusion_list,
             port,
         })
     }
@@ -99,8 +153,27 @@ impl CommandLineArguments {
         self.routes.as_deref()
     }
 
+    pub fn proxy_host(&self) -> Option<&str> {
+        self.proxy_host.as_deref()
+    }
+
+    pub fn proxy_port(&self) -> u16 {
+        self.proxy_port
+    }
+
+    pub fn proxy_exclusion_list(&self) -> Option<&str> {
+        self.proxy_exclusion_list.as_deref()
+    }
+
     pub fn port(&self) -> u16 {
         self.port
+    }
+}
+
+fn parse_port(value: &str, parameter_name: &str) -> Result<u16, String> {
+    match value.parse::<u16>() {
+        Ok(port) if port > 0 => Ok(port),
+        _ => Err(format!("Invalid {} value: {}", parameter_name, value)),
     }
 }
 
@@ -108,13 +181,20 @@ impl CommandLineArguments {
 mod tests {
     use super::*;
 
-    const ACCEPT_ALL: u8 = PARAM_SERIAL | PARAM_DNS_SERVERS | PARAM_ROUTES;
+    const ACCEPT_ALL: u8 = PARAM_SERIAL
+        | PARAM_DNS_SERVERS
+        | PARAM_ROUTES
+        | PARAM_PROXY_HOST
+        | PARAM_PROXY_PORT
+        | PARAM_PROXY_EXCLUSION_LIST;
 
     #[test]
     fn test_no_args() {
         let args = CommandLineArguments::parse(ACCEPT_ALL, Vec::<&str>::new()).unwrap();
         assert!(args.serial.is_none());
         assert!(args.dns_servers.is_none());
+        assert!(args.proxy_host.is_none());
+        assert_eq!(0, args.proxy_port);
     }
 
     #[test]
@@ -176,6 +256,56 @@ mod tests {
     #[test]
     fn test_no_routes_parameter() {
         let raw_args = vec!["-r"];
+        assert!(CommandLineArguments::parse(ACCEPT_ALL, raw_args).is_err());
+    }
+
+    #[test]
+    fn test_proxy_host_and_port() {
+        let raw_args = vec!["--proxy-host", "127.0.0.1", "--proxy-port", "8080"];
+        let args = CommandLineArguments::parse(ACCEPT_ALL, raw_args).unwrap();
+        assert_eq!("127.0.0.1", args.proxy_host.unwrap());
+        assert_eq!(8080, args.proxy_port);
+        assert!(args.proxy_exclusion_list.is_none());
+    }
+
+    #[test]
+    fn test_proxy_exclusion_list() {
+        let raw_args = vec![
+            "--proxy-host",
+            "127.0.0.1",
+            "--proxy-port",
+            "8080",
+            "--proxy-exclusion-list",
+            "localhost,*.example.org",
+        ];
+        let args = CommandLineArguments::parse(ACCEPT_ALL, raw_args).unwrap();
+        assert_eq!(
+            "localhost,*.example.org",
+            args.proxy_exclusion_list.unwrap()
+        );
+    }
+
+    #[test]
+    fn test_proxy_host_without_proxy_port() {
+        let raw_args = vec!["--proxy-host", "127.0.0.1"];
+        assert!(CommandLineArguments::parse(ACCEPT_ALL, raw_args).is_err());
+    }
+
+    #[test]
+    fn test_proxy_port_without_proxy_host() {
+        let raw_args = vec!["--proxy-port", "8080"];
+        assert!(CommandLineArguments::parse(ACCEPT_ALL, raw_args).is_err());
+    }
+
+    #[test]
+    fn test_empty_proxy_host() {
+        let raw_args = vec!["--proxy-host", "  ", "--proxy-port", "8080"];
+        assert!(CommandLineArguments::parse(ACCEPT_ALL, raw_args).is_err());
+    }
+
+    #[test]
+    fn test_proxy_exclusion_list_without_proxy() {
+        let raw_args = vec!["--proxy-exclusion-list", "localhost"];
         assert!(CommandLineArguments::parse(ACCEPT_ALL, raw_args).is_err());
     }
 }

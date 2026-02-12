@@ -27,6 +27,9 @@ public class CommandLineArguments {
     public static final int PARAM_DNS_SERVER = 1 << 1;
     public static final int PARAM_ROUTES = 1 << 2;
     public static final int PARAM_PORT = 1 << 3;
+    public static final int PARAM_PROXY_HOST = 1 << 4;
+    public static final int PARAM_PROXY_PORT = 1 << 5;
+    public static final int PARAM_PROXY_EXCLUSION_LIST = 1 << 6;
 
     public static final int DEFAULT_PORT = 31416;
 
@@ -34,6 +37,9 @@ public class CommandLineArguments {
     private String serial;
     private String dnsServers;
     private String routes;
+    private String proxyHost;
+    private int proxyPort;
+    private String proxyExclusionList;
 
     public static CommandLineArguments parse(int acceptedParameters, String... args) {
         CommandLineArguments arguments = new CommandLineArguments();
@@ -64,10 +70,38 @@ public class CommandLineArguments {
                 if (i == args.length - 1) {
                     throw new IllegalArgumentException("Missing -p parameter");
                 }
-                arguments.port = Integer.parseInt(args[i + 1]);
-                if (arguments.port <= 0 || arguments.port >= 65536) {
-                    throw new IllegalArgumentException("Invalid port: " + arguments.port);
+                arguments.port = parsePort(args[i + 1], "-p");
+                ++i;
+            } else if ((acceptedParameters & PARAM_PROXY_HOST) != 0 && "--proxy-host".equals(arg)) {
+                if (arguments.proxyHost != null) {
+                    throw new IllegalArgumentException("Proxy host already set");
                 }
+                if (i == args.length - 1) {
+                    throw new IllegalArgumentException("Missing --proxy-host parameter");
+                }
+                arguments.proxyHost = args[i + 1];
+                if (arguments.proxyHost.trim().isEmpty()) {
+                    throw new IllegalArgumentException("Proxy host must not be empty");
+                }
+                ++i;
+            } else if ((acceptedParameters & PARAM_PROXY_PORT) != 0 && "--proxy-port".equals(arg)) {
+                if (arguments.proxyPort != 0) {
+                    throw new IllegalArgumentException("Proxy port already set");
+                }
+                if (i == args.length - 1) {
+                    throw new IllegalArgumentException("Missing --proxy-port parameter");
+                }
+                arguments.proxyPort = parsePort(args[i + 1], "--proxy-port");
+                ++i;
+            } else if ((acceptedParameters & PARAM_PROXY_EXCLUSION_LIST) != 0
+                    && "--proxy-exclusion-list".equals(arg)) {
+                if (arguments.proxyExclusionList != null) {
+                    throw new IllegalArgumentException("Proxy exclusion list already set");
+                }
+                if (i == args.length - 1) {
+                    throw new IllegalArgumentException("Missing --proxy-exclusion-list parameter");
+                }
+                arguments.proxyExclusionList = args[i + 1];
                 ++i;
             } else if ((acceptedParameters & PARAM_SERIAL) != 0 && arguments.serial == null) {
                 arguments.serial = arg;
@@ -75,10 +109,29 @@ public class CommandLineArguments {
                 throw new IllegalArgumentException("Unexpected argument: \"" + arg + "\"");
             }
         }
+        if ((arguments.proxyHost == null) != (arguments.proxyPort == 0)) {
+            throw new IllegalArgumentException("Both --proxy-host and --proxy-port must be provided together");
+        }
+        if (arguments.proxyExclusionList != null && arguments.proxyHost == null) {
+            throw new IllegalArgumentException("Proxy exclusion list requires --proxy-host and --proxy-port");
+        }
         if (arguments.port == 0) {
             arguments.port = DEFAULT_PORT;
         }
         return arguments;
+    }
+
+    private static int parsePort(String value, String parameterName) {
+        int port;
+        try {
+            port = Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("Invalid " + parameterName + " value: " + value, e);
+        }
+        if (port <= 0 || port >= 65536) {
+            throw new IllegalArgumentException("Invalid port: " + port);
+        }
+        return port;
     }
 
     public String getSerial() {
@@ -95,5 +148,17 @@ public class CommandLineArguments {
 
     public int getPort() {
         return port;
+    }
+
+    public String getProxyHost() {
+        return proxyHost;
+    }
+
+    public int getProxyPort() {
+        return proxyPort;
+    }
+
+    public String getProxyExclusionList() {
+        return proxyExclusionList;
     }
 }
