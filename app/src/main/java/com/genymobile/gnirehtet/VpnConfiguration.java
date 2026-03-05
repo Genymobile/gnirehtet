@@ -26,15 +26,28 @@ public class VpnConfiguration implements Parcelable {
 
     private final InetAddress[] dnsServers;
     private final CIDR[] routes;
+    private final String proxyHost;
+    private final int proxyPort;
+    private final String[] exclusionList;
 
     public VpnConfiguration() {
         this.dnsServers = new InetAddress[0];
         this.routes = new CIDR[0];
+        this.proxyHost = null;
+        this.proxyPort = -1;
+        this.exclusionList = new String[0];
     }
 
     public VpnConfiguration(InetAddress[] dnsServers, CIDR[] routes) {
+        this(dnsServers, routes, null, -1, new String[0]);
+    }
+
+    public VpnConfiguration(InetAddress[] dnsServers, CIDR[] routes, String proxyHost, int proxyPort, String[] exclusionList) {
         this.dnsServers = dnsServers;
         this.routes = routes;
+        this.proxyHost = proxyHost;
+        this.proxyPort = proxyPort;
+        this.exclusionList = exclusionList;
     }
 
     private VpnConfiguration(Parcel source) {
@@ -48,6 +61,9 @@ public class VpnConfiguration implements Parcelable {
             throw new AssertionError("Invalid address", e);
         }
         routes = source.createTypedArray(CIDR.CREATOR);
+        proxyHost = source.readString();
+        proxyPort = source.readInt();
+        exclusionList = source.createStringArray();
     }
 
     public InetAddress[] getDnsServers() {
@@ -58,6 +74,22 @@ public class VpnConfiguration implements Parcelable {
         return routes;
     }
 
+    public String getProxyHost() {
+        return proxyHost;
+    }
+
+    public int getProxyPort() {
+        return proxyPort;
+    }
+
+    public String[] getExclusionList() {
+        return exclusionList;
+    }
+
+    public boolean hasProxy() {
+        return proxyHost != null && proxyPort > 0;
+    }
+
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeInt(dnsServers.length);
@@ -65,6 +97,9 @@ public class VpnConfiguration implements Parcelable {
             dest.writeByteArray(addr.getAddress());
         }
         dest.writeTypedArray(routes, 0);
+        dest.writeString(proxyHost);
+        dest.writeInt(proxyPort);
+        dest.writeStringArray(exclusionList);
     }
 
     @Override

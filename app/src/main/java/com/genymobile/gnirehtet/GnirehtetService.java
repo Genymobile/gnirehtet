@@ -22,6 +22,7 @@ import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
+import android.net.ProxyInfo;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.Handler;
@@ -139,6 +140,16 @@ public class GnirehtetService extends VpnService {
         // so switch to synchronous I/O to avoid polling
         builder.setBlocking(true);
         builder.setMtu(MTU);
+
+        // Set HTTP proxy with exclusion list if configured (API 29+)
+        if (config.hasProxy() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            String proxyHost = config.getProxyHost();
+            int proxyPort = config.getProxyPort();
+            String[] exclusionList = config.getExclusionList();
+            ProxyInfo proxyInfo = ProxyInfo.buildDirectProxy(proxyHost, proxyPort, exclusionList);
+            builder.setHttpProxy(proxyInfo);
+            Log.d(TAG, "HTTP proxy configured: " + proxyHost + ":" + proxyPort + " with " + exclusionList.length + " exclusions");
+        }
 
         vpnInterface = builder.establish();
         if (vpnInterface == null) {
