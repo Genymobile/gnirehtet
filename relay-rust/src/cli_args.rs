@@ -19,6 +19,8 @@ pub const PARAM_SERIAL: u8 = 1;
 pub const PARAM_DNS_SERVERS: u8 = 1 << 1;
 pub const PARAM_ROUTES: u8 = 1 << 2;
 pub const PARAM_PORT: u8 = 1 << 3;
+pub const PARAM_PROXY: u8 = 1 << 4;
+pub const PARAM_EXCLUSION_LIST: u8 = 1 << 5;
 
 pub const DEFAULT_PORT: u16 = 31416;
 
@@ -27,6 +29,9 @@ pub struct CommandLineArguments {
     dns_servers: Option<String>,
     routes: Option<String>,
     port: u16,
+    proxy_host: Option<String>,
+    proxy_port: Option<u16>,
+    exclusion_list: Option<String>,
 }
 
 impl CommandLineArguments {
@@ -36,6 +41,9 @@ impl CommandLineArguments {
         let mut dns_servers = None;
         let mut routes = None;
         let mut port = 0;
+        let mut proxy_host = None;
+        let mut proxy_port = None;
+        let mut exclusion_list = None;
 
         let mut iter = args.into_iter();
         while let Some(arg) = iter.next() {
@@ -70,6 +78,34 @@ impl CommandLineArguments {
                 } else {
                     return Err(String::from("Missing -p parameter"));
                 }
+            } else if (accepted_parameters & PARAM_PROXY) != 0 && "-x" == arg {
+                if proxy_host.is_some() {
+                    return Err(String::from("Proxy already set"));
+                }
+                if let Some(value) = iter.next() {
+                    let proxy_value: String = value.into();
+                    if let Some(colon_pos) = proxy_value.rfind(':') {
+                        if colon_pos > 0 && colon_pos < proxy_value.len() - 1 {
+                            proxy_host = Some(proxy_value[..colon_pos].to_string());
+                            proxy_port = Some(proxy_value[colon_pos + 1..].parse().map_err(|_| "Invalid proxy port")?);
+                        } else {
+                            return Err(String::from("Invalid proxy format. Use host:port"));
+                        }
+                    } else {
+                        return Err(String::from("Invalid proxy format. Use host:port"));
+                    }
+                } else {
+                    return Err(String::from("Missing -x parameter"));
+                }
+            } else if (accepted_parameters & PARAM_EXCLUSION_LIST) != 0 && "-e" == arg {
+                if exclusion_list.is_some() {
+                    return Err(String::from("Exclusion list already set"));
+                }
+                if let Some(value) = iter.next() {
+                    exclusion_list = Some(value.into());
+                } else {
+                    return Err(String::from("Missing -e parameter"));
+                }
             } else if (accepted_parameters & PARAM_SERIAL) != 0 && serial.is_none() {
                 serial = Some(arg);
             } else {
@@ -84,6 +120,9 @@ impl CommandLineArguments {
             dns_servers,
             routes,
             port,
+            proxy_host,
+            proxy_port,
+            exclusion_list,
         })
     }
 
@@ -101,6 +140,29 @@ impl CommandLineArguments {
 
     pub fn port(&self) -> u16 {
         self.port
+    }
+
+    pub fn proxy_host(&self) -> Option<&str> {
+        self.proxy_host.as_deref()
+    }
+
+    pub fn proxy_port(&self) -> Option<u16> {
+        self.proxy_port
+    }
+
+    pub fn has_proxy(&self) -> bool {
+        self.proxy_host.is_some() && self.proxy_port.is_some()
+    }
+
+    pub fn exclusion_list(&self) -> Option<&str> {
+        self.exclusion_list.as_deref()
+    }
+
+    pub fn exclusion_list_array(&self) -> Vec<String> {
+        match &self.exclusion_list {
+            Some(list) => list.split(',').map(|s| s.to_string()).collect(),
+            None => Vec::new(),
+        }
     }
 }
 

@@ -22,6 +22,7 @@ import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
+import android.net.ProxyInfo;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.Handler;
@@ -135,6 +136,9 @@ public class GnirehtetService extends VpnService {
             }
         }
 
+        // Set up HTTP proxy with exclusion list
+        setupHttpProxy(builder, config);
+
         // non-blocking by default, but FileChannel is not selectable, that's stupid!
         // so switch to synchronous I/O to avoid polling
         builder.setBlocking(true);
@@ -149,6 +153,30 @@ public class GnirehtetService extends VpnService {
 
         setAsUndernlyingNetwork();
         return true;
+    }
+
+    @SuppressWarnings("checkstyle:MagicNumber")
+    private void setupHttpProxy(Builder builder, VpnConfiguration config) {
+        String[] exclusionList = config.getProxyExclusionList();
+        if (exclusionList == null || exclusionList.length == 0) {
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            // Convert exclusion list to comma-separated string
+            StringBuilder exclusionListStr = new StringBuilder();
+            for (int i = 0; i < exclusionList.length; i++) {
+                if (i > 0) {
+                    exclusionListStr.append(",");
+                }
+                exclusionListStr.append(exclusionList[i]);
+            }
+            ProxyInfo proxyInfo = ProxyInfo.buildDirectProxy(VPN_ADDRESS.getHostAddress(), 31416, exclusionList);
+            builder.setHttpProxy(proxyInfo);
+            Log.d(TAG, "HTTP proxy configured with exclusion list: " + exclusionListStr.toString());
+        } else {
+            Log.w(TAG, "HTTP proxy exclusion list requires Android 10 (API 29) or higher");
+        }
     }
 
     @SuppressWarnings("checkstyle:MagicNumber")

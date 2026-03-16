@@ -87,7 +87,7 @@ public final class Main {
             }
         },
         RUN("run", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES
-                | CommandLineArguments.PARAM_PORT) {
+                | CommandLineArguments.PARAM_PORT | CommandLineArguments.PARAM_PROXY_EXCLUSION_LIST) {
             @Override
             String getDescription() {
                 return "Enable reverse tethering for exactly one device:\n"
@@ -99,10 +99,11 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                cmdRun(args.getSerial(), args.getDnsServers(), args.getRoutes(), args.getPort());
+                cmdRun(args.getSerial(), args.getDnsServers(), args.getRoutes(), args.getPort(), args.getProxyExclusionList());
             }
         },
-        AUTORUN("autorun", CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES | CommandLineArguments.PARAM_PORT) {
+        AUTORUN("autorun", CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES | CommandLineArguments.PARAM_PORT
+                | CommandLineArguments.PARAM_PROXY_EXCLUSION_LIST) {
             @Override
             String getDescription() {
                 return "Enable reverse tethering for all devices:\n"
@@ -112,11 +113,11 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                cmdAutorun(args.getDnsServers(), args.getRoutes(), args.getPort());
+                cmdAutorun(args.getDnsServers(), args.getRoutes(), args.getPort(), args.getProxyExclusionList());
             }
         },
         START("start", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES
-                | CommandLineArguments.PARAM_PORT) {
+                | CommandLineArguments.PARAM_PORT | CommandLineArguments.PARAM_PROXY_EXCLUSION_LIST) {
             @Override
             String getDescription() {
                 return "Start a client on the Android device and exit.\n"
@@ -127,6 +128,7 @@ public final class Main {
                         + "If -r is given, then only reverse tether the specified routes.\n"
                         + "If -p is given, then make the relay server listen on the specified\n"
                         + "port. Otherwise, use port 31416.\n"
+                        + "If -x is given, then exclude the specified domains from being proxied.\n"
                         + "Otherwise, use 0.0.0.0/0 (redirect the whole traffic).\n"
                         + "If the client is already started, then do nothing, and ignore\n"
                         + "the other parameters.\n"
@@ -135,10 +137,11 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                cmdStart(args.getSerial(), args.getDnsServers(), args.getRoutes(), args.getPort());
+                cmdStart(args.getSerial(), args.getDnsServers(), args.getRoutes(), args.getPort(), args.getProxyExclusionList());
             }
         },
-        AUTOSTART("autostart", CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES | CommandLineArguments.PARAM_PORT) {
+        AUTOSTART("autostart", CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES | CommandLineArguments.PARAM_PORT
+                | CommandLineArguments.PARAM_PROXY_EXCLUSION_LIST) {
             @Override
             String getDescription() {
                 return "Listen for device connexions and start a client on every detected\n"
@@ -149,7 +152,7 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                cmdAutostart(args.getDnsServers(), args.getRoutes(), args.getPort());
+                cmdAutostart(args.getDnsServers(), args.getRoutes(), args.getPort(), args.getProxyExclusionList());
             }
         },
         STOP("stop", CommandLineArguments.PARAM_SERIAL) {
@@ -166,7 +169,7 @@ public final class Main {
             }
         },
         RESTART("restart", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_DNS_SERVER | CommandLineArguments.PARAM_ROUTES
-                | CommandLineArguments.PARAM_PORT) {
+                | CommandLineArguments.PARAM_PORT | CommandLineArguments.PARAM_PROXY_EXCLUSION_LIST) {
             @Override
             String getDescription() {
                 return "Stop then start.";
@@ -174,7 +177,7 @@ public final class Main {
 
             @Override
             void execute(CommandLineArguments args) throws Exception {
-                cmdRestart(args.getSerial(), args.getDnsServers(), args.getRoutes(), args.getPort());
+                cmdRestart(args.getSerial(), args.getDnsServers(), args.getRoutes(), args.getPort(), args.getProxyExclusionList());
             }
         },
         TUNNEL("tunnel", CommandLineArguments.PARAM_SERIAL | CommandLineArguments.PARAM_PORT) {
@@ -231,9 +234,9 @@ public final class Main {
         cmdInstall(serial);
     }
 
-    private static void cmdRun(String serial, String dnsServers, String routes, int port) throws IOException {
+    private static void cmdRun(String serial, String dnsServers, String routes, int port, String proxyExclusionList) throws IOException {
         // start in parallel so that the relay server is ready when the client connects
-        asyncStart(serial, dnsServers, routes, port);
+        asyncStart(serial, dnsServers, routes, port, proxyExclusionList);
 
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             // executed on Ctrl+C
@@ -247,10 +250,10 @@ public final class Main {
         cmdRelay(port);
     }
 
-    private static void cmdAutorun(final String dnsServers, final String routes, int port) throws IOException {
+    private static void cmdAutorun(final String dnsServers, final String routes, int port, final String proxyExclusionList) throws IOException {
         new Thread(() -> {
             try {
-                cmdAutostart(dnsServers, routes, port);
+                cmdAutostart(dnsServers, routes, port, proxyExclusionList);
             } catch (Exception e) {
                 Log.e(TAG, "Cannot auto start clients", e);
             }
@@ -260,7 +263,7 @@ public final class Main {
     }
 
     @SuppressWarnings("checkstyle:MagicNumber")
-    private static void cmdStart(String serial, String dnsServers, String routes, int port) throws InterruptedException, IOException,
+    private static void cmdStart(String serial, String dnsServers, String routes, int port, String proxyExclusionList) throws InterruptedException, IOException,
             CommandExecutionException {
         if (mustInstallClient(serial)) {
             cmdInstall(serial);
@@ -280,12 +283,15 @@ public final class Main {
         if (routes != null) {
             Collections.addAll(cmd, "--esa", "routes", routes);
         }
+        if (proxyExclusionList != null) {
+            Collections.addAll(cmd, "--esa", "proxyExclusionList", proxyExclusionList);
+        }
         execAdb(serial, cmd);
     }
 
-    private static void cmdAutostart(final String dnsServers, final String routes, int port) {
+    private static void cmdAutostart(final String dnsServers, final String routes, int port, final String proxyExclusionList) {
         AdbMonitor adbMonitor = new AdbMonitor((serial) -> {
-            asyncStart(serial, dnsServers, routes, port);
+            asyncStart(serial, dnsServers, routes, port, proxyExclusionList);
         });
         adbMonitor.monitor();
     }
@@ -296,10 +302,10 @@ public final class Main {
                 "com.genymobile.gnirehtet/.GnirehtetActivity");
     }
 
-    private static void cmdRestart(String serial, String dnsServers, String routes, int port) throws InterruptedException, IOException,
+    private static void cmdRestart(String serial, String dnsServers, String routes, int port, String proxyExclusionList) throws InterruptedException, IOException,
             CommandExecutionException {
         cmdStop(serial);
-        cmdStart(serial, dnsServers, routes, port);
+        cmdStart(serial, dnsServers, routes, port, proxyExclusionList);
     }
 
     private static void cmdTunnel(String serial, int port) throws InterruptedException, IOException, CommandExecutionException {
@@ -311,10 +317,10 @@ public final class Main {
         new Relay(port).run();
     }
 
-    private static void asyncStart(String serial, String dnsServers, String routes, int port) {
+    private static void asyncStart(String serial, String dnsServers, String routes, int port, String proxyExclusionList) {
         new Thread(() -> {
             try {
-                cmdStart(serial, dnsServers, routes, port);
+                cmdStart(serial, dnsServers, routes, port, proxyExclusionList);
             } catch (Exception e) {
                 Log.e(TAG, "Cannot start client", e);
             }
@@ -411,6 +417,9 @@ public final class Main {
         }
         if ((command.acceptedParameters & CommandLineArguments.PARAM_ROUTES) != 0) {
             builder.append(" [-r ROUTE[,ROUTE2,...]]");
+        }
+        if ((command.acceptedParameters & CommandLineArguments.PARAM_PROXY_EXCLUSION_LIST) != 0) {
+            builder.append(" [-x EXCLUDE[,EXCLUDE2,...]]");
         }
         builder.append(NL);
         String[] descLines = command.getDescription().split("\n");
