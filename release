@@ -30,6 +30,8 @@ done
 cp relay-java/build/libs/gnirehtet.jar \
    relay-java/scripts/gnirehtet \
    relay-java/scripts/gnirehtet.cmd \
+   relay-java/scripts/gnirehtet-gui \
+   relay-java/scripts/gnirehtet-gui.cmd \
    relay-java/scripts/gnirehtet-run.cmd \
    "$DIST/$TARGET_DIR_JAVA"/
 cp relay-rust/target/release/gnirehtet "$DIST/$TARGET_DIR_RUST_LINUX"/

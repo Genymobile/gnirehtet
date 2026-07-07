@@ -131,8 +131,15 @@ Then extract it. The archive contains:
 _Note: On Windows, replace `./gnirehtet` by `gnirehtet` in the following
 commands._
 
-The application has no UI, and is intended to be controlled from the computer
-only.
+The classic command-line flow is still controlled from the computer.
+
+The Java relay also includes a desktop UI:
+
+    ./gnirehtet gui
+
+On Windows, you can double-click `gnirehtet-gui.cmd`. The interface lists ADB
+devices, starts/stops reverse tethering, offers an auto mode for newly connected
+phones, and displays incoming/outgoing traffic counters.
 
 If you want to activate reverse tethering for exactly one device, just execute:
 

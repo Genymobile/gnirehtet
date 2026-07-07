@@ -22,15 +22,25 @@ public class CommandExecutionException extends Exception {
 
     private List<String> command;
     private int exitCode;
+    private String output;
 
     public CommandExecutionException(List<String> command, int exitCode) {
-        super(createMessage(command, exitCode));
-        this.command = command;
-        this.exitCode = exitCode;
+        this(command, exitCode, null);
     }
 
-    private static String createMessage(List<String> command, int exitCode) {
-        return "Command " + command + " returned with value " + exitCode;
+    public CommandExecutionException(List<String> command, int exitCode, String output) {
+        super(createMessage(command, exitCode, output));
+        this.command = command;
+        this.exitCode = exitCode;
+        this.output = output;
+    }
+
+    private static String createMessage(List<String> command, int exitCode, String output) {
+        String message = "Command " + command + " returned with value " + exitCode;
+        if (output != null && !output.trim().isEmpty()) {
+            message += ": " + output.trim();
+        }
+        return message;
     }
 
     public int getExitCode() {
@@ -39,5 +49,9 @@ public class CommandExecutionException extends Exception {
 
     public List<String> getCommand() {
         return command;
+    }
+
+    public String getOutput() {
+        return output;
     }
 }

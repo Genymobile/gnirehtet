@@ -28,37 +28,74 @@ public class Relay {
     private static final int CLEANING_INTERVAL = 60 * 1000;
 
     private final int port;
+    private final TrafficStats trafficStats;
+    private final Runnable startedListener;
+
+    private volatile boolean stopped;
+    private Selector selector;
 
     public Relay(int port) {
+        this(port, new TrafficStats(), null);
+    }
+
+    public Relay(int port, TrafficStats trafficStats) {
+        this(port, trafficStats, null);
+    }
+
+    public Relay(int port, TrafficStats trafficStats, Runnable startedListener) {
         this.port = port;
+        this.trafficStats = trafficStats;
+        this.startedListener = startedListener;
     }
 
     public void run() throws IOException {
-        Selector selector = Selector.open();
+        selector = Selector.open();
 
         // will register the socket on the selector
-        TunnelServer tunnelServer = new TunnelServer(port, selector);
+        TunnelServer tunnelServer = new TunnelServer(port, selector, trafficStats);
 
         Log.i(TAG, "Relay server started");
+        notifyStarted();
 
-        long nextCleaningDeadline = System.currentTimeMillis() + UDPConnection.IDLE_TIMEOUT;
-        while (true) {
-            long timeout = Math.max(0, nextCleaningDeadline - System.currentTimeMillis());
-            selector.select(timeout);
-            Set<SelectionKey> selectedKeys = selector.selectedKeys();
+        try {
+            long nextCleaningDeadline = System.currentTimeMillis() + UDPConnection.IDLE_TIMEOUT;
+            while (!stopped) {
+                long timeout = Math.max(0, nextCleaningDeadline - System.currentTimeMillis());
+                selector.select(timeout);
+                Set<SelectionKey> selectedKeys = selector.selectedKeys();
 
-            long now = System.currentTimeMillis();
-            if (now >= nextCleaningDeadline || selectedKeys.isEmpty()) {
-                tunnelServer.cleanUp();
-                nextCleaningDeadline = now + CLEANING_INTERVAL;
+                long now = System.currentTimeMillis();
+                if (now >= nextCleaningDeadline || selectedKeys.isEmpty()) {
+                    tunnelServer.cleanUp();
+                    nextCleaningDeadline = now + CLEANING_INTERVAL;
+                }
+
+                for (SelectionKey selectedKey : selectedKeys) {
+                    SelectionHandler selectionHandler = (SelectionHandler) selectedKey.attachment();
+                    selectionHandler.onReady(selectedKey);
+                }
+                // by design, we handled everything
+                selectedKeys.clear();
             }
+        } finally {
+            tunnelServer.close();
+            selector.close();
+            selector = null;
+            Log.i(TAG, "Relay server stopped");
+        }
+    }
 
-            for (SelectionKey selectedKey : selectedKeys) {
-                SelectionHandler selectionHandler = (SelectionHandler) selectedKey.attachment();
-                selectionHandler.onReady(selectedKey);
-            }
-            // by design, we handled everything
-            selectedKeys.clear();
+    public void stop() {
+        stopped = true;
+        Selector currentSelector = selector;
+        if (currentSelector != null) {
+            currentSelector.wakeup();
+        }
+    }
+
+    private void notifyStarted() {
+        if (startedListener != null) {
+            startedListener.run();
         }
     }
 }

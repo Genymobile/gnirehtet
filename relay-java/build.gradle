@@ -1,16 +1,27 @@
 apply plugin: 'application'
 
-mainClassName = 'com.genymobile.gnirehtet.Main'
+def gnirehtetMainClass = 'com.genymobile.gnirehtet.Main'
+
+mainClassName = gnirehtetMainClass
+
+sourceCompatibility = JavaVersion.VERSION_1_8
+targetCompatibility = JavaVersion.VERSION_1_8
+
+tasks.withType(JavaCompile) {
+    if (JavaVersion.current().isJava9Compatible()) {
+        options.compilerArgs += ['--release', '8']
+    }
+}
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    testCompile 'junit:junit:4.12'
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    testImplementation 'junit:junit:4.12'
 }
 
 jar {
     manifest {
         attributes(
-                'Main-Class': mainClassName
+                'Main-Class': gnirehtetMainClass
         )
     }
     baseName 'gnirehtet'
