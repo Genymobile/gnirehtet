@@ -16,6 +16,7 @@ import android.os.Build;
 public class Notifier {
 
     private static final int NOTIFICATION_ID = 42;
+    private static final int STATUS_NOTIFICATION_ID = 43;
     private static final String CHANNEL_ID = "Gnirehtet";
 
     private final Service context;
@@ -26,13 +27,17 @@ public class Notifier {
     }
 
     private Notification createNotification(boolean failure) {
+        return createNotification(failure, failure ? context.getString(R.string.relay_disconnected)
+                : context.getString(R.string.relay_connected));
+    }
+
+    private Notification createNotification(boolean failure, String message) {
         Notification.Builder notificationBuilder = createNotificationBuilder();
         notificationBuilder.setContentTitle(context.getString(R.string.app_name));
+        notificationBuilder.setContentText(message);
         if (failure) {
-            notificationBuilder.setContentText(context.getString(R.string.relay_disconnected));
             notificationBuilder.setSmallIcon(R.drawable.ic_report_problem_24dp);
         } else {
-            notificationBuilder.setContentText(context.getString(R.string.relay_connected));
             notificationBuilder.setSmallIcon(R.drawable.ic_usb_24dp);
         }
         notificationBuilder.addAction(createStopAction());
@@ -56,7 +61,8 @@ public class Notifier {
 
     @TargetApi(26)
     private void deleteNotificationChannel() {
-        getNotificationManager().deleteNotificationChannel(CHANNEL_ID);
+        // Keep the channel so disconnected status notifications can still be shown after the
+        // foreground service is stopped.
     }
 
     public void start() {
@@ -80,6 +86,19 @@ public class Notifier {
             Notification notification = createNotification(failure);
             getNotificationManager().notify(NOTIFICATION_ID, notification);
         }
+    }
+
+    public void showConnected() {
+        String pcName = GnirehtetSettings.getPcName(context);
+        String message = pcName.length() == 0 ? context.getString(R.string.notification_connected)
+                : context.getString(R.string.notification_connected_with_pc, pcName);
+        getNotificationManager().notify(STATUS_NOTIFICATION_ID, createNotification(false,
+                message));
+    }
+
+    public void showDisconnected() {
+        getNotificationManager().notify(STATUS_NOTIFICATION_ID, createNotification(true,
+                context.getString(R.string.notification_disconnected)));
     }
 
     private Notification.Action createStopAction() {

@@ -23,6 +23,7 @@ public class GnirehtetActivity extends Activity {
 
     public static final String EXTRA_DNS_SERVERS = "dnsServers";
     public static final String EXTRA_ROUTES = "routes";
+    public static final String EXTRA_PC_NAME = "pcName";
 
     private static final int VPN_REQUEST_CODE = 0;
 
@@ -39,6 +40,7 @@ public class GnirehtetActivity extends Activity {
         Log.d(TAG, "Received request " + action);
         boolean finish = true;
         if (ACTION_GNIREHTET_START.equals(action)) {
+            rememberPcName(intent);
             VpnConfiguration config = createConfig(intent);
             finish = startGnirehtet(config);
         } else if (ACTION_GNIREHTET_STOP.equals(action)) {
@@ -62,7 +64,24 @@ public class GnirehtetActivity extends Activity {
         return new VpnConfiguration(Net.toInetAddresses(dnsServers), Net.toCIDRs(routes));
     }
 
+    private void rememberPcName(Intent intent) {
+        String pcName = intent.getStringExtra(EXTRA_PC_NAME);
+        if (pcName != null) {
+            pcName = pcName.trim();
+            if (pcName.length() > 0) {
+                GnirehtetSettings.setPcName(this, pcName);
+            }
+        }
+    }
+
     private boolean startGnirehtet(VpnConfiguration config) {
+        if (!GnirehtetSettings.acceptsConnection(this)) {
+            Log.i(TAG, "Gnirehtet start blocked by client mode");
+            GnirehtetSettings.setLastStatus(this, getString(R.string.status_start_blocked));
+            GnirehtetService.stop(this);
+            return true;
+        }
+
         Intent vpnIntent = VpnService.prepare(this);
         if (vpnIntent == null) {
             Log.d(TAG, "VPN was already authorized");
@@ -88,7 +107,7 @@ public class GnirehtetActivity extends Activity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == VPN_REQUEST_CODE && resultCode == RESULT_OK) {
+        if (requestCode == VPN_REQUEST_CODE && resultCode == RESULT_OK && GnirehtetSettings.acceptsConnection(this)) {
             GnirehtetService.start(this, requestedConfig);
         }
         requestedConfig = null;

@@ -28,6 +28,7 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.ParcelFileDescriptor;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -83,7 +84,11 @@ public class GnirehtetService extends VpnService {
         String action = intent.getAction();
         Log.d(TAG, "Received request " + action);
         if (ACTION_START_VPN.equals(action)) {
-            if (isRunning()) {
+            if (!GnirehtetSettings.acceptsConnection(this)) {
+                Log.i(TAG, "VPN start blocked by client mode");
+                GnirehtetSettings.setLastStatus(this, getString(R.string.status_start_blocked));
+                close();
+            } else if (isRunning()) {
                 Log.d(TAG, "VPN already running, ignore START request");
             } else {
                 VpnConfiguration config = intent.getParcelableExtra(EXTRA_VPN_CONFIGURATION);
@@ -105,7 +110,14 @@ public class GnirehtetService extends VpnService {
     private void startVpn(VpnConfiguration config) {
         notifier.start();
         if (setupVpn(config)) {
+            GnirehtetSettings.setVpnRunning(this, true);
+            GnirehtetSettings.setRelayConnected(this, false);
+            GnirehtetSettings.setLastStatus(this, getString(R.string.status_vpn_started));
             startForwarding();
+        } else {
+            notifier.stop();
+            GnirehtetSettings.setVpnRunning(this, false);
+            GnirehtetSettings.setRelayConnected(this, false);
         }
     }
 
@@ -185,21 +197,39 @@ public class GnirehtetService extends VpnService {
     }
 
     private void close() {
+        close(getString(R.string.status_vpn_stopped));
+    }
+
+    private void close(String status) {
         if (!isRunning()) {
             // already closed
+            GnirehtetSettings.setVpnRunning(this, false);
+            GnirehtetSettings.setRelayConnected(this, false);
             return;
         }
 
         notifier.stop();
 
         try {
-            forwarder.stop();
-            forwarder = null;
-            vpnInterface.close();
-            vpnInterface = null;
+            if (forwarder != null) {
+                forwarder.stop();
+                forwarder = null;
+            }
+            if (vpnInterface != null) {
+                vpnInterface.close();
+                vpnInterface = null;
+            }
+            GnirehtetSettings.setVpnRunning(this, false);
+            GnirehtetSettings.setRelayConnected(this, false);
+            GnirehtetSettings.setLastStatus(this, status);
         } catch (IOException e) {
             Log.w(TAG, "Cannot close VPN file descriptor", e);
         }
+    }
+
+    private void closeAfterRelayDisconnected() {
+        notifier.showDisconnected();
+        close(getString(R.string.status_relay_lost));
     }
 
 
@@ -220,11 +250,17 @@ public class GnirehtetService extends VpnService {
             switch (message.what) {
                 case RelayTunnelListener.MSG_RELAY_TUNNEL_CONNECTED:
                     Log.d(TAG, "Relay tunnel connected");
+                    GnirehtetSettings.setRelayConnected(vpnService, true);
+                    GnirehtetSettings.setLastStatus(vpnService, vpnService.getString(R.string.status_relay_ready));
                     vpnService.notifier.setFailure(false);
+                    vpnService.notifier.showConnected();
+                    Toast.makeText(vpnService, R.string.notification_connected, Toast.LENGTH_SHORT).show();
                     break;
                 case RelayTunnelListener.MSG_RELAY_TUNNEL_DISCONNECTED:
                     Log.d(TAG, "Relay tunnel disconnected");
-                    vpnService.notifier.setFailure(true);
+                    GnirehtetSettings.setRelayConnected(vpnService, false);
+                    Toast.makeText(vpnService, R.string.notification_disconnected, Toast.LENGTH_LONG).show();
+                    vpnService.closeAfterRelayDisconnected();
                     break;
                 default:
             }
