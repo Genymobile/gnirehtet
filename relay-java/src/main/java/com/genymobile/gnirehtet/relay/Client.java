@@ -41,15 +41,18 @@ public class Client {
     private final IPv4PacketBuffer clientToNetwork = new IPv4PacketBuffer();
     private final StreamBuffer networkToClient = new StreamBuffer(16 * IPv4Packet.MAX_PACKET_LENGTH);
     private final Router router;
+    private final TrafficStats trafficStats;
 
     private final List<PacketSource> pendingPacketSources = new ArrayList<>();
 
     // store the remaining bytes of "id" to send to the client before relaying any data
     private ByteBuffer pendingIdBuffer;
 
-    public Client(Selector selector, SocketChannel clientChannel, CloseListener<Client> closeListener) throws ClosedChannelException {
+    public Client(Selector selector, SocketChannel clientChannel, CloseListener<Client> closeListener, TrafficStats trafficStats)
+            throws ClosedChannelException {
         id = nextId++;
         this.clientChannel = clientChannel;
+        this.trafficStats = trafficStats;
         router = new Router(this, selector);
         pendingIdBuffer = createIntBuffer(id);
 
@@ -153,9 +156,14 @@ public class Client {
     private void pushToNetwork() {
         IPv4Packet packet;
         while ((packet = clientToNetwork.asIPv4Packet()) != null) {
+            trafficStats.recordClientToNetwork(packet.getRawLength());
             router.sendToNetwork(packet);
             clientToNetwork.next();
         }
+    }
+
+    public void disconnect() {
+        close();
     }
 
     private void close() {
@@ -187,6 +195,7 @@ public class Client {
             return false;
         }
         networkToClient.readFrom(packet.getRaw());
+        trafficStats.recordNetworkToClient(packet.getRawLength());
         updateInterests();
         return true;
     }

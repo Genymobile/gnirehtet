@@ -20,7 +20,13 @@ import com.genymobile.gnirehtet.relay.CommandExecutionException;
 import com.genymobile.gnirehtet.relay.Log;
 import com.genymobile.gnirehtet.relay.Relay;
 
+import java.io.BufferedReader;
+import java.io.File;
 import java.io.IOException;
+import java.io.InputStreamReader;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -38,14 +44,52 @@ public final class Main {
         // not instantiable
     }
 
-    private static String getAdbPath() {
+    static String getAdbPath() {
         String adb = System.getenv("ADB");
         return adb != null ? adb : "adb";
     }
 
-    private static String getApkPath() {
+    static String getApkPath() {
         String apk = System.getenv("GNIREHTET_APK");
-        return apk != null ? apk : "gnirehtet.apk";
+        if (apk != null) {
+            return apk;
+        }
+        String[] candidates = {
+            "gnirehtet.apk",
+            "app/build/outputs/apk/debug/gnirehtet-debug.apk",
+            "app/build/outputs/apk/release/gnirehtet-release.apk"
+        };
+        for (String candidate : candidates) {
+            if (new File(candidate).isFile()) {
+                return candidate;
+            }
+        }
+        return candidates[0];
+    }
+
+    static String getComputerName() {
+        String computerName = getEnvironmentName("COMPUTERNAME");
+        if (computerName != null) {
+            return computerName;
+        }
+        computerName = getEnvironmentName("HOSTNAME");
+        if (computerName != null) {
+            return computerName;
+        }
+        try {
+            return InetAddress.getLocalHost().getHostName();
+        } catch (UnknownHostException e) {
+            return "PC";
+        }
+    }
+
+    private static String getEnvironmentName(String key) {
+        String value = System.getenv(key);
+        if (value == null) {
+            return null;
+        }
+        value = value.trim();
+        return value.isEmpty() ? null : value;
     }
 
     enum Command {
@@ -201,6 +245,17 @@ public final class Main {
             void execute(CommandLineArguments args) throws Exception {
                 cmdRelay(args.getPort());
             }
+        },
+        GUI("gui", CommandLineArguments.PARAM_NONE) {
+            @Override
+            String getDescription() {
+                return "Open the desktop graphical interface.";
+            }
+
+            @Override
+            void execute(CommandLineArguments args) {
+                GnirehtetGui.open();
+            }
         };
 
         private String command;
@@ -216,22 +271,22 @@ public final class Main {
         abstract void execute(CommandLineArguments args) throws Exception;
     }
 
-    private static void cmdInstall(String serial) throws InterruptedException, IOException, CommandExecutionException {
+    static void cmdInstall(String serial) throws InterruptedException, IOException, CommandExecutionException {
         Log.i(TAG, "Installing gnirehtet client...");
         execAdb(serial, "install", "-r", getApkPath());
     }
 
-    private static void cmdUninstall(String serial) throws InterruptedException, IOException, CommandExecutionException {
+    static void cmdUninstall(String serial) throws InterruptedException, IOException, CommandExecutionException {
         Log.i(TAG, "Uninstalling gnirehtet client...");
         execAdb(serial, "uninstall", "com.genymobile.gnirehtet");
     }
 
-    private static void cmdReinstall(String serial) throws InterruptedException, IOException, CommandExecutionException {
+    static void cmdReinstall(String serial) throws InterruptedException, IOException, CommandExecutionException {
         cmdUninstall(serial);
         cmdInstall(serial);
     }
 
-    private static void cmdRun(String serial, String dnsServers, String routes, int port) throws IOException {
+    static void cmdRun(String serial, String dnsServers, String routes, int port) throws IOException {
         // start in parallel so that the relay server is ready when the client connects
         asyncStart(serial, dnsServers, routes, port);
 
@@ -247,7 +302,7 @@ public final class Main {
         cmdRelay(port);
     }
 
-    private static void cmdAutorun(final String dnsServers, final String routes, int port) throws IOException {
+    static void cmdAutorun(final String dnsServers, final String routes, int port) throws IOException {
         new Thread(() -> {
             try {
                 cmdAutostart(dnsServers, routes, port);
@@ -260,7 +315,7 @@ public final class Main {
     }
 
     @SuppressWarnings("checkstyle:MagicNumber")
-    private static void cmdStart(String serial, String dnsServers, String routes, int port) throws InterruptedException, IOException,
+    static void cmdStart(String serial, String dnsServers, String routes, int port) throws InterruptedException, IOException,
             CommandExecutionException {
         if (mustInstallClient(serial)) {
             cmdInstall(serial);
@@ -280,33 +335,34 @@ public final class Main {
         if (routes != null) {
             Collections.addAll(cmd, "--esa", "routes", routes);
         }
+        Collections.addAll(cmd, "--es", "pcName", getComputerName());
         execAdb(serial, cmd);
     }
 
-    private static void cmdAutostart(final String dnsServers, final String routes, int port) {
+    static void cmdAutostart(final String dnsServers, final String routes, int port) {
         AdbMonitor adbMonitor = new AdbMonitor((serial) -> {
             asyncStart(serial, dnsServers, routes, port);
         });
         adbMonitor.monitor();
     }
 
-    private static void cmdStop(String serial) throws InterruptedException, IOException, CommandExecutionException {
+    static void cmdStop(String serial) throws InterruptedException, IOException, CommandExecutionException {
         Log.i(TAG, "Stopping client...");
         execAdb(serial, "shell", "am", "start", "-a", "com.genymobile.gnirehtet.STOP", "-n",
                 "com.genymobile.gnirehtet/.GnirehtetActivity");
     }
 
-    private static void cmdRestart(String serial, String dnsServers, String routes, int port) throws InterruptedException, IOException,
+    static void cmdRestart(String serial, String dnsServers, String routes, int port) throws InterruptedException, IOException,
             CommandExecutionException {
         cmdStop(serial);
         cmdStart(serial, dnsServers, routes, port);
     }
 
-    private static void cmdTunnel(String serial, int port) throws InterruptedException, IOException, CommandExecutionException {
+    static void cmdTunnel(String serial, int port) throws InterruptedException, IOException, CommandExecutionException {
         execAdb(serial, "reverse", "localabstract:gnirehtet", "tcp:" + port);
     }
 
-    private static void cmdRelay(int port) throws IOException {
+    static void cmdRelay(int port) throws IOException {
         Log.i(TAG, "Starting relay server on port " + port + "...");
         new Relay(port).run();
     }
@@ -344,12 +400,27 @@ public final class Main {
     private static void execSync(List<String> command) throws InterruptedException, IOException, CommandExecutionException {
         Log.d(TAG, "Execute: " + command);
         ProcessBuilder processBuilder = new ProcessBuilder(command);
-        processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT).redirectError(ProcessBuilder.Redirect.INHERIT);
+        processBuilder.redirectErrorStream(true);
         Process process = processBuilder.start();
+        String output = readProcessOutput(process);
         int exitCode = process.waitFor();
-        if (exitCode != 0) {
-            throw new CommandExecutionException(command, exitCode);
+        if (!output.isEmpty()) {
+            System.out.print(output);
         }
+        if (exitCode != 0) {
+            throw new CommandExecutionException(command, exitCode, output);
+        }
+    }
+
+    private static String readProcessOutput(Process process) throws IOException {
+        StringBuilder builder = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                builder.append(line).append(System.lineSeparator());
+            }
+        }
+        return builder.toString();
     }
 
     private static boolean mustInstallClient(String serial) throws InterruptedException, IOException, CommandExecutionException {

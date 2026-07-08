@@ -1,6 +1,40 @@
 <resources>
     <string name="app_name" translatable="false">Gnirehtet</string>
-    <string name="relay_connected">Reverse tethering enabled</string>
-    <string name="relay_disconnected">Disconnected from the relay server</string>
-    <string name="stop_vpn">Stop Gnirehtet</string>
+    <string name="relay_connected">Internet de la PC activo</string>
+    <string name="relay_disconnected">Relay desconectado</string>
+    <string name="stop_vpn">Detener Gnirehtet</string>
+    <string name="mode_off">Off</string>
+    <string name="mode_on">On</string>
+    <string name="mode_auto">Auto</string>
+    <string name="mode_auto_summary">Auto acepta la conexion de la PC cuando el relay este disponible.</string>
+    <string name="android_app_subtitle">Internet de la PC para este telefono</string>
+    <string name="status_current">Estado actual</string>
+    <string name="status_mode">Mode</string>
+    <string name="status_pc">PC</string>
+    <string name="status_unknown_pc">PC no identificada</string>
+    <string name="status_vpn">VPN</string>
+    <string name="status_relay">Relay</string>
+    <string name="status_last_event">Ultimo evento</string>
+    <string name="status_on">On</string>
+    <string name="status_off">Off</string>
+    <string name="status_connected">Conectado</string>
+    <string name="status_disconnected">Desconectado</string>
+    <string name="status_waiting_pc">Esperando PC</string>
+    <string name="status_ready">Listo</string>
+    <string name="status_idle">En espera</string>
+    <string name="connect">Conectar</string>
+    <string name="connect_now">Conectar ahora</string>
+    <string name="disconnect">Desconectar</string>
+    <string name="status_vpn_started">VPN iniciada</string>
+    <string name="status_vpn_stopped">VPN detenida</string>
+    <string name="status_relay_lost">Relay desconectado; VPN detenida</string>
+    <string name="status_relay_ready">Relay conectado</string>
+    <string name="status_start_blocked">Conexion bloqueada por modo Off</string>
+    <string name="android_status_connected_detail">El telefono esta usando internet de la PC.</string>
+    <string name="android_status_waiting_detail">VPN activa sin relay. Si el cable se desconecto, la VPN se detendra.</string>
+    <string name="android_status_off_detail">La conexion esta apagada desde el telefono.</string>
+    <string name="android_status_ready_detail">La app aceptara la conexion cuando la PC vuelva a iniciar Gnirehtet.</string>
+    <string name="notification_connected">Gnirehtet conectado: internet de la PC activo.</string>
+    <string name="notification_connected_with_pc">Gnirehtet conectado a %1$s: internet de la PC activo.</string>
+    <string name="notification_disconnected">Gnirehtet desconectado: se detuvo la VPN del telefono.</string>
 </resources>

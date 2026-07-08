@@ -18,9 +18,12 @@ public class TunnelServer {
     private static final String TAG = TunnelServer.class.getSimpleName();
 
     private final List<Client> clients = new ArrayList<>();
+    private final TrafficStats trafficStats;
+    private final ServerSocketChannel serverSocketChannel;
 
-    public TunnelServer(int port, Selector selector) throws IOException {
-        ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
+    public TunnelServer(int port, Selector selector, TrafficStats trafficStats) throws IOException {
+        this.trafficStats = trafficStats;
+        serverSocketChannel = ServerSocketChannel.open();
         serverSocketChannel.configureBlocking(false);
         // ServerSocketChannel.bind() requires API 24
         serverSocketChannel.socket().bind(new InetSocketAddress(Inet4Address.getLoopbackAddress(), port));
@@ -40,7 +43,7 @@ public class TunnelServer {
         SocketChannel socketChannel = serverSocketChannel.accept();
         socketChannel.configureBlocking(false);
         // will register the socket on the selector
-        Client client = new Client(selector, socketChannel, this::removeClient);
+        Client client = new Client(selector, socketChannel, this::removeClient, trafficStats);
         clients.add(client);
         Log.i(TAG, "Client #" + client.getId() + " connected");
     }
@@ -53,6 +56,18 @@ public class TunnelServer {
     public void cleanUp() {
         for (Client client : clients) {
             client.cleanExpiredConnections();
+        }
+    }
+
+    public void close() {
+        List<Client> clientsCopy = new ArrayList<>(clients);
+        for (Client client : clientsCopy) {
+            client.disconnect();
+        }
+        try {
+            serverSocketChannel.close();
+        } catch (IOException e) {
+            Log.e(TAG, "Cannot close server socket", e);
         }
     }
 }

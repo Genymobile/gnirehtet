@@ -54,6 +54,15 @@ fn get_apk_path() -> String {
     }
 }
 
+fn get_computer_name() -> String {
+    env::var("COMPUTERNAME")
+        .or_else(|_| env::var("HOSTNAME"))
+        .map(|name| name.trim().to_string())
+        .ok()
+        .filter(|name| !name.is_empty())
+        .unwrap_or_else(|| "PC".to_string())
+}
+
 const COMMANDS: &[&dyn Command] = &[
     &InstallCommand,
     &UninstallCommand,
@@ -418,21 +427,31 @@ fn cmd_start(
     info!(target: TAG, "Starting client...");
     cmd_tunnel(serial, port)?;
 
+    let pc_name = get_computer_name();
     let mut adb_args = vec![
-        "shell",
-        "am",
-        "start",
-        "-a",
-        "com.genymobile.gnirehtet.START",
-        "-n",
-        "com.genymobile.gnirehtet/.GnirehtetActivity",
+        "shell".to_string(),
+        "am".to_string(),
+        "start".to_string(),
+        "-a".to_string(),
+        "com.genymobile.gnirehtet.START".to_string(),
+        "-n".to_string(),
+        "com.genymobile.gnirehtet/.GnirehtetActivity".to_string(),
     ];
     if let Some(dns_servers) = dns_servers {
-        adb_args.append(&mut vec!["--esa", "dnsServers", dns_servers]);
+        adb_args.append(&mut vec![
+            "--esa".to_string(),
+            "dnsServers".to_string(),
+            dns_servers.to_string(),
+        ]);
     }
     if let Some(routes) = routes {
-        adb_args.append(&mut vec!["--esa", "routes", routes]);
+        adb_args.append(&mut vec![
+            "--esa".to_string(),
+            "routes".to_string(),
+            routes.to_string(),
+        ]);
     }
+    adb_args.append(&mut vec!["--es".to_string(), "pcName".to_string(), pc_name]);
     exec_adb(serial, adb_args)
 }
 
