@@ -538,7 +538,9 @@ start_monitor() {
   stop_monitor
   mkdir -p "$LOG_DIR"
   : > "$MONITOR_LOG"
-  nohup "$MONITOR_SCRIPT" "$adb" "$RELAY_PID_FILE" "$MONITOR_PID_FILE" "$RELAY_LOG" "$$" "$@" >>"$MONITOR_LOG" 2>&1 &
+  local controller_tty
+  controller_tty="$(tty 2>/dev/null || true)"
+  nohup "$MONITOR_SCRIPT" "$adb" "$RELAY_PID_FILE" "$MONITOR_PID_FILE" "$RELAY_LOG" "$$" "$controller_tty" "$@" >>"$MONITOR_LOG" 2>&1 &
   local monitor_pid="$!"
   printf "%s\n" "$monitor_pid" > "$MONITOR_PID_FILE"
   printf "Connection-loss monitor started as PID %s.\n" "$monitor_pid"
