@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:tools="http://schemas.android.com/tools"
-    package="com.genymobile.gnirehtet">
+    xmlns:tools="http://schemas.android.com/tools">
 
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:allowBackup="false"
@@ -14,25 +15,38 @@
         android:supportsRtl="true"
         android:theme="@style/AppTheme"
         tools:ignore="GoogleAppIndexingWarning">
+
         <activity
-            android:name="com.genymobile.gnirehtet.GnirehtetActivity"
+            android:name=".GnirehtetActivity"
+            android:excludeFromRecents="true"
             android:exported="true"
+            android:finishOnTaskLaunch="true"
+            android:noHistory="true"
             android:permission="android.permission.WRITE_SECURE_SETTINGS"
             android:theme="@style/Theme.Transparent">
             <intent-filter>
                 <action android:name="com.genymobile.gnirehtet.START" />
                 <action android:name="com.genymobile.gnirehtet.STOP" />
+                <category android:name="android.intent.category.DEFAULT" />
             </intent-filter>
         </activity>
 
         <service
-            android:name="com.genymobile.gnirehtet.GnirehtetService"
+            android:name=".GnirehtetService"
             android:enabled="true"
             android:exported="true"
-            android:permission="android.permission.BIND_VPN_SERVICE">
+            android:foregroundServiceType="specialUse"
+            android:permission="android.permission.BIND_VPN_SERVICE"
+            android:stopWithTask="false">
             <intent-filter>
                 <action android:name="android.net.VpnService" />
             </intent-filter>
+            <meta-data
+                android:name="android.net.VpnService.SUPPORTS_ALWAYS_ON"
+                android:value="false" />
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="USB/ADB reverse-tethering VPN packet forwarding" />
         </service>
     </application>
 

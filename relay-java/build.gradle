@@ -1,27 +1,30 @@
 apply plugin: 'application'
 
-mainClassName = 'com.genymobile.gnirehtet.Main'
+application {
+    mainClass = 'com.genymobile.gnirehtet.Main'
+}
 
 dependencies {
-    compile fileTree(dir: 'libs', include: ['*.jar'])
-    testCompile 'junit:junit:4.12'
+    implementation fileTree(dir: 'libs', include: ['*.jar'])
+    testImplementation 'junit:junit:4.13.2'
 }
 
 jar {
     manifest {
-        attributes(
-                'Main-Class': mainClassName
-        )
+        attributes('Main-Class': application.mainClass.get())
     }
-    baseName 'gnirehtet'
+    archiveBaseName = 'gnirehtet'
 }
 
-task assembleDebug(dependsOn: 'jar')
-task assembleRelease(dependsOn: ['build', 'jar'])
+tasks.register('assembleDebug') {
+    dependsOn 'jar'
+}
+tasks.register('assembleRelease') {
+    dependsOn 'build', 'jar'
+}
 
 apply from: "$project.rootDir/config/java-checkstyle.gradle"
 
 test {
-    // to log using System.out.println(…) in tests
     testLogging.showStandardStreams = true
 }

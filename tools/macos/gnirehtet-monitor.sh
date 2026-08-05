@@ -1,0 +1,90 @@
+#!/bin/bash
+set -u
+
+ADB_PATH="$1"
+RELAY_PID_FILE="$2"
+MONITOR_PID_FILE="$3"
+RELAY_LOG="$4"
+CONTROLLER_PID="$5"
+shift 5
+WATCHED_SERIALS=("$@")
+
+log() {
+  printf "%s %s\n" "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
+}
+
+relay_pid() {
+  [ -f "$RELAY_PID_FILE" ] || return 1
+  cat "$RELAY_PID_FILE" 2>/dev/null
+}
+
+relay_is_running() {
+  local pid
+  pid="$(relay_pid || true)"
+  [ -n "$pid" ] || return 1
+  kill -0 "$pid" >/dev/null 2>&1
+}
+
+stop_relay() {
+  local pid
+  pid="$(relay_pid || true)"
+  if [ -n "$pid" ]; then
+    log "Stopping relay PID $pid after device loss."
+    kill "$pid" >/dev/null 2>&1 || true
+    sleep 1
+    if kill -0 "$pid" >/dev/null 2>&1; then
+      kill -9 "$pid" >/dev/null 2>&1 || true
+    fi
+  fi
+  rm -f "$RELAY_PID_FILE"
+}
+
+quit_controller() {
+  if [ -n "$CONTROLLER_PID" ] && kill -0 "$CONTROLLER_PID" >/dev/null 2>&1; then
+    log "Quitting controller PID $CONTROLLER_PID after device loss."
+    kill "$CONTROLLER_PID" >/dev/null 2>&1 || true
+  fi
+}
+
+connected_serials() {
+  "$ADB_PATH" devices 2>/dev/null | awk 'NR > 1 && $2 == "device" { print $1 }'
+}
+
+any_watched_device_connected() {
+  local connected
+  connected="$(connected_serials)"
+  local watched
+  for watched in "${WATCHED_SERIALS[@]}"; do
+    if printf "%s\n" "$connected" | grep -Fxq "$watched"; then
+      return 0
+    fi
+  done
+  return 1
+}
+
+cleanup_monitor_file() {
+  rm -f "$MONITOR_PID_FILE"
+}
+trap cleanup_monitor_file EXIT
+
+log "Monitoring selected device(s): ${WATCHED_SERIALS[*]}"
+log "Relay log: $RELAY_LOG"
+
+missing_count=0
+while relay_is_running; do
+  if any_watched_device_connected; then
+    missing_count=0
+  else
+    missing_count=$((missing_count + 1))
+    log "No watched devices connected; missing check $missing_count/2."
+    if [ "$missing_count" -ge 2 ]; then
+      stop_relay
+      quit_controller
+      log "All watched devices disconnected. Monitor exiting."
+      exit 0
+    fi
+  fi
+  sleep 3
+done
+
+log "Relay is no longer running. Monitor exiting."

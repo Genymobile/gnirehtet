@@ -1,0 +1,12 @@
+#!/bin/bash
+set -u
+
+RESOURCE_DIR="$(cd "$(dirname "$0")/../Resources" && pwd)"
+COMMAND_PATH="$RESOURCE_DIR/Gnirehtet Controller.command"
+
+if [ ! -x "$COMMAND_PATH" ]; then
+  /usr/bin/osascript -e 'display alert "Gnirehtet Controller" message "The bundled controller command is missing or not executable."'
+  exit 1
+fi
+
+/usr/bin/open -a Terminal "$COMMAND_PATH"
