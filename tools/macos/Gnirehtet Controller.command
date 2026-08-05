@@ -331,7 +331,7 @@ start_tethering() {
   local serial
   for serial in "${SELECTED_SERIALS[@]}"; do
     printf "\nStarting gnirehtet on %s...\n" "$serial"
-    "$adb" -s "$serial" reverse tcp:"$RELAY_PORT" tcp:"$RELAY_PORT" || { pause; return; }
+    "$adb" -s "$serial" reverse localabstract:gnirehtet tcp:"$RELAY_PORT" || { pause; return; }
     "$adb" -s "$serial" shell am start -n com.genymobile.gnirehtet/.GnirehtetActivity -a com.genymobile.gnirehtet.START || { pause; return; }
   done
   start_monitor "$adb" "${SELECTED_SERIALS[@]}"

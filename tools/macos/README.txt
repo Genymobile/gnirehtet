@@ -16,6 +16,9 @@ Basic use:
 6. Install the bundled APK on selected devices.
 7. Start tethering. Accept the Android VPN prompt if requested.
 
+Runtime tunnel:
+- The controller maps Android localabstract:gnirehtet to the Mac relay port.
+
 Stopping:
 - Use "Stop tethering on selected devices" in the controller.
 - Quit also performs cleanup first.
@@ -32,4 +35,4 @@ adb install -r gnirehtet-android16-debug.apk
 Notes:
 - Homebrew must already be installed for automatic dependency repair.
 - The controller installs android-platform-tools and openjdk@17 when requested.
-- The relay is started with launchctl under the label gnirehtet-relay-controller.
+- The relay is started in the background and writes logs to logs/gnirehtet-relay.log.

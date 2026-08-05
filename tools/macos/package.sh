@@ -5,8 +5,20 @@ ROOT_DIR="$(cd "$(dirname "$0")/../.." && pwd)"
 TOOLS_DIR="$ROOT_DIR/tools/macos"
 OUT_DIR="$ROOT_DIR/build/macos-kit/Gnirehtet-Android16-Mac-Kit"
 APP_DIR="$OUT_DIR/Gnirehtet Controller.app"
+BREW_JAVA_HOME="/opt/homebrew/opt/openjdk@17/libexec/openjdk.jdk/Contents/Home"
+BREW_ANDROID_HOME="/opt/homebrew/share/android-commandlinetools"
 
 cd "$ROOT_DIR"
+
+if [[ -x "$BREW_JAVA_HOME/bin/java" ]]; then
+  export JAVA_HOME="$BREW_JAVA_HOME"
+  export PATH="$JAVA_HOME/bin:$PATH"
+fi
+
+if [[ -d "$BREW_ANDROID_HOME/platforms" ]]; then
+  export ANDROID_HOME="$BREW_ANDROID_HOME"
+  export ANDROID_SDK_ROOT="$BREW_ANDROID_HOME"
+fi
 
 ./gradlew :app:assembleDebug :relay-java:assembleDebug
 

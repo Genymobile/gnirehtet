@@ -13,6 +13,10 @@ It can:
 - install missing `adb` and Java 17 dependencies with Homebrew;
 - stop the desktop relay when all selected devices disappear from ADB.
 
+When tethering starts, the controller maps Android's
+`localabstract:gnirehtet` socket to the desktop relay TCP port. This matches the
+Android client protocol used by gnirehtet.
+
 The controller is intentionally implemented as shell scripts wrapped by a small
 `.app` launcher. This keeps the tool inspectable and avoids requiring Xcode to
 run it.
