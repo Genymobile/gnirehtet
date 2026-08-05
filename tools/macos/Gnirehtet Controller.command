@@ -219,11 +219,11 @@ ensure_selection() {
   if [ "${#DEVICE_SERIALS[@]}" -eq 0 ]; then
     printf "No authorized Android devices found.\n"
     printf "Connect USB, enable USB debugging, and approve the trust prompt on Android.\n"
-  else
-    printf "Multiple devices are connected. Use \"Choose Android devices\" first.\n"
+    pause
+    return 1
   fi
-  pause
-  return 1
+  choose_devices
+  [ "${#SELECTED_SERIALS[@]}" -gt 0 ]
 }
 
 install_apk() {
