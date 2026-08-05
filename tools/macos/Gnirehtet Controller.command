@@ -14,6 +14,8 @@ MONITOR_LOG="$LOG_DIR/gnirehtet-monitor.log"
 MONITOR_PID_FILE="$LOG_DIR/gnirehtet-monitor.pid"
 MONITOR_SCRIPT="$SCRIPT_DIR/gnirehtet-monitor.sh"
 STATS_FILE="$LOG_DIR/gnirehtet-stats.tsv"
+STATS_TOTAL_WIDTH=14
+STATS_RATE_WIDTH=12
 
 SELECTED_SERIALS=()
 SELECTED_LABELS=()
@@ -397,6 +399,89 @@ show_connection_stats() {
   done
 }
 
+stats_are_available() {
+  relay_is_listening || return 1
+  [ "${#SELECTED_SERIALS[@]}" -gt 0 ] || return 1
+  [ -n "$(adb_path || true)" ] || return 1
+}
+
+print_connection_stats_layout() {
+  stats_are_available || return
+
+  printf "\nConnection stats:\n"
+  local i
+  for ((i = 0; i < ${#SELECTED_SERIALS[@]}; i++)); do
+    printf "  - %s\n" "${SELECTED_LABELS[$i]}"
+    printf "    Down: %-${STATS_TOTAL_WIDTH}s total, %-${STATS_RATE_WIDTH}s\n" "-" "-"
+    printf "    Up:   %-${STATS_TOTAL_WIDTH}s total, %-${STATS_RATE_WIDTH}s\n" "-" "-"
+  done
+}
+
+move_to_stats_value() {
+  local row="$1"
+  local column="$2"
+  tput rc 2>/dev/null || return 1
+  [ "$row" -gt 0 ] && tput cud "$row" 2>/dev/null
+  tput hpa "$column" 2>/dev/null
+}
+
+print_stats_value() {
+  local value="$1"
+  local width="$2"
+  printf "%-${width}.${width}s" "$value"
+}
+
+refresh_menu_stats_numbers() {
+  stats_are_available || return 1
+
+  local adb
+  adb="$(adb_path || true)"
+  local now
+  now="$(date +%s)"
+  local i
+  for ((i = 0; i < ${#SELECTED_SERIALS[@]}; i++)); do
+    local serial="${SELECTED_SERIALS[$i]}"
+    local sample
+    sample="$(read_tun_bytes "$adb" "$serial" || true)"
+    [ -n "$sample" ] || continue
+
+    set -- $sample
+    local rx="$1"
+    local tx="$2"
+    local previous
+    previous="$(previous_tun_sample "$serial" || true)"
+    remember_tun_sample "$serial" "$rx" "$tx" "$now"
+
+    local rx_rate="0 B/s"
+    local tx_rate="0 B/s"
+    if [ -n "$previous" ]; then
+      set -- $previous
+      local prev_rx="$1"
+      local prev_tx="$2"
+      local prev_ts="$3"
+      local elapsed=$((now - prev_ts))
+      local rx_delta=$((rx - prev_rx))
+      local tx_delta=$((tx - prev_tx))
+      [ "$rx_delta" -ge 0 ] || rx_delta=0
+      [ "$tx_delta" -ge 0 ] || tx_delta=0
+      rx_rate="$(format_rate "$rx_delta" "$elapsed")"
+      tx_rate="$(format_rate "$tx_delta" "$elapsed")"
+    fi
+
+    local down_row=$((3 + i * 3))
+    local up_row=$((4 + i * 3))
+    move_to_stats_value "$down_row" 10 && print_stats_value "$(format_bytes "$rx")" "$STATS_TOTAL_WIDTH"
+    move_to_stats_value "$down_row" $((10 + STATS_TOTAL_WIDTH + 8)) && print_stats_value "$rx_rate" "$STATS_RATE_WIDTH"
+    move_to_stats_value "$up_row" 10 && print_stats_value "$(format_bytes "$tx")" "$STATS_TOTAL_WIDTH"
+    move_to_stats_value "$up_row" $((10 + STATS_TOTAL_WIDTH + 8)) && print_stats_value "$tx_rate" "$STATS_RATE_WIDTH"
+  done
+
+  tput rc 2>/dev/null || true
+  local prompt_row=$((3 + ${#SELECTED_SERIALS[@]} * 3))
+  [ "$prompt_row" -gt 0 ] && tput cud "$prompt_row" 2>/dev/null
+  tput hpa 8 2>/dev/null || true
+}
+
 relay_pid_is_running() {
   [ -f "$RELAY_PID_FILE" ] || return 1
   local pid
@@ -601,31 +686,26 @@ print_main_menu_options() {
   printf "8) Quit\n"
 }
 
-refresh_menu_stats() {
-  tput rc 2>/dev/null || return 1
-  tput ed 2>/dev/null || return 1
-  show_connection_stats
-  printf "\nChoice: "
-}
-
 main_menu() {
   while true; do
     header
     print_main_menu_options
 
-    local can_refresh_in_place=false
-    if tput sc 2>/dev/null; then
-      can_refresh_in_place=true
-    fi
-    refresh_menu_stats || {
+    local can_refresh_numbers=false
+    if tput sc 2>/dev/null && stats_are_available; then
+      can_refresh_numbers=true
+      print_connection_stats_layout
+      printf "\nChoice: "
+      refresh_menu_stats_numbers
+    else
       show_connection_stats
       printf "\nChoice: "
-    }
+    fi
 
     local choice=""
     while ! read -r -t 2 choice && [ -z "$choice" ]; do
-      if [ "$can_refresh_in_place" = true ]; then
-        refresh_menu_stats || break
+      if [ "$can_refresh_numbers" = true ]; then
+        refresh_menu_stats_numbers || break
       fi
     done
     [ -n "$choice" ] || continue
