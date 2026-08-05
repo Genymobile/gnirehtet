@@ -91,6 +91,10 @@ public class GnirehtetService extends VpnService {
                 .setBlocking(true)
                 .setMtu(MTU);
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            builder.setMetered(false);
+        }
+
         CIDR[] routes = config.getRoutes();
         if (routes.length == 0) {
             builder.addRoute("0.0.0.0", 0);
