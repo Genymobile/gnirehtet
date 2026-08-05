@@ -141,6 +141,12 @@ load_devices() {
   done < <("$adb" devices -l)
 }
 
+select_device_at_index() {
+  local index="$1"
+  SELECTED_SERIALS+=("${DEVICE_SERIALS[$index]}")
+  SELECTED_LABELS+=("${DEVICE_LABELS[$index]}")
+}
+
 choose_devices() {
   header
   local adb
@@ -164,18 +170,25 @@ choose_devices() {
 
   SELECTED_SERIALS=()
   SELECTED_LABELS=()
-  if [[ "$selection" =~ ^[Aa][Ll][Ll]$ ]]; then
+  selection="$(printf "%s" "$selection" | tr -d '[:space:]')"
+  if [ -z "$selection" ]; then
+    if [ "${#DEVICE_SERIALS[@]}" -eq 1 ]; then
+      select_device_at_index 0
+    else
+      printf "\nMultiple devices are connected. Choose a device number, serial, or ALL.\n"
+      pause
+      return
+    fi
+  elif [[ "$selection" =~ ^[Aa][Ll][Ll]$ ]]; then
     SELECTED_SERIALS=("${DEVICE_SERIALS[@]}")
     SELECTED_LABELS=("${DEVICE_LABELS[@]}")
   else
     IFS=',' read -ra picks <<< "$selection"
     local pick
     for pick in "${picks[@]}"; do
-      pick="$(printf "%s" "$pick" | tr -d '[:space:]')"
       for ((i = 0; i < ${#DEVICE_SERIALS[@]}; i++)); do
         if [ "$pick" = "$((i + 1))" ] || [ "$pick" = "${DEVICE_SERIALS[$i]}" ]; then
-          SELECTED_SERIALS+=("${DEVICE_SERIALS[$i]}")
-          SELECTED_LABELS+=("${DEVICE_LABELS[$i]}")
+          select_device_at_index "$i"
         fi
       done
     done
@@ -193,8 +206,24 @@ ensure_selection() {
   if [ "${#SELECTED_SERIALS[@]}" -gt 0 ]; then
     return 0
   fi
-  choose_devices
-  [ "${#SELECTED_SERIALS[@]}" -gt 0 ]
+  local adb
+  adb="$(require_adb)" || { pause; return 1; }
+  load_devices "$adb"
+  if [ "${#DEVICE_SERIALS[@]}" -eq 1 ]; then
+    SELECTED_SERIALS=()
+    SELECTED_LABELS=()
+    select_device_at_index 0
+    printf "Using the only connected device: %s\n" "${SELECTED_LABELS[0]}"
+    return 0
+  fi
+  if [ "${#DEVICE_SERIALS[@]}" -eq 0 ]; then
+    printf "No authorized Android devices found.\n"
+    printf "Connect USB, enable USB debugging, and approve the trust prompt on Android.\n"
+  else
+    printf "Multiple devices are connected. Use \"Choose Android devices\" first.\n"
+  fi
+  pause
+  return 1
 }
 
 install_apk() {
