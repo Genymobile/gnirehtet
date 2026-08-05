@@ -6,12 +6,13 @@ RELAY_PID_FILE="$2"
 MONITOR_PID_FILE="$3"
 RELAY_LOG="$4"
 CONTROLLER_PID="$5"
+RELAY_PORT="${6:-31416}"
 CONTROLLER_TTY=""
-if [ "$#" -ge 6 ]; then
-  CONTROLLER_TTY="$6"
-  shift 6
+if [ "$#" -ge 7 ]; then
+  CONTROLLER_TTY="$7"
+  shift 7
 else
-  shift 5
+  shift 6
 fi
 WATCHED_SERIALS=("$@")
 
@@ -24,11 +25,22 @@ relay_pid() {
   cat "$RELAY_PID_FILE" 2>/dev/null
 }
 
+relay_listener_pids() {
+  /usr/sbin/lsof -tiTCP:"$RELAY_PORT" -sTCP:LISTEN 2>/dev/null
+}
+
 relay_is_running() {
   local pid
   pid="$(relay_pid || true)"
-  [ -n "$pid" ] || return 1
-  kill -0 "$pid" >/dev/null 2>&1
+  if [ -n "$pid" ] && kill -0 "$pid" >/dev/null 2>&1; then
+    return 0
+  fi
+  [ -n "$(relay_listener_pids)" ]
+}
+
+controller_is_running() {
+  [ -n "$CONTROLLER_PID" ] || return 1
+  kill -0 "$CONTROLLER_PID" >/dev/null 2>&1
 }
 
 stop_relay() {
@@ -42,6 +54,18 @@ stop_relay() {
       kill -9 "$pid" >/dev/null 2>&1 || true
     fi
   fi
+  local listener_pid
+  while IFS= read -r listener_pid; do
+    [ -n "$listener_pid" ] || continue
+    if [ "$listener_pid" != "$pid" ]; then
+      log "Stopping relay listener PID $listener_pid after device loss."
+      kill "$listener_pid" >/dev/null 2>&1 || true
+      sleep 1
+      if kill -0 "$listener_pid" >/dev/null 2>&1; then
+        kill -9 "$listener_pid" >/dev/null 2>&1 || true
+      fi
+    fi
+  done < <(relay_listener_pids)
   rm -f "$RELAY_PID_FILE"
 }
 
@@ -97,7 +121,7 @@ log "Monitoring selected device(s): ${WATCHED_SERIALS[*]}"
 log "Relay log: $RELAY_LOG"
 
 missing_count=0
-while relay_is_running; do
+while controller_is_running; do
   if any_watched_device_connected; then
     missing_count=0
   else
@@ -113,4 +137,7 @@ while relay_is_running; do
   sleep 3
 done
 
-log "Relay is no longer running. Monitor exiting."
+if relay_is_running; then
+  stop_relay
+fi
+log "Controller is no longer running. Monitor exiting."

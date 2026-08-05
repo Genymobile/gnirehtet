@@ -343,6 +343,10 @@ relay_is_listening() {
   /usr/sbin/lsof -nP -iTCP:"$RELAY_PORT" -sTCP:LISTEN >/dev/null 2>&1
 }
 
+relay_listener_pids() {
+  /usr/sbin/lsof -tiTCP:"$RELAY_PORT" -sTCP:LISTEN 2>/dev/null
+}
+
 show_connection_stats() {
   relay_is_listening || return
   [ "${#SELECTED_SERIALS[@]}" -gt 0 ] || return
@@ -504,6 +508,12 @@ start_relay() {
     return 0
   fi
   if relay_is_listening; then
+    mkdir -p "$LOG_DIR"
+    local existing_pid
+    existing_pid="$(relay_listener_pids | head -1)"
+    if [ -n "$existing_pid" ]; then
+      printf "%s\n" "$existing_pid" > "$RELAY_PID_FILE"
+    fi
     printf "Relay is already listening on port %s.\n" "$RELAY_PORT"
     return 0
   fi
@@ -540,7 +550,7 @@ start_monitor() {
   : > "$MONITOR_LOG"
   local controller_tty
   controller_tty="$(tty 2>/dev/null || true)"
-  nohup "$MONITOR_SCRIPT" "$adb" "$RELAY_PID_FILE" "$MONITOR_PID_FILE" "$RELAY_LOG" "$$" "$controller_tty" "$@" >>"$MONITOR_LOG" 2>&1 &
+  nohup "$MONITOR_SCRIPT" "$adb" "$RELAY_PID_FILE" "$MONITOR_PID_FILE" "$RELAY_LOG" "$$" "$RELAY_PORT" "$controller_tty" "$@" >>"$MONITOR_LOG" 2>&1 &
   local monitor_pid="$!"
   printf "%s\n" "$monitor_pid" > "$MONITOR_PID_FILE"
   printf "Connection-loss monitor started as PID %s.\n" "$monitor_pid"
@@ -606,8 +616,8 @@ stop_tethering() {
 }
 
 stop_relay() {
+  local relay_pid=""
   if relay_pid_is_running; then
-    local relay_pid
     relay_pid="$(cat "$RELAY_PID_FILE")"
     kill "$relay_pid" >/dev/null 2>&1 || true
     sleep 1
@@ -615,6 +625,17 @@ stop_relay() {
       kill -9 "$relay_pid" >/dev/null 2>&1 || true
     fi
   fi
+  local listener_pid
+  while IFS= read -r listener_pid; do
+    [ -n "$listener_pid" ] || continue
+    if [ "$listener_pid" != "$relay_pid" ]; then
+      kill "$listener_pid" >/dev/null 2>&1 || true
+      sleep 1
+      if kill -0 "$listener_pid" >/dev/null 2>&1; then
+        kill -9 "$listener_pid" >/dev/null 2>&1 || true
+      fi
+    fi
+  done < <(relay_listener_pids)
   rm -f "$RELAY_PID_FILE"
 }
 
