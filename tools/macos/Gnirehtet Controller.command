@@ -525,7 +525,7 @@ start_relay() {
   fi
   mkdir -p "$LOG_DIR"
   : > "$RELAY_LOG"
-  nohup "$java" -jar "$JAR_PATH" relay >>"$RELAY_LOG" 2>&1 &
+  nohup "$java" -jar "$JAR_PATH" relay >>"$RELAY_LOG" 2>&1 </dev/null &
   local relay_pid="$!"
   printf "%s\n" "$relay_pid" > "$RELAY_PID_FILE"
   sleep 1
@@ -550,7 +550,7 @@ start_monitor() {
   : > "$MONITOR_LOG"
   local controller_tty
   controller_tty="$(tty 2>/dev/null || true)"
-  nohup "$MONITOR_SCRIPT" "$adb" "$RELAY_PID_FILE" "$MONITOR_PID_FILE" "$RELAY_LOG" "$$" "$RELAY_PORT" "$controller_tty" "$@" >>"$MONITOR_LOG" 2>&1 &
+  nohup "$MONITOR_SCRIPT" "$adb" "$RELAY_PID_FILE" "$MONITOR_PID_FILE" "$RELAY_LOG" "$$" "$RELAY_PORT" "$controller_tty" "$@" >>"$MONITOR_LOG" 2>&1 </dev/null &
   local monitor_pid="$!"
   printf "%s\n" "$monitor_pid" > "$MONITOR_PID_FILE"
   printf "Connection-loss monitor started as PID %s.\n" "$monitor_pid"

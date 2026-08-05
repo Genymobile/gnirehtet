@@ -6,13 +6,18 @@ RELAY_PID_FILE="$2"
 MONITOR_PID_FILE="$3"
 RELAY_LOG="$4"
 CONTROLLER_PID="$5"
-RELAY_PORT="${6:-31416}"
+RELAY_PORT="31416"
 CONTROLLER_TTY=""
-if [ "$#" -ge 7 ]; then
+
+if [ "$#" -ge 7 ] && [[ "${6:-}" =~ ^[0-9]+$ ]]; then
+  RELAY_PORT="$6"
   CONTROLLER_TTY="$7"
   shift 7
-else
+elif [ "$#" -ge 6 ]; then
+  CONTROLLER_TTY="$6"
   shift 6
+else
+  shift 5
 fi
 WATCHED_SERIALS=("$@")
 
@@ -70,9 +75,20 @@ stop_relay() {
 }
 
 quit_controller() {
+  if [ -n "$CONTROLLER_PID" ] && kill -0 "$CONTROLLER_PID" >/dev/null 2>&1; then
+    log "Quitting controller PID $CONTROLLER_PID after device loss."
+    kill "$CONTROLLER_PID" >/dev/null 2>&1 || true
+    sleep 1
+    if kill -0 "$CONTROLLER_PID" >/dev/null 2>&1; then
+      kill -9 "$CONTROLLER_PID" >/dev/null 2>&1 || true
+    fi
+  fi
+
   if [ -n "$CONTROLLER_TTY" ]; then
     log "Closing Terminal session $CONTROLLER_TTY after device loss."
-    /usr/bin/osascript >/dev/null 2>&1 <<EOF || true
+    (
+      sleep 1
+      /usr/bin/osascript >/dev/null 2>&1 <<EOF || true
 tell application "Terminal"
   repeat with terminalWindow in windows
     repeat with terminalTab in tabs of terminalWindow
@@ -84,15 +100,7 @@ tell application "Terminal"
   end repeat
 end tell
 EOF
-  fi
-
-  if [ -n "$CONTROLLER_PID" ] && kill -0 "$CONTROLLER_PID" >/dev/null 2>&1; then
-    log "Quitting controller PID $CONTROLLER_PID after device loss."
-    kill "$CONTROLLER_PID" >/dev/null 2>&1 || true
-    sleep 1
-    if kill -0 "$CONTROLLER_PID" >/dev/null 2>&1; then
-      kill -9 "$CONTROLLER_PID" >/dev/null 2>&1 || true
-    fi
+    ) >/dev/null 2>&1 </dev/null &
   fi
 }
 
