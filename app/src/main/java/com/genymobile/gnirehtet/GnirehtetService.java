@@ -11,6 +11,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Message;
 import android.os.ParcelFileDescriptor;
+import android.system.OsConstants;
 import android.util.Log;
 
 import java.io.IOException;
@@ -87,6 +88,8 @@ public class GnirehtetService extends VpnService {
     private boolean setupVpn(VpnConfiguration config) {
         Builder builder = new Builder()
                 .addAddress(VPN_ADDRESS, 32)
+                .allowBypass()
+                .allowFamily(OsConstants.AF_INET6)
                 .setSession(getString(R.string.app_name))
                 .setBlocking(true)
                 .setMtu(MTU);
