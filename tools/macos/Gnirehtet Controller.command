@@ -590,22 +590,46 @@ show_status() {
   pause
 }
 
+print_main_menu_options() {
+  printf "1) Choose Android devices\n"
+  printf "2) Install/Repair dependencies with Homebrew\n"
+  printf "3) Install bundled APK on selected devices\n"
+  printf "4) Uninstall Android app from selected devices\n"
+  printf "5) Start tethering on selected devices\n"
+  printf "6) Stop tethering on selected devices\n"
+  printf "7) Status\n"
+  printf "8) Quit\n"
+}
+
+refresh_menu_stats() {
+  tput rc 2>/dev/null || return 1
+  tput ed 2>/dev/null || return 1
+  show_connection_stats
+  printf "\nChoice: "
+}
+
 main_menu() {
   while true; do
     header
-    printf "1) Choose Android devices\n"
-    printf "2) Install/Repair dependencies with Homebrew\n"
-    printf "3) Install bundled APK on selected devices\n"
-    printf "4) Uninstall Android app from selected devices\n"
-    printf "5) Start tethering on selected devices\n"
-    printf "6) Stop tethering on selected devices\n"
-    printf "7) Status\n"
-    printf "8) Quit\n"
-    show_connection_stats
-    printf "\nChoice: "
-    if ! read -r -t 2 choice; then
-      continue
+    print_main_menu_options
+
+    local can_refresh_in_place=false
+    if tput sc 2>/dev/null; then
+      can_refresh_in_place=true
     fi
+    refresh_menu_stats || {
+      show_connection_stats
+      printf "\nChoice: "
+    }
+
+    local choice=""
+    while ! read -r -t 2 choice && [ -z "$choice" ]; do
+      if [ "$can_refresh_in_place" = true ]; then
+        refresh_menu_stats || break
+      fi
+    done
+    [ -n "$choice" ] || continue
+
     case "$choice" in
       1) choose_devices ;;
       2) install_dependencies ;;
