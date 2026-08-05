@@ -375,25 +375,25 @@ show_connection_stats() {
     rx_total="$(format_bytes "$rx")"
     tx_total="$(format_bytes "$tx")"
 
-    if [ -z "$previous" ]; then
-      printf "  - %s: down %s, up %s\n" "$label" "$rx_total" "$tx_total"
-      continue
+    local rx_rate="0 B/s"
+    local tx_rate="0 B/s"
+    if [ -n "$previous" ]; then
+      set -- $previous
+      local prev_rx="$1"
+      local prev_tx="$2"
+      local prev_ts="$3"
+      local elapsed=$((now - prev_ts))
+      local rx_delta=$((rx - prev_rx))
+      local tx_delta=$((tx - prev_tx))
+      [ "$rx_delta" -ge 0 ] || rx_delta=0
+      [ "$tx_delta" -ge 0 ] || tx_delta=0
+      rx_rate="$(format_rate "$rx_delta" "$elapsed")"
+      tx_rate="$(format_rate "$tx_delta" "$elapsed")"
     fi
 
-    set -- $previous
-    local prev_rx="$1"
-    local prev_tx="$2"
-    local prev_ts="$3"
-    local elapsed=$((now - prev_ts))
-    local rx_delta=$((rx - prev_rx))
-    local tx_delta=$((tx - prev_tx))
-    [ "$rx_delta" -ge 0 ] || rx_delta=0
-    [ "$tx_delta" -ge 0 ] || tx_delta=0
-
-    printf "  - %s: down %s (%s), up %s (%s)\n" \
-      "$label" \
-      "$rx_total" "$(format_rate "$rx_delta" "$elapsed")" \
-      "$tx_total" "$(format_rate "$tx_delta" "$elapsed")"
+    printf "  - %s\n" "$label"
+    printf "    Down: %s total, %s\n" "$rx_total" "$rx_rate"
+    printf "    Up:   %s total, %s\n" "$tx_total" "$tx_rate"
   done
 }
 
@@ -603,7 +603,9 @@ main_menu() {
     printf "8) Quit\n"
     show_connection_stats
     printf "\nChoice: "
-    read -r choice
+    if ! read -r -t 2 choice; then
+      continue
+    fi
     case "$choice" in
       1) choose_devices ;;
       2) install_dependencies ;;
