@@ -13,6 +13,7 @@ RELAY_PID_FILE="$LOG_DIR/gnirehtet-relay.pid"
 MONITOR_LOG="$LOG_DIR/gnirehtet-monitor.log"
 MONITOR_PID_FILE="$LOG_DIR/gnirehtet-monitor.pid"
 MONITOR_SCRIPT="$SCRIPT_DIR/gnirehtet-monitor.sh"
+STATS_FILE="$LOG_DIR/gnirehtet-stats.tsv"
 
 SELECTED_SERIALS=()
 SELECTED_LABELS=()
@@ -37,6 +38,71 @@ header() {
     done
   fi
   printf "\n"
+}
+
+format_bytes() {
+  awk -v bytes="${1:-0}" '
+    function human(value) {
+      split("B KiB MiB GiB TiB", units, " ")
+      unit = 1
+      while (value >= 1024 && unit < 5) {
+        value /= 1024
+        ++unit
+      }
+      if (unit == 1) {
+        return sprintf("%d %s", value, units[unit])
+      }
+      return sprintf("%.1f %s", value, units[unit])
+    }
+    BEGIN { print human(bytes) }
+  '
+}
+
+format_rate() {
+  awk -v bytes="${1:-0}" -v seconds="${2:-1}" '
+    function human(value) {
+      split("B/s KiB/s MiB/s GiB/s", units, " ")
+      unit = 1
+      while (value >= 1024 && unit < 4) {
+        value /= 1024
+        ++unit
+      }
+      if (unit == 1) {
+        return sprintf("%d %s", value, units[unit])
+      }
+      return sprintf("%.1f %s", value, units[unit])
+    }
+    BEGIN {
+      if (seconds < 1) {
+        seconds = 1
+      }
+      print human(bytes / seconds)
+    }
+  '
+}
+
+read_tun_bytes() {
+  local adb="$1"
+  local serial="$2"
+  "$adb" -s "$serial" shell "awk '\$1 ~ /tun0:/ { print \$2, \$10 }' /proc/net/dev" 2>/dev/null \
+    | tr -d '\r' \
+    | tail -1
+}
+
+previous_tun_sample() {
+  local serial="$1"
+  [ -f "$STATS_FILE" ] || return 1
+  awk -v serial="$serial" '$1 == serial { rx = $2; tx = $3; ts = $4 } END { if (ts != "") print rx, tx, ts }' "$STATS_FILE"
+}
+
+remember_tun_sample() {
+  mkdir -p "$LOG_DIR"
+  printf "%s\t%s\t%s\t%s\n" "$1" "$2" "$3" "$4" >> "$STATS_FILE"
+}
+
+reset_stats() {
+  mkdir -p "$LOG_DIR"
+  : > "$STATS_FILE"
 }
 
 find_executable() {
@@ -275,6 +341,62 @@ relay_is_listening() {
   /usr/sbin/lsof -nP -iTCP:"$RELAY_PORT" -sTCP:LISTEN >/dev/null 2>&1
 }
 
+show_connection_stats() {
+  relay_is_listening || return
+  [ "${#SELECTED_SERIALS[@]}" -gt 0 ] || return
+
+  local adb
+  adb="$(adb_path || true)"
+  [ -n "$adb" ] || return
+
+  printf "\nConnection stats:\n"
+  local now
+  now="$(date +%s)"
+  local i
+  for ((i = 0; i < ${#SELECTED_SERIALS[@]}; i++)); do
+    local serial="${SELECTED_SERIALS[$i]}"
+    local label="${SELECTED_LABELS[$i]}"
+    local sample
+    sample="$(read_tun_bytes "$adb" "$serial" || true)"
+    if [ -z "$sample" ]; then
+      printf "  - %s: waiting for VPN traffic\n" "$label"
+      continue
+    fi
+
+    set -- $sample
+    local rx="$1"
+    local tx="$2"
+    local previous
+    previous="$(previous_tun_sample "$serial" || true)"
+    remember_tun_sample "$serial" "$rx" "$tx" "$now"
+
+    local rx_total
+    local tx_total
+    rx_total="$(format_bytes "$rx")"
+    tx_total="$(format_bytes "$tx")"
+
+    if [ -z "$previous" ]; then
+      printf "  - %s: down %s, up %s\n" "$label" "$rx_total" "$tx_total"
+      continue
+    fi
+
+    set -- $previous
+    local prev_rx="$1"
+    local prev_tx="$2"
+    local prev_ts="$3"
+    local elapsed=$((now - prev_ts))
+    local rx_delta=$((rx - prev_rx))
+    local tx_delta=$((tx - prev_tx))
+    [ "$rx_delta" -ge 0 ] || rx_delta=0
+    [ "$tx_delta" -ge 0 ] || tx_delta=0
+
+    printf "  - %s: down %s (%s), up %s (%s)\n" \
+      "$label" \
+      "$rx_total" "$(format_rate "$rx_delta" "$elapsed")" \
+      "$tx_total" "$(format_rate "$tx_delta" "$elapsed")"
+  done
+}
+
 relay_pid_is_running() {
   [ -f "$RELAY_PID_FILE" ] || return 1
   local pid
@@ -357,6 +479,7 @@ start_tethering() {
     pause
     return
   }
+  reset_stats
   local serial
   for serial in "${SELECTED_SERIALS[@]}"; do
     printf "\nStarting gnirehtet on %s...\n" "$serial"
@@ -478,6 +601,7 @@ main_menu() {
     printf "6) Stop tethering on selected devices\n"
     printf "7) Status\n"
     printf "8) Quit\n"
+    show_connection_stats
     printf "\nChoice: "
     read -r choice
     case "$choice" in
