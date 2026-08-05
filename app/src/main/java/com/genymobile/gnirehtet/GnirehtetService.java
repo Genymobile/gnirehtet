@@ -6,6 +6,7 @@ package com.genymobile.gnirehtet;
 
 import android.content.Context;
 import android.content.Intent;
+import android.net.Network;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.Handler;
@@ -88,7 +89,6 @@ public class GnirehtetService extends VpnService {
     private boolean setupVpn(VpnConfiguration config) {
         Builder builder = new Builder()
                 .addAddress(VPN_ADDRESS, 32)
-                .allowBypass()
                 .allowFamily(OsConstants.AF_INET6)
                 .setSession(getString(R.string.app_name))
                 .setBlocking(true)
@@ -96,6 +96,9 @@ public class GnirehtetService extends VpnService {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             builder.setMetered(false);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            builder.setUnderlyingNetworks(new Network[0]);
         }
 
         CIDR[] routes = config.getRoutes();
@@ -128,8 +131,6 @@ public class GnirehtetService extends VpnService {
             return false;
         }
 
-        // Do not point setUnderlyingNetworks() at the VPN itself. The tunnel is
-        // carried over an ADB local socket, not an Android upstream Network.
         return true;
     }
 

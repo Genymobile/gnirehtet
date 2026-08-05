@@ -37,7 +37,7 @@ public class Notifier {
             builder.setSmallIcon(R.drawable.ic_report_problem_24dp);
         } else {
             builder.setContentText(context.getString(R.string.relay_connected));
-            builder.setSmallIcon(R.drawable.ic_usb_24dp);
+            builder.setSmallIcon(R.drawable.ic_public_24dp);
         }
         builder.addAction(createStopAction());
         return builder.build();
