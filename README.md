@@ -1,5 +1,21 @@
 # Gnirehtet (v2.5.1)
 
+## About this fork
+
+This fork is an Android 16 compatibility and macOS convenience build of
+Genymobile's original `gnirehtet` reverse-tethering project.
+
+It keeps the existing gnirehtet desktop relay protocol intact, but modernizes
+the Android app so it can build and run against Android 16/API 36. It also adds
+a small macOS kit that bundles the debug APK, Java relay, and a Terminal-based
+controller for installing, starting, stopping, uninstalling, selecting one or
+more Android devices, and cleaning up when a USB device is disconnected.
+
+The project still uses Android's standard `VpnService` API. That is the normal
+no-root way to route all Android app traffic over USB, but Android and apps can
+still identify the connection as a VPN. Some apps may treat VPN traffic
+differently even when the tunnel is connected, validated, and otherwise working.
+
 This project provides **reverse tethering** over `adb` for Android: it
 allows devices to use the internet connection of the computer they are plugged
 on. It does not require any _root_ access (neither on the device nor on the

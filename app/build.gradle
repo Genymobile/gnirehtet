@@ -1,32 +1,40 @@
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion rootProject.ext.compileSdkVersion
-    buildToolsVersion rootProject.ext.buildToolsVersion
+    namespace 'com.genymobile.gnirehtet'
+    compileSdk rootProject.ext.compileSdkVersion
 
     defaultConfig {
-        archivesBaseName = "gnirehtet" // change apk name
+        archivesBaseName = "gnirehtet"
         applicationId "com.genymobile.gnirehtet"
-        minSdkVersion 21
-        targetSdkVersion 29
-        versionCode 9
-        versionName "2.5.1"
-        testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+        minSdk 21
+        targetSdk 36
+        versionCode 10
+        versionName "2.6.0-android16"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
     buildTypes {
         release {
             minifyEnabled false
-            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
         }
     }
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
-    androidTestImplementation('com.android.support.test.espresso:espresso-core:2.2.2', {
-        exclude group: 'com.android.support', module: 'support-annotations'
-    })
-    testImplementation 'junit:junit:4.12'
+    androidTestImplementation 'androidx.test.espresso:espresso-core:3.6.1'
+    testImplementation 'junit:junit:4.13.2'
 }
 
 apply from: "$project.rootDir/config/android-checkstyle.gradle"

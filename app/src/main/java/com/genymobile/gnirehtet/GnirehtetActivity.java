@@ -1,8 +1,11 @@
 package com.genymobile.gnirehtet;
 
+import android.Manifest;
 import android.app.Activity;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.VpnService;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 
@@ -25,8 +28,10 @@ public class GnirehtetActivity extends Activity {
     public static final String EXTRA_ROUTES = "routes";
 
     private static final int VPN_REQUEST_CODE = 0;
+    private static final int NOTIFICATION_PERMISSION_REQUEST_CODE = 1;
 
     private VpnConfiguration requestedConfig;
+    private boolean notificationPermissionRequested;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -63,6 +68,15 @@ public class GnirehtetActivity extends Activity {
     }
 
     private boolean startGnirehtet(VpnConfiguration config) {
+        if (shouldRequestNotificationPermission()) {
+            requestedConfig = config;
+            notificationPermissionRequested = true;
+            requestPermissions(
+                    new String[] {Manifest.permission.POST_NOTIFICATIONS},
+                    NOTIFICATION_PERMISSION_REQUEST_CODE);
+            return false;
+        }
+
         Intent vpnIntent = VpnService.prepare(this);
         if (vpnIntent == null) {
             Log.d(TAG, "VPN was already authorized");
@@ -93,5 +107,20 @@ public class GnirehtetActivity extends Activity {
         }
         requestedConfig = null;
         finish();
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == NOTIFICATION_PERMISSION_REQUEST_CODE) {
+            startGnirehtet(requestedConfig);
+        }
+    }
+
+    private boolean shouldRequestNotificationPermission() {
+        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                && !notificationPermissionRequested
+                && checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)
+                        != PackageManager.PERMISSION_GRANTED;
     }
 }
