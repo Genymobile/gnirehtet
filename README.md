@@ -5,8 +5,7 @@ allows devices to use the internet connection of the computer they are plugged
 on. It does not require any _root_ access (neither on the device nor on the
 computer). It works on _GNU/Linux_, _Windows_ and _Mac OS_.
 
-Currently, it relays [TCP] and [UDP] over [IPv4] traffic, but it does not
-support [IPv6] (yet?).
+Currently, it relays [TCP] and [UDP] over [IPv4] and [IPv6].
 
 [TCP]: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
 [UDP]: https://fr.wikipedia.org/wiki/User_Datagram_Protocol
