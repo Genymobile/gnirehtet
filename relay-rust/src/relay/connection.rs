@@ -15,11 +15,13 @@
  */
 
 use std::fmt;
-use std::net::SocketAddrV4;
+use std::net::{IpAddr, SocketAddr};
 
 use super::client::ClientChannel;
+use super::ip_packet::IpPacket;
 use super::ipv4_header::{Ipv4HeaderData, Protocol};
 use super::ipv4_packet::Ipv4Packet;
+use super::ipv6_packet::Ipv6Packet;
 use super::net;
 use super::selector::Selector;
 use super::transport_header::TransportHeaderData;
@@ -33,7 +35,7 @@ pub trait Connection {
         &mut self,
         selector: &mut Selector,
         client_channel: &mut ClientChannel,
-        ipv4_packet: &Ipv4Packet,
+        ip_packet: &IpPacket,
     );
     fn close(&mut self, selector: &mut Selector);
     fn is_expired(&self) -> bool;
@@ -43,9 +45,9 @@ pub trait Connection {
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ConnectionId {
     protocol: Protocol,
-    source_ip: u32,
+    source_ip: IpAddr,
     source_port: u16,
-    destination_ip: u32,
+    destination_ip: IpAddr,
     destination_port: u16,
     id_string: String,
 }
@@ -55,17 +57,29 @@ impl ConnectionId {
         ipv4_header_data: &Ipv4HeaderData,
         transport_header_data: &TransportHeaderData,
     ) -> Self {
-        let source_ip = ipv4_header_data.source();
-        let source_port = transport_header_data.source_port();
-        let destination_ip = ipv4_header_data.destination();
-        let destination_port = transport_header_data.destination_port();
+        Self::from_ip(
+            ipv4_header_data.protocol(),
+            IpAddr::from(net::to_addr(ipv4_header_data.source())),
+            transport_header_data.source_port(),
+            IpAddr::from(net::to_addr(ipv4_header_data.destination())),
+            transport_header_data.destination_port(),
+        )
+    }
+
+    pub fn from_ip(
+        protocol: Protocol,
+        source_ip: IpAddr,
+        source_port: u16,
+        destination_ip: IpAddr,
+        destination_port: u16,
+    ) -> Self {
         let id_string = format!(
             "{} -> {}",
-            net::to_socket_addr(source_ip, source_port),
-            net::to_socket_addr(destination_ip, destination_port)
+            net::to_socket_addr_ip(source_ip, source_port),
+            net::to_socket_addr_ip(destination_ip, destination_port)
         );
         Self {
-            protocol: ipv4_header_data.protocol(),
+            protocol,
             source_ip,
             source_port,
             destination_ip,
@@ -74,17 +88,50 @@ impl ConnectionId {
         }
     }
 
+    pub fn from_ipv4_packet(packet: &Ipv4Packet) -> Option<Self> {
+        let (ip_data, transport) = packet.headers_data();
+        transport.map(|t| {
+            Self::from_headers(ip_data, t)
+        })
+    }
+
+    pub fn from_ipv6_packet(packet: &Ipv6Packet) -> Option<Self> {
+        let (ip_data, transport) = packet.headers_data();
+        transport.map(|t| {
+            Self::from_ip(
+                ip_data.protocol(),
+                IpAddr::from(net::to_ipv6_addr(&ip_data.source())),
+                t.source_port(),
+                IpAddr::from(net::to_ipv6_addr(&ip_data.destination())),
+                t.destination_port(),
+            )
+        })
+    }
+
+    pub fn from_ip_packet(packet: &IpPacket) -> Option<Self> {
+        match *packet {
+            IpPacket::V4(ref p) => Self::from_ipv4_packet(p),
+            IpPacket::V6(ref p) => Self::from_ipv6_packet(p),
+        }
+    }
+
     pub fn protocol(&self) -> Protocol {
         self.protocol
     }
 
-    pub fn rewritten_destination(&self) -> SocketAddrV4 {
-        let ip = if self.destination_ip == LOCALHOST_FORWARD {
-            LOCALHOST
-        } else {
-            self.destination_ip
-        };
-        net::to_socket_addr(ip, self.destination_port)
+    pub fn is_ipv6(&self) -> bool {
+        self.destination_ip.is_ipv6()
+    }
+
+    pub fn rewritten_destination(&self) -> SocketAddr {
+        // Preserve the emulator special-case for IPv4; IPv6 passes through
+        if let IpAddr::V4(v4) = self.destination_ip {
+            let ip_u32 = u32::from(v4);
+            if ip_u32 == LOCALHOST_FORWARD {
+                return SocketAddr::from(net::to_socket_addr(LOCALHOST, self.destination_port));
+            }
+        }
+        net::to_socket_addr_ip(self.destination_ip, self.destination_port)
     }
 }
 

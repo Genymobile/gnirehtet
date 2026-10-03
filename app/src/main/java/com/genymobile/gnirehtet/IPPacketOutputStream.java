@@ -30,7 +30,10 @@ public class IPPacketOutputStream extends OutputStream {
 
     private static final String TAG = IPPacketOutputStream.class.getSimpleName();
 
-    private static final int MAX_IP_PACKET_LENGTH = 1 << 16; // packet length is stored on 16 bits
+    private static final int MAX_IP_PACKET_LENGTH = (1 << 16) + 40; // max IPv6 packet: 40B header + 64K payload
+
+    private static final int IPV4_HEADER_LENGTH = 20;
+    private static final int IPV6_HEADER_LENGTH = 40;
 
     private final OutputStream target;
     // must always accept 1 full packet + any partial packet
@@ -91,13 +94,13 @@ public class IPPacketOutputStream extends OutputStream {
             // no packet at all
             return false;
         }
-        if (version != 4) {
+        if (version != 4 && version != 6) {
             Log.e(TAG, "Unsupported packet received, IP version is:" + version);
             Log.d(TAG, "Clearing buffer");
             buffer.clear();
             return false;
         }
-        int packetLength = readPacketLength(buffer);
+        int packetLength = readPacketLength(buffer, version);
         if (packetLength == -1 || packetLength > buffer.remaining()) {
             // no packet
             return false;
@@ -125,17 +128,43 @@ public class IPPacketOutputStream extends OutputStream {
     }
 
     /**
+     * Read the packet length, assuming that an IP packet is stored at absolute position 0.
+     *
+     * @param buffer the buffer
+     * @param version the IP version (4 or 6)
+     * @return the packet length, or {@code -1} if not available
+     */
+    public static int readPacketLength(ByteBuffer buffer, int version) {
+        if (version == 6) {
+            if (buffer.limit() < buffer.position() + IPV6_HEADER_LENGTH) {
+                // buffer does not even contain the IPv6 header
+                return -1;
+            }
+            // IPv6 payload length is 16 bits starting at offset 4, plus the 40B fixed header
+            return IPV6_HEADER_LENGTH + Binary.unsigned(buffer.getShort(buffer.position() + 4));
+        }
+        if (buffer.limit() < buffer.position() + 4) {
+            // buffer does not even contains the length field
+            return -1;
+        }
+        // IPv4 packet length is 16 bits starting at offset 2
+        return Binary.unsigned(buffer.getShort(buffer.position() + 2));
+    }
+
+    /**
      * Read the packet length, assuming thatan IP packet is stored at absolute position 0.
      *
      * @param buffer the buffer
      * @return the packet length, or {@code -1} if not available
      */
     public static int readPacketLength(ByteBuffer buffer) {
-        if (buffer.limit() < buffer.position() + 4) {
-            // buffer does not even contains the length field
+        int version = readPacketVersion(buffer);
+        if (version == -1) {
             return -1;
         }
-        // packet length is 16 bits starting at offset 2
-        return Binary.unsigned(buffer.getShort(buffer.position() + 2));
+        if (version != 4 && version != 6) {
+            return -1;
+        }
+        return readPacketLength(buffer, version);
     }
 }

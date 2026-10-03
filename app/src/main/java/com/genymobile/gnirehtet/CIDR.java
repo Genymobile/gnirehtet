@@ -54,7 +54,8 @@ public class CIDR implements Parcelable {
                 prefix = Integer.parseInt(cidr.substring(slashIndex + 1));
             } else {
                 address = Net.toInetAddress(cidr);
-                prefix = 32;
+                // default prefix length depends on the address family
+                prefix = (address instanceof java.net.Inet6Address) ? 128 : 32;
             }
             return new CIDR(address, prefix);
         } catch (IllegalArgumentException e) {

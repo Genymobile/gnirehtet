@@ -44,6 +44,7 @@ public class GnirehtetService extends VpnService {
     private static final String TAG = GnirehtetService.class.getSimpleName();
 
     private static final InetAddress VPN_ADDRESS = Net.toInetAddress(new byte[] {10, 0, 0, 2});
+    private static final InetAddress VPN_ADDRESS_V6 = Net.toInetAddress("fd00::2");
     // magic value: higher (like 0x8000 or 0xffff) or lower (like 1500) values show poorer performances
     private static final int MTU = 0x4000;
 
@@ -113,12 +114,14 @@ public class GnirehtetService extends VpnService {
     private boolean setupVpn(VpnConfiguration config) {
         Builder builder = new Builder();
         builder.addAddress(VPN_ADDRESS, 32);
+        builder.addAddress(VPN_ADDRESS_V6, 128);
         builder.setSession(getString(R.string.app_name));
 
         CIDR[] routes = config.getRoutes();
         if (routes.length == 0) {
-            // no routes defined, redirect the whole network traffic
+            // no routes defined, redirect the whole network traffic (dual-stack)
             builder.addRoute("0.0.0.0", 0);
+            builder.addRoute("::", 0);
         } else {
             for (CIDR route : routes) {
                 builder.addRoute(route.getAddress(), route.getPrefixLength());
@@ -127,8 +130,9 @@ public class GnirehtetService extends VpnService {
 
         InetAddress[] dnsServers = config.getDnsServers();
         if (dnsServers.length == 0) {
-            // no DNS server defined, use Google DNS
+            // no DNS server defined, use Google DNS (dual-stack)
             builder.addDnsServer("8.8.8.8");
+            builder.addDnsServer("2001:4860:4860::8888");
         } else {
             for (InetAddress dnsServer : dnsServers) {
                 builder.addDnsServer(dnsServer);
@@ -171,7 +175,8 @@ public class GnirehtetService extends VpnService {
             LinkProperties linkProperties = cm.getLinkProperties(network);
             List<LinkAddress> addresses = linkProperties.getLinkAddresses();
             for (LinkAddress addr : addresses) {
-                if (addr.getAddress().equals(VPN_ADDRESS)) {
+                if (addr.getAddress().equals(VPN_ADDRESS)
+                        || addr.getAddress().equals(VPN_ADDRESS_V6)) {
                     return network;
                 }
             }

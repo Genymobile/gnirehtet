@@ -15,6 +15,7 @@
  */
 
 use super::ipv4_header::{Ipv4HeaderData, Protocol};
+use super::ipv6_header::Ipv6HeaderData;
 use super::tcp_header::{TcpHeader, TcpHeaderData, TcpHeaderMut};
 use super::udp_header::{UdpHeader, UdpHeaderData, UdpHeaderMut, UDP_HEADER_LENGTH};
 
@@ -195,6 +196,18 @@ impl<'a> TransportHeaderMut<'a> {
             }
             TransportHeaderMut::Udp(ref mut udp_header) => {
                 udp_header.update_checksum(ipv4_header_data, payload)
+            }
+        }
+    }
+
+    #[inline]
+    pub fn update_checksum_v6(&mut self, ipv6_header_data: &Ipv6HeaderData, payload: &[u8]) {
+        match *self {
+            TransportHeaderMut::Tcp(ref mut tcp_header) => {
+                tcp_header.update_checksum_v6(ipv6_header_data, payload)
+            }
+            TransportHeaderMut::Udp(ref mut udp_header) => {
+                udp_header.update_checksum_v6(ipv6_header_data, payload)
             }
         }
     }

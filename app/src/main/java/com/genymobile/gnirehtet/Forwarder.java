@@ -100,8 +100,8 @@ public class Forwarder {
                 break;
             }
             if (r > 0) {
-                int version = buffer[0] >> 4;
-                if (version == 4) {
+                int version = (buffer[0] & 0xf0) >> 4;
+                if (version == 4 || version == 6) {
                     // blocking send
                     tunnel.send(buffer, r);
                 } else {
