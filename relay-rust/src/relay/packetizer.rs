@@ -17,9 +17,14 @@
 use std::io;
 
 use super::datagram::{DatagramReceiver, ReadAdapter};
+use super::ip_packet::IpPacket;
 use super::ipv4_header::{Ipv4Header, Ipv4HeaderData, Ipv4HeaderMut};
-use super::ipv4_packet::{Ipv4Packet, MAX_PACKET_LENGTH};
+use super::ipv4_packet::Ipv4Packet;
+use super::ipv6_header::{Ipv6Header, Ipv6HeaderData, Ipv6HeaderMut, IPV6_HEADER_LENGTH};
+use super::ipv6_packet::Ipv6Packet;
 use super::transport_header::{TransportHeader, TransportHeaderData, TransportHeaderMut};
+
+pub const MAX_PACKET_LENGTH: usize = IPV6_HEADER_LENGTH + 65535;
 
 /// Convert from level 5 to level 3 by appending correct IP and transport headers.
 pub struct Packetizer {
@@ -129,6 +134,184 @@ impl Packetizer {
             self.ipv4_header_data.clone(),
             self.transport_header_data.clone(),
         )
+    }
+}
+
+/// Packetizer for IPv6 responses (no IP header checksum, payload length field).
+pub struct Ipv6Packetizer {
+    buffer: Box<[u8; MAX_PACKET_LENGTH]>,
+    transport_index: usize,
+    payload_index: usize,
+    ipv6_header_data: Ipv6HeaderData,
+    transport_header_data: TransportHeaderData,
+}
+
+impl Ipv6Packetizer {
+    pub fn new(
+        reference_ipv6_header: &Ipv6Header,
+        reference_transport_header: &TransportHeader,
+    ) -> Self {
+        let mut buffer = Box::new([0; MAX_PACKET_LENGTH]);
+
+        let transport_index = IPV6_HEADER_LENGTH;
+        let payload_index = transport_index + reference_transport_header.header_length() as usize;
+
+        let mut ipv6_header_data = reference_ipv6_header.data().clone();
+        let mut transport_header_data = reference_transport_header.data_clone();
+
+        {
+            let ipv6_header_raw = &mut buffer[..transport_index];
+            ipv6_header_raw.copy_from_slice(reference_ipv6_header.raw());
+            let mut ipv6_header = ipv6_header_data.bind_mut(ipv6_header_raw);
+            ipv6_header.swap_source_and_destination();
+        }
+
+        {
+            let transport_header_raw = &mut buffer[transport_index..payload_index];
+            transport_header_raw.copy_from_slice(reference_transport_header.raw());
+            let mut transport_header = transport_header_data.bind_mut(transport_header_raw);
+            transport_header.swap_source_and_destination();
+        }
+
+        Self {
+            buffer,
+            transport_index,
+            payload_index,
+            ipv6_header_data,
+            transport_header_data,
+        }
+    }
+
+    pub fn packetize_empty_payload(&mut self) -> Ipv6Packet {
+        self.build(0)
+    }
+
+    pub fn packetize<R: DatagramReceiver>(&mut self, source: &mut R) -> io::Result<Ipv6Packet> {
+        let r = source.recv(&mut self.buffer[self.payload_index..])?;
+        Ok(self.build(r as u16))
+    }
+
+    pub fn packetize_read<R: io::Read>(
+        &mut self,
+        source: &mut R,
+        max_chunk_size: Option<usize>,
+    ) -> io::Result<Option<Ipv6Packet>> {
+        let mut adapter = ReadAdapter::new(source, max_chunk_size);
+        let r = adapter.recv(&mut self.buffer[self.payload_index..])?;
+        Ok(if r > 0 {
+            Some(self.build(r as u16))
+        } else {
+            None
+        })
+    }
+
+    pub fn ipv6_header_mut(&mut self) -> Ipv6HeaderMut {
+        let raw = &mut self.buffer[..self.transport_index];
+        self.ipv6_header_data.bind_mut(raw)
+    }
+
+    pub fn transport_header_mut(&mut self) -> TransportHeaderMut {
+        let raw = &mut self.buffer[self.transport_index..self.payload_index];
+        self.transport_header_data.bind_mut(raw)
+    }
+
+    fn build(&mut self, payload_length: u16) -> Ipv6Packet {
+        let transport_len = (self.payload_index - self.transport_index) as u16 + payload_length;
+        self.ipv6_header_mut().set_payload_length(transport_len);
+        self.transport_header_mut()
+            .set_payload_length(payload_length);
+
+        let total_length = self.payload_index + payload_length as usize;
+        let mut packet = Ipv6Packet::new(
+            &mut self.buffer[..total_length],
+            self.ipv6_header_data.clone(),
+            self.transport_header_data.clone(),
+        );
+        packet.compute_checksums();
+        packet
+    }
+
+    pub fn inflate(&mut self, packet_length: u16) -> Ipv6Packet {
+        Ipv6Packet::new(
+            &mut self.buffer[..packet_length as usize],
+            self.ipv6_header_data.clone(),
+            self.transport_header_data.clone(),
+        )
+    }
+}
+
+/// Version-agnostic packetizer used by TCP/UDP connections.
+pub enum AnyPacketizer {
+    V4(Packetizer),
+    V6(Ipv6Packetizer),
+}
+
+impl AnyPacketizer {
+    pub fn new_v4(
+        reference_ipv4_header: &Ipv4Header,
+        reference_transport_header: &TransportHeader,
+    ) -> Self {
+        AnyPacketizer::V4(Packetizer::new(
+            reference_ipv4_header,
+            reference_transport_header,
+        ))
+    }
+
+    pub fn new_v6(
+        reference_ipv6_header: &Ipv6Header,
+        reference_transport_header: &TransportHeader,
+    ) -> Self {
+        AnyPacketizer::V6(Ipv6Packetizer::new(
+            reference_ipv6_header,
+            reference_transport_header,
+        ))
+    }
+
+    pub fn is_ipv6(&self) -> bool {
+        matches!(*self, AnyPacketizer::V6(_))
+    }
+
+    pub fn transport_header_mut(&mut self) -> TransportHeaderMut {
+        match *self {
+            AnyPacketizer::V4(ref mut p) => p.transport_header_mut(),
+            AnyPacketizer::V6(ref mut p) => p.transport_header_mut(),
+        }
+    }
+
+    pub fn packetize_empty_payload(&mut self) -> IpPacket {
+        match *self {
+            AnyPacketizer::V4(ref mut p) => IpPacket::V4(p.packetize_empty_payload()),
+            AnyPacketizer::V6(ref mut p) => IpPacket::V6(p.packetize_empty_payload()),
+        }
+    }
+
+    pub fn packetize<R: DatagramReceiver>(&mut self, source: &mut R) -> io::Result<IpPacket> {
+        match *self {
+            AnyPacketizer::V4(ref mut p) => p.packetize(source).map(IpPacket::V4),
+            AnyPacketizer::V6(ref mut p) => p.packetize(source).map(IpPacket::V6),
+        }
+    }
+
+    pub fn packetize_read<R: io::Read>(
+        &mut self,
+        source: &mut R,
+        max_chunk_size: Option<usize>,
+    ) -> io::Result<Option<IpPacket>> {
+        match *self {
+            AnyPacketizer::V4(ref mut p) => {
+                Ok(p.packetize_read(source, max_chunk_size)?.map(IpPacket::V4))
+            }
+            AnyPacketizer::V6(ref mut p) => {
+                Ok(p.packetize_read(source, max_chunk_size)?.map(IpPacket::V6))
+            }
+        }
+    }
+
+    pub fn inflate(&mut self, packet_length: u16) -> IpPacket {
+        match *self {
+            AnyPacketizer::V4(ref mut p) => IpPacket::V4(p.inflate(packet_length)),
+            AnyPacketizer::V6(ref mut p) => IpPacket::V6(p.inflate(packet_length)),
+        }
     }
 }
 

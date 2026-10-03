@@ -15,6 +15,7 @@
  */
 
 use super::ipv4_header::Ipv4HeaderData;
+use super::ipv6_header::Ipv6HeaderData;
 use byteorder::{BigEndian, ByteOrder};
 use std::mem;
 
@@ -296,6 +297,23 @@ impl<'a> TcpHeaderMut<'a> {
         BigEndian::write_u16(&mut self.raw[16..18], checksum);
     }
 
+    pub fn update_checksum_v6(&mut self, ipv6_header_data: &Ipv6HeaderData, payload: &[u8]) {
+        // pseudo-header checksum (cf RFC 8200 section 8.1)
+        let source = ipv6_header_data.source();
+        let destination = ipv6_header_data.destination();
+        let header_length = self.header_length();
+        debug_assert!(header_length % 2 == 0 && header_length >= 20);
+        let transport_length = u32::from(header_length) + payload.len() as u32;
+
+        let mut sum = 6u32; // next header: TCP = 6
+        sum += (transport_length >> 16) + (transport_length & 0xFFFF);
+        for chunk in source.chunks(2).chain(destination.chunks(2)) {
+            sum += u32::from(BigEndian::read_u16(chunk));
+        }
+
+        self.update_checksum_with_sum(sum, header_length, payload);
+    }
+
     pub fn update_checksum(&mut self, ipv4_header_data: &Ipv4HeaderData, payload: &[u8]) {
         // pseudo-header checksum (cf rfc793 section 3.1)
         let source = ipv4_header_data.source();
@@ -320,6 +338,11 @@ impl<'a> TcpHeaderMut<'a> {
         sum += destination & 0xFFFF;
         sum += u32::from(transport_length);
 
+        self.update_checksum_with_sum(sum, header_length, payload);
+    }
+
+    fn update_checksum_with_sum(&mut self, mut sum: u32, header_length: u8, payload: &[u8]) {
+        let payload_length = payload.len() as u16;
         // reset checksum field, so that it can be added with other bytes
         self.set_checksum(0);
 

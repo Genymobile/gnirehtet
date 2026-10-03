@@ -22,8 +22,8 @@ use std::rc::{Rc, Weak};
 use super::binary;
 use super::client::{Client, ClientChannel};
 use super::connection::{Connection, ConnectionId};
+use super::ip_packet::IpPacket;
 use super::ipv4_header::Protocol;
-use super::ipv4_packet::Ipv4Packet;
 use super::selector::Selector;
 use super::tcp_connection::TcpConnection;
 use super::udp_connection::UdpConnection;
@@ -53,15 +53,15 @@ impl Router {
         &mut self,
         selector: &mut Selector,
         client_channel: &mut ClientChannel,
-        ipv4_packet: &Ipv4Packet,
+        ip_packet: &IpPacket,
     ) {
-        if ipv4_packet.is_valid() {
-            match self.connection(selector, ipv4_packet) {
+        if ip_packet.is_valid() {
+            match self.connection(selector, ip_packet) {
                 Ok(index) => {
                     let closed = {
                         let connection_ref = &self.connections[index];
                         let mut connection = connection_ref.borrow_mut();
-                        connection.send_to_network(selector, client_channel, ipv4_packet);
+                        connection.send_to_network(selector, client_channel, ip_packet);
                         if connection.is_closed() {
                             debug!(
                                 target: TAG,
@@ -86,7 +86,7 @@ impl Router {
                 trace!(
                     target: TAG,
                     "{}",
-                    binary::build_packet_string(ipv4_packet.raw())
+                    binary::build_packet_string(ip_packet.raw())
                 );
             }
         }
@@ -95,16 +95,14 @@ impl Router {
     fn connection(
         &mut self,
         selector: &mut Selector,
-        ipv4_packet: &Ipv4Packet,
+        ip_packet: &IpPacket,
     ) -> io::Result<usize> {
-        let (ipv4_header_data, transport_header_data) = ipv4_packet.headers_data();
-        let transport_header_data = transport_header_data.expect("No transport");
-        let id = ConnectionId::from_headers(ipv4_header_data, transport_header_data);
+        let id = ConnectionId::from_ip_packet(ip_packet).expect("No transport");
         let index = match self.find_index(&id) {
             Some(index) => index,
             None => {
                 let connection =
-                    Self::create_connection(selector, id, self.client.clone(), ipv4_packet)?;
+                    Self::create_connection(selector, id, self.client.clone(), ip_packet)?;
                 let index = self.connections.len();
                 self.connections.push(connection);
                 index
@@ -117,29 +115,57 @@ impl Router {
         selector: &mut Selector,
         id: ConnectionId,
         client: Weak<RefCell<Client>>,
-        ipv4_packet: &Ipv4Packet,
+        ip_packet: &IpPacket,
     ) -> io::Result<Rc<RefCell<dyn Connection>>> {
-        let (ipv4_header, transport_header) = ipv4_packet.headers();
-        let transport_header = transport_header.expect("No transport");
-        match id.protocol() {
-            Protocol::Tcp => Ok(TcpConnection::create(
-                selector,
-                id,
-                client,
-                ipv4_header,
-                transport_header,
-            )?),
-            Protocol::Udp => Ok(UdpConnection::create(
-                selector,
-                id,
-                client,
-                ipv4_header,
-                transport_header,
-            )?),
-            p => Err(io::Error::new(
-                io::ErrorKind::Other,
-                format!("Unsupported protocol: {:?}", p),
-            )),
+        match ip_packet {
+            IpPacket::V4(ref ipv4_packet) => {
+                let (ipv4_header, transport_header) = ipv4_packet.headers();
+                let transport_header = transport_header.expect("No transport");
+                match id.protocol() {
+                    Protocol::Tcp => Ok(TcpConnection::create_v4(
+                        selector,
+                        id,
+                        client,
+                        ipv4_header,
+                        transport_header,
+                    )?),
+                    Protocol::Udp => Ok(UdpConnection::create_v4(
+                        selector,
+                        id,
+                        client,
+                        ipv4_header,
+                        transport_header,
+                    )?),
+                    p => Err(io::Error::new(
+                        io::ErrorKind::Other,
+                        format!("Unsupported protocol: {:?}", p),
+                    )),
+                }
+            }
+            IpPacket::V6(ref ipv6_packet) => {
+                let (ipv6_header, transport_header) = ipv6_packet.headers();
+                let transport_header = transport_header.expect("No transport");
+                match id.protocol() {
+                    Protocol::Tcp => Ok(TcpConnection::create_v6(
+                        selector,
+                        id,
+                        client,
+                        ipv6_header,
+                        transport_header,
+                    )?),
+                    Protocol::Udp => Ok(UdpConnection::create_v6(
+                        selector,
+                        id,
+                        client,
+                        ipv6_header,
+                        transport_header,
+                    )?),
+                    p => Err(io::Error::new(
+                        io::ErrorKind::Other,
+                        format!("Unsupported protocol: {:?}", p),
+                    )),
+                }
+            }
         }
     }
 

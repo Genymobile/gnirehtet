@@ -15,6 +15,7 @@
  */
 
 use super::ipv4_header::Ipv4HeaderData;
+use super::ipv6_header::Ipv6HeaderData;
 use byteorder::{BigEndian, ByteOrder};
 use std::mem;
 
@@ -152,6 +153,49 @@ impl<'a> UdpHeaderMut<'a> {
     pub fn update_checksum(&mut self, _ipv4_header_data: &Ipv4HeaderData, _payload: &[u8]) {
         // disable checksum validation
         self.set_checksum(0);
+    }
+
+    #[inline]
+    pub fn update_checksum_v6(&mut self, ipv6_header_data: &Ipv6HeaderData, payload: &[u8]) {
+        // IPv6 requires a UDP checksum (RFC 8200); 0 means "no checksum" is not
+        // allowed, so compute it. If the computed value is 0, transmit 0xFFFF.
+        let source = ipv6_header_data.source();
+        let destination = ipv6_header_data.destination();
+        let transport_length = UDP_HEADER_LENGTH as u32 + payload.len() as u32;
+
+        let mut sum = 17u32; // next header: UDP = 17
+        sum += (transport_length >> 16) + (transport_length & 0xFFFF);
+        for chunk in source.chunks(2).chain(destination.chunks(2)) {
+            sum += u32::from(BigEndian::read_u16(chunk));
+        }
+        self.set_checksum(0);
+        let mut hsum = 0u32;
+        unsafe {
+            let mut p = self.raw.as_ptr();
+            let end = p.offset(UDP_HEADER_LENGTH as isize);
+            while p < end {
+                hsum += u32::from(*p);
+                sum += u32::from(*p.offset(1));
+                p = p.offset(2);
+            }
+            let mut p = payload.as_ptr();
+            let payload_length = payload.len() as isize;
+            let end = p.offset(payload_length - 1);
+            while p < end {
+                hsum += u32::from(*p);
+                sum += u32::from(*p.offset(1));
+                p = p.offset(2);
+            }
+            if payload.len() % 2 != 0 {
+                hsum += u32::from(*payload.get_unchecked(payload.len() - 1));
+            }
+        }
+        sum += hsum << 8;
+        while (sum & !0xFFFF) != 0 {
+            sum = (sum & 0xFFFF) + (sum >> 16);
+        }
+        let checksum = !sum as u16;
+        self.set_checksum(if checksum == 0 { 0xFFFF } else { checksum });
     }
 }
 
