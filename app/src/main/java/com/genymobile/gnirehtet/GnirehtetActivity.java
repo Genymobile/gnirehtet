@@ -23,6 +23,8 @@ public class GnirehtetActivity extends Activity {
 
     public static final String EXTRA_DNS_SERVERS = "dnsServers";
     public static final String EXTRA_ROUTES = "routes";
+    /** One of VpnConfiguration.UNDERLYING_*; absent means callback. */
+    public static final String EXTRA_UNDERLYING = "underlying";
 
     private static final int VPN_REQUEST_CODE = 0;
 
@@ -59,7 +61,8 @@ public class GnirehtetActivity extends Activity {
         if (routes == null) {
             routes = new String[0];
         }
-        return new VpnConfiguration(Net.toInetAddresses(dnsServers), Net.toCIDRs(routes));
+        String underlyingMode = VpnConfiguration.underlyingModeOf(intent.getStringExtra(EXTRA_UNDERLYING));
+        return new VpnConfiguration(Net.toInetAddresses(dnsServers), Net.toCIDRs(routes), underlyingMode);
     }
 
     private boolean startGnirehtet(VpnConfiguration config) {

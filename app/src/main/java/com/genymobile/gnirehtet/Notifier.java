@@ -74,6 +74,23 @@ public class Notifier {
         }
     }
 
+    /**
+     * Post the foreground notification and take it straight back, leaving the
+     * channel in place. This is for a STOP that arrives with no VPN running:
+     * the service was started with startForegroundService() and must call
+     * startForeground() or be killed, but has nothing to show. The channel must
+     * survive the call: the system posts the notification asynchronously, and
+     * deleting the channel first makes that post fail with a
+     * "Bad notification for startForeground" crash of its own.
+     */
+    public void acknowledgeForegroundStart() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            createNotificationChannel();
+        }
+        context.startForeground(NOTIFICATION_ID, createNotification(false));
+        context.stopForeground(true);
+    }
+
     public void setFailure(boolean failure) {
         if (this.failure != failure) {
             this.failure = failure;

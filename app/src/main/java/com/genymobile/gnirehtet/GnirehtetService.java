@@ -22,6 +22,8 @@ import android.net.ConnectivityManager;
 import android.net.LinkAddress;
 import android.net.LinkProperties;
 import android.net.Network;
+import android.net.NetworkCapabilities;
+import android.net.NetworkRequest;
 import android.net.VpnService;
 import android.os.Build;
 import android.os.Handler;
@@ -52,6 +54,7 @@ public class GnirehtetService extends VpnService {
 
     private ParcelFileDescriptor vpnInterface = null;
     private Forwarder forwarder;
+    private ConnectivityManager.NetworkCallback underlyingNetworkWatcher;
 
     public static void start(Context context, VpnConfiguration config) {
         Intent intent = new Intent(context, GnirehtetService.class);
@@ -93,6 +96,15 @@ public class GnirehtetService extends VpnService {
                 startVpn(config);
             }
         } else if (ACTION_CLOSE_VPN.equals(action)) {
+            if (!isRunning() && Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                // stop() reached us through startForegroundService(), which
+                // obliges this service to call startForeground() within a few
+                // seconds or be killed with a ForegroundServiceDidNotStartInTime
+                // crash. With nothing running, close() would never post the
+                // notification that does that, and the crash dialog then sits
+                // on a headless device until someone taps it.
+                notifier.acknowledgeForegroundStart();
+            }
             close();
         }
         return START_NOT_STICKY;
@@ -140,43 +152,143 @@ public class GnirehtetService extends VpnService {
         builder.setBlocking(true);
         builder.setMtu(MTU);
 
+        // Registered before establish() so the VPN network cannot appear
+        // unobserved; the callback is also replayed for networks that already
+        // exist, so the order is belt and braces rather than a requirement.
+        String underlyingMode = config.getUnderlyingMode();
+        if (VpnConfiguration.UNDERLYING_CALLBACK.equals(underlyingMode)) {
+            watchForVpnNetwork();
+        }
+
         vpnInterface = builder.establish();
         if (vpnInterface == null) {
             Log.w(TAG, "VPN starting failed, please retry");
             // establish() may return null if the application is not prepared or is revoked
+            stopWatchingForVpnNetwork();
             return false;
         }
 
-        setAsUndernlyingNetwork();
+        if (VpnConfiguration.UNDERLYING_SCAN.equals(underlyingMode)) {
+            declareUnderlyingNetworkByScan();
+        } else if (VpnConfiguration.UNDERLYING_NONE.equals(underlyingMode)) {
+            Log.i(TAG, "Not declaring an underlying network (mode none)");
+        }
         return true;
     }
 
-    @SuppressWarnings("checkstyle:MagicNumber")
-    private void setAsUndernlyingNetwork() {
-        if (Build.VERSION.SDK_INT >= 22) {
-            Network vpnNetwork = findVpnNetwork();
-            if (vpnNetwork != null) {
-                // so that applications knows that network is available
-                setUnderlyingNetworks(new Network[] {vpnNetwork});
+    /*
+     * Why the VPN declares itself as its own underlying network
+     *
+     * Android answers the legacy connectivity API (getActiveNetworkInfo and
+     * friends) for an app behind a VPN by looking at the VPN's declared
+     * underlying networks: the first one declared, or the real default network
+     * when nothing is declared. The relay transport here is an ADB socket, which
+     * is not an Android network, so there is nothing truthful to declare; and a
+     * tethered handset with no SIM and no Wi-Fi has no default network either.
+     * With no declaration the legacy call returns null to every app, and apps
+     * that still gate on it -- Maps, YouTube, Play -- report themselves offline
+     * while the tunnel is carrying their traffic. The modern API meanwhile sees
+     * a validated VPN. Declaring the VPN itself is a compatibility workaround
+     * that hands those apps a connected TYPE_VPN NetworkInfo instead.
+     *
+     * v2.5.1 already did this, but on current releases it never took: it scanned
+     * getAllNetworks() once, synchronously after establish(), and the network
+     * agent is registered on ConnectivityService's own thread, so the scan ran
+     * before the VPN existed, found nothing, and declared nothing. On an Android
+     * 16 handset the agent appeared 14 ms after establish() returned, with
+     * UnderlyingNetworks: Null.
+     *
+     * The callback mode waits to be told. The scan mode keeps the original
+     * behaviour, and none declares nothing, so the three can be compared on one
+     * device with the same relay.
+     */
+
+    private void watchForVpnNetwork() {
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        // A request with TRANSPORT_VPN and without NOT_VPN matches our own
+        // tunnel, which is the only network with VPN_ADDRESS on it.
+        NetworkRequest request = new NetworkRequest.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_VPN)
+                .removeCapability(NetworkCapabilities.NET_CAPABILITY_NOT_VPN)
+                .build();
+        underlyingNetworkWatcher = new ConnectivityManager.NetworkCallback() {
+            @Override
+            public void onLinkPropertiesChanged(Network network, LinkProperties linkProperties) {
+                if (!isRunning() || !hasVpnAddress(linkProperties)) {
+                    return;
+                }
+                declareUnderlyingNetwork(network, "callback");
             }
-        } else {
-            Log.w(TAG, "Cannot set underlying network, API version " + Build.VERSION.SDK_INT + " < 22");
+        };
+        try {
+            cm.registerNetworkCallback(request, underlyingNetworkWatcher);
+        } catch (RuntimeException e) {
+            // Too many callbacks, or a SecurityException on an odd build. The
+            // tunnel still works without the declaration; only legacy-API apps
+            // are affected, which is the v2.5.1 situation.
+            Log.w(TAG, "Cannot watch for the VPN network; no underlying network will be declared", e);
+            underlyingNetworkWatcher = null;
         }
+    }
+
+    private void stopWatchingForVpnNetwork() {
+        if (underlyingNetworkWatcher == null) {
+            return;
+        }
+        ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        try {
+            cm.unregisterNetworkCallback(underlyingNetworkWatcher);
+        } catch (IllegalArgumentException e) {
+            // already unregistered
+        }
+        underlyingNetworkWatcher = null;
+    }
+
+    private void declareUnderlyingNetworkByScan() {
+        Network vpnNetwork = findVpnNetwork();
+        if (vpnNetwork == null) {
+            Log.w(TAG, "Scan found no network with " + VPN_ADDRESS + " yet; no underlying network declared");
+            return;
+        }
+        declareUnderlyingNetwork(vpnNetwork, "scan");
+    }
+
+    @SuppressWarnings("checkstyle:MagicNumber")
+    private void declareUnderlyingNetwork(Network vpnNetwork, String how) {
+        if (Build.VERSION.SDK_INT < 22) {
+            Log.w(TAG, "Cannot set underlying network, API version " + Build.VERSION.SDK_INT + " < 22");
+            return;
+        }
+        // Logged with the platform's verdict: a rejected declaration is the
+        // other way this can silently not take.
+        boolean accepted = setUnderlyingNetworks(new Network[] {vpnNetwork});
+        Log.i(TAG, "Declared " + vpnNetwork + " as underlying network (" + how + "): "
+                + (accepted ? "accepted" : "rejected"));
     }
 
     private Network findVpnNetwork() {
         ConnectivityManager cm = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         Network[] networks = cm.getAllNetworks();
         for (Network network : networks) {
-            LinkProperties linkProperties = cm.getLinkProperties(network);
-            List<LinkAddress> addresses = linkProperties.getLinkAddresses();
-            for (LinkAddress addr : addresses) {
-                if (addr.getAddress().equals(VPN_ADDRESS)) {
-                    return network;
-                }
+            if (hasVpnAddress(cm.getLinkProperties(network))) {
+                return network;
             }
         }
         return null;
+    }
+
+    private static boolean hasVpnAddress(LinkProperties linkProperties) {
+        if (linkProperties == null) {
+            // a network torn down between being listed and being asked about
+            return false;
+        }
+        List<LinkAddress> addresses = linkProperties.getLinkAddresses();
+        for (LinkAddress addr : addresses) {
+            if (addr.getAddress().equals(VPN_ADDRESS)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void startForwarding() {
@@ -191,6 +303,7 @@ public class GnirehtetService extends VpnService {
         }
 
         notifier.stop();
+        stopWatchingForVpnNetwork();
 
         try {
             forwarder.stop();
